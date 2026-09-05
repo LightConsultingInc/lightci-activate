@@ -1,27 +1,35 @@
-name: Deploy API (AWS dev)
+name: Deploy (AWS dev)
 
 on:
   push:
     branches: [main]
     paths:
       - "api/**"
+      - "frontend/**"
+      - "mcp-app/**"
+      - "marketplace/**"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
 concurrency:
-  group: deploy-api-dev
+  group: deploy-dev
   cancel-in-progress: false
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: lightci-activate-dev
   ECS_CLUSTER: lightci-activate-dev-cluster
-  ECS_SERVICE: lightci-activate-dev
+  API_ECR_REPOSITORY: lightci-activate-dev
+  API_ECS_SERVICE: lightci-activate-dev
+  WEB_ECR_REPOSITORY: lightci-activate-dev-web
+  WEB_ECS_SERVICE: lightci-activate-dev-web
+  WEB_ECS_CLUSTER: lightci-activate-dev-web-cluster
+  API_URL: https://lightci-activate-api.lciventure.com
+  WEB_URL: https://lightci-activate.lciventure.com
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -34,28 +42,45 @@ jobs:
       - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # The ECS service runs linux/amd64 (X86_64 in the terraform service
-      # module), matching the runner's native arch — no QEMU needed.
       - uses: docker/setup-buildx-action@v3
 
+      # API image carries the MCP app bundle and the demo marketplace repo (root build context).
       - uses: docker/build-push-action@v6
         with:
-          context: api
+          context: .
           file: api/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ steps.ecr.outputs.registry }}/${{ env.API_ECR_REPOSITORY }}:latest
+            ${{ steps.ecr.outputs.registry }}/${{ env.API_ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
 
-      - name: Roll ECS service
+      - uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ env.API_URL }}
+            NEXT_PUBLIC_WORKOS_REDIRECT_URI=${{ env.WEB_URL }}/callback
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.WEB_ECR_REPOSITORY }}:latest
+            ${{ steps.ecr.outputs.registry }}/${{ env.WEB_ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      # Terraform ignores task_definition drift on the service, so point each service at the
+      # latest revision of its family (new env/secrets land) and force a fresh deployment.
+      - name: Roll ECS services
         run: |
-          aws ecs update-service \
-            --cluster "$ECS_CLUSTER" \
-            --service "$ECS_SERVICE" \
-            --force-new-deployment > /dev/null
-          echo "Rollout triggered; waiting for service to stabilise..."
-          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
-          echo "Service stable."
+          API_TD=$(aws ecs describe-task-definition --task-definition "$API_ECS_SERVICE" --query taskDefinition.taskDefinitionArn --output text)
+          WEB_TD=$(aws ecs describe-task-definition --task-definition "$WEB_ECS_SERVICE" --query taskDefinition.taskDefinitionArn --output text)
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$API_ECS_SERVICE" --task-definition "$API_TD" --force-new-deployment > /dev/null
+          aws ecs update-service --cluster "$WEB_ECS_CLUSTER" --service "$WEB_ECS_SERVICE" --task-definition "$WEB_TD" --force-new-deployment > /dev/null
+          echo "Rollouts triggered; waiting for services to stabilise..."
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$API_ECS_SERVICE"
+          aws ecs wait services-stable --cluster "$WEB_ECS_CLUSTER" --services "$WEB_ECS_SERVICE"
+          echo "Both services stable."

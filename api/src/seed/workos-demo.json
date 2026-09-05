@@ -1,0 +1,11 @@
+{
+  "organizationId": "org_01M1SKK4CFRCNC175QQRRJTAFG",
+  "password": "Activate-demo-2026!",
+  "users": {
+    "priya.nair@meridianwealth.demo": "user_01M1SKK4PRY6HQGAZ5YKXV94DQ",
+    "marcus.reid@meridianwealth.demo": "user_01M1SKK5AJ2H4QN05EB7CHMN6M",
+    "daniel.okafor@meridianwealth.demo": "user_01M1SKK5Y8C1M74S4EZS252VBD",
+    "elena.marsh@meridianwealth.demo": "user_01M1SKK6J0TJ4970VHBQDXG7Z0",
+    "zain+activate-lead@lightci.com": "user_01M1SKK7673EXSZV8MWQHWTV3Z"
+  }
+}

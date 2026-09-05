@@ -62,7 +62,7 @@ resource "aws_iam_role_policy" "execution_secrets" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["secretsmanager:GetSecretValue"]
-      Resource = concat([var.db_secret_arn], values(var.extra_secrets))
+      Resource = concat(var.db_secret_arn == null ? [] : [var.db_secret_arn], values(var.extra_secrets))
     }]
   })
 }
@@ -261,7 +261,7 @@ resource "aws_ecs_task_definition" "this" {
     # The full DB secret JSON lands in the `DB` env var; the API's
     # typeorm.config.ts parses {host, port, username, password, dbname}.
     secrets = concat(
-      [
+      var.db_secret_arn == null ? [] : [
         {
           name      = "DB"
           valueFrom = var.db_secret_arn

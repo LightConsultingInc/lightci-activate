@@ -1,0 +1,164 @@
+# Activate REST contract (v1)
+
+All routes are prefixed `/api`, require `Authorization: Bearer <WorkOS access token>` unless marked public, and are scoped to the caller's org (`req.orgId`; leads switch with `X-Activate-Org`). Errors are problem-details `{status, title, detail}`. Dates are ISO strings. Money is USD numbers. Scores are 0..1 unless noted. IDs are UUIDs. `Person` summaries are `PersonRef = {id, name, email, title, avatarUrl, teamId, teamName, rung, roles}`.
+
+Frontend and backend agents build against this document. If you must deviate, add a note under "Deviations" at the bottom rather than silently changing shapes.
+
+## Auth (done)
+- `GET /auth/me` (public) → `{user, org, team, orgs}` (see frontend `lib/api.ts` `Me`).
+- `POST /auth/consent {accepted}` → `{ok}`.
+- `POST /auth/invites {email, teamId?}` → `{ok, personId, invitation}`.
+
+## Learning (learner) — `api/src/learning`
+- `GET /ladder/me` → `LadderView`:
+  ```
+  { person: PersonRef, rung: number, nextRung: number|null,
+    progress: { toNextRung: 0..1, gate: { masteryThreshold, minContexts, minJudgement }, met: {mastery: bool, contexts: bool, judgement: bool, retention: bool} },
+    competencies: [{ code, name, rung, mastery, components: {artifact, consistency, retention, judgement, contexts}, threshold, minContexts, status: 'locked'|'in_progress'|'mastered'|'decayed' }],
+    judgement: { score, calibration: 0..1, critiqueQuality: 0..1, trend: 'up'|'flat'|'down', overconfidentRate },
+    hoursBack: { thisMonthMinutes, baselineMinutesPerWeek, currentMinutesPerWeek, netOfReworkMinutes, series: [{week: 'YYYY-MM-DD', minutesBack}] },
+    streak: { activeDays: number, last14: [{day, active: bool}] },
+    nextUp: ExerciseSummary|null, revisitsDue: RevisitSummary[], queued: ExerciseSummary[],
+    recentGrades: [{ submissionId, exerciseTitle, score, decision, gradedAt }],
+    coachNotes: [{ note, tags, createdAt }] }
+  ```
+  `ExerciseSummary = { id, title, rung, kind, mode, workSurface, status, brief, rationale, competencyCodes, estimatedMinutes, contextTag, scheduledFor, createdAt, skillId?, workflowMapId? }`
+  `RevisitSummary = { id, competencyCode, competencyName, prompt, dueAt, intervalStep, overdue: bool }`
+- `GET /exercises?status=&personId=` → `ExerciseSummary[]` (champion/sponsor may pass personId).
+- `GET /exercises/:id` → `ExerciseDetail = ExerciseSummary & { hints: string[] (only revealed ones), hintsRevealed, hintsTotal, workedExample: string|null (only after a cold attempt), starter, submissions: SubmissionView[], skill?: SkillCard, workflow?: WorkflowSummary, coachIntro: string }`
+- `POST /exercises/:id/start` → `ExerciseDetail` (status → active).
+- `POST /exercises/:id/hint` → `{ hint, hintsRevealed, hintsTotal }` (reveals the next one).
+- `POST /exercises/:id/run { prompt, context?: string, project?: {instructions, files:[{name,content}]} }` → `{ output: string, model, runId }` — L1/L2 "run Claude" inside the work surface (Coach role, task `coach.run`). Requires `expectationText` to have been stated first via the submission draft — enforce with `POST /exercises/:id/expect { expectationText, expectationConfidence }` → `{ok}` which stores a draft on the exercise (`starter.draftExpectation`).
+- `POST /exercises/:id/submit { expectationText, expectationConfidence, artifact: Artifact, critiqueText, coldAttempt }` → `{ submission: SubmissionView, grade: GradeView, exercise: ExerciseDetail, nextUp: ExerciseSummary|null, promotion?: { newRung } }` — grades synchronously via Grader (task `grader.submission`), updates mastery, schedules revisits, may generate the next exercise (task `coach.next-exercise`) and create a Placement if the gate is met.
+  `SubmissionView = { id, attempt, expectationText, expectationConfidence, artifact, critiqueText, coldAttempt, submittedAt, grade: GradeView|null }`
+  `GradeView = { id, score, decision, rubric: [{criterion,label,score,note}], feedback, teachingMoment, critiqueQuality, expectationAccuracy, securityFindings, gradedAt, gradedBy: 'grader'|PersonRef }`
+- `POST /exercises/:id/skip { reason: 'no_time'|'blocked'|'tool_issue'|'not_relevant', note? }` → `{ ok, nextUp }` (writes CoachNote; two consecutive 'blocked' create an Escalation).
+- `POST /exercises/:id/open-in-claude` → `{ prompt: string, contextBundle: string }` (in_claude mode: a copy-ready pack).
+- `GET /revisits?due=today|all` → `RevisitSummary[]`
+- `POST /revisits/:id/answer { response }` → `{ score, feedback, nextDueAt, intervalStep }` (Grader task `grader.revisit`).
+- `GET /history` → `{ items: [{ exercise: ExerciseSummary, submission: SubmissionView }] }` newest first.
+- `GET /mastery/:personId` → `{ competencies: LadderView.competencies, snapshots: [{day, competencyCode, mastery}] (30d) }` (self, champion of team, sponsor/admin/lead).
+- `GET /competencies` → catalog.
+- `GET /my-skills` → `{ adopted: [SkillCard & {myActivations30d}], authored: [SkillCard & {usageByOthers30d}] }`.
+
+## Interviews (Interviewer) — `api/src/interviews`
+- `POST /interviews { mode: 'intake'|'champion'|'workflow', workflowMapId?, teamId?, voice?: bool }` → `InterviewView`.
+- `GET /interviews/:id` → `InterviewView = { id, mode, status, completeness, transcript: [{role, content, at}], scribe: Partial<WorkflowSchema> | IntakeProfile, checkerFlags, turnCount, nextQuestion: string, result }`
+  `IntakeProfile = { role, responsibilities[], weeklyWorkflows: [{name, minutesPerRun, runsPerWeek, systems[]}], claudeUseToday, selfRatedComfort 1..5, sensitivities[] }`
+- `POST /interviews/:id/turns { content }` → `InterviewView` (task `interviewer.turn`: assistant asks next question, scribe updates schema, checker flags inconsistencies; when completeness ≥ 0.85 or turnCount ≥ 14 the interviewer proposes finishing).
+- `POST /interviews/:id/complete` → `{ interview, workflowMapIds: string[], placement?: {rung, evidence}, exercises: ExerciseSummary[] }` — intake: writes person ContextLayer + 2–4 WorkflowMaps + diagnostic placement + first exercise; champion: team ContextLayer + seed WorkflowMaps + Scorer run; workflow: fills the WorkflowMap and marks completeness.
+- `POST /interviews/:id/verify { approved: bool, corrections?: Partial<WorkflowSchema> }` (champion) → marks `championVerified`.
+- `POST /realtime/session { interviewId }` → `{ clientSecret, model, expiresAt, instructions }` — OpenAI Realtime ephemeral key (`POST https://api.openai.com/v1/realtime/client_secrets` with `session: {type:'realtime', model, instructions, audio:{output:{voice:'marin'}}}`), 501 with detail when OPENAI_API_KEY is absent.
+- `POST /interviews/:id/voice-transcript { turns: [{role:'user'|'interviewer', content}] }` → `InterviewView` (appends voice turns and re-runs scribe/checker).
+
+## Workflows (Scorer, Builder) — `api/src/workflows`
+- `GET /workflows?teamId=&status=&nextWave=&mine=` → `WorkflowSummary[] = { id, name, teamId, teamName, owner: PersonRef|null, status, completeness, championVerified, score, nextWave, linkedSkills: SkillCard[], baselineMinutesPerWeek, measuredMinutesPerWeek, hoursBackPerWeek, updatedAt }`
+- `GET /workflows/:id` → `WorkflowDetail = WorkflowSummary & { schema, interviewSessionId, baselines: Baseline[], measurements: Measurement[] }`
+- `POST /workflows { name, teamId?, schema? }`, `PATCH /workflows/:id { name?, schema?, status?, nextWave? }`
+- `POST /workflows/:id/score` → `WorkflowDetail` (Scorer task `scorer.workflow`).
+- `POST /workflows/rescore?teamId=` → `{ scored: number }` (all candidates).
+- `POST /workflows/:id/build` → `{ skill: SkillDetail }` (Builder task `builder.skill`: drafts a Skill with sample cases and boundary; status draft; owner = caller; links to workflow).
+- `POST /workflows/:id/baseline { method, minutesPerWeek, reworkMinutesPerWeek }` → Baseline; `POST /workflows/:id/measurements { minutesPerWeek, reworkMinutesPerWeek, periodStart, periodEnd, method }` → Measurement.
+- `GET /backlog?teamId=` → `{ items: WorkflowSummary[] ranked by score.composite desc, totals: { hoursAtStake, candidates, inBuild, shipped, nextWave } }`.
+
+## Skills & Library (Grader, Promoter) — `api/src/skills`
+- `GET /library?team=&family=&rung=&status=&q=&sort=` → `{ skills: SkillCard[], facets: { teams: [{id,name,count}], families: [{name,count}], rungs, statuses } }`
+  `SkillCard = { id, slug, name, triggerLine, plugin, team: {id,name}|null, owner: PersonRef|null, status, rungRequired, version, grade: {score, decision}|null, boundaryBadge: 'green'|'amber'|'red', activeUsers30d, runs30d, adoptedByMe, publishedAt, updatedAt, health: ('unused_30d'|'grade_below_threshold'|'boundary_gap'|'owner_left'|'overlapping_trigger'|'pending_review')[] }`
+  boundaryBadge: red if `boundary.mustNeverReceive` intersects the org's forbiddenDataClasses is empty but skill reads any restricted class OR manifest touches restricted; amber if humanReview non-empty; green otherwise. (Implement as a pure helper `boundaryBadge(skill, orgBoundary)`.)
+- `GET /skills/:slug` → `SkillDetail = SkillCard & { skillMd, boundary, sampleCases, manifest, workflow: WorkflowSummary|null, versions: [{id, version, tag, commitSha, changelog, author: PersonRef|null, gradeScore, approvers: PersonRef[], createdAt}], grades: GradeView[], usageByTeam: [{teamId, teamName, activations30d}], usageSeries: [{day, activations}] (90d), adopters: PersonRef[] (opt-in), comments: [{id, person: PersonRef, body, kind, createdAt}], promotion: PromotionView|null, successor: SkillCard|null }`
+- `POST /skills { name, slug?, plugin?, teamId?, triggerLine, skillMd, boundary, sampleCases, workflowMapId?, forkedFromSkillId? }` → `SkillDetail` (status draft, branch `skill/<slug>`; writes to the marketplace repo working tree under `plugins/<plugin>/skills/<slug>/` on a branch when `LIBRARY_REPO_PATH` is a git repo).
+- `PATCH /skills/:id { skillMd?, triggerLine?, boundary?, sampleCases?, name? }` → `SkillDetail` (new SkillVersion on save when content changed).
+- `POST /skills/:id/grade` → `{ grade: GradeView, skill: SkillDetail }` (Grader task `grader.skill`; rubric = GRADER_RUBRIC_SKILL; plus security review of the skill text; writes a `grader` SkillComment summary).
+- `POST /skills/:id/adopt` → `{ adoption, exercise: ExerciseSummary }` (creates an "adopt this skill on your case" exercise).
+- `POST /skills/:id/fork` → `SkillDetail` (new draft owned by caller, `forkedFromSkillId`).
+- `POST /skills/:id/comments { body }` → comment. `POST /skills/:id/deprecate { successorSkillId? }` (owner/champion).
+- `POST /skills/:id/promotion-requests` → `PromotionView` (Promoter task `promoter.package`: requires latest grade pass; boundary check against org boundary; diff summary; opens GitHub PR when GITHUB_TOKEN+GITHUB_REPO configured, else records `prNumber` from a local counter and `prUrl` null; `requiredApproverRoles` = ['champion'] + ['compliance'] if highExposure).
+  `PromotionView = { id, skill: SkillCard, version, requestedBy: PersonRef, prNumber, prUrl, branch, grade: GradeView|null, boundaryCheck, diffSummary, approvals, requiredApproverRoles, decision, highExposure, testResults, createdAt, decidedAt }`
+- `GET /promotions?state=pending|all` → `PromotionView[]` (champion/lead/sponsor).
+- `GET /promotions/:id` → `PromotionView & { skillMd, previousSkillMd }`.
+- `POST /promotions/:id/approve { note? }` / `POST /promotions/:id/send-back { note }` → `PromotionView`. When all required roles approved → merge: SkillVersion tagged `<slug>@vN`, skill status published, manifest updated, AuditLog `promotion.merged`, commit to `main` in the repo when available.
+- `GET /skills/:id/regrade-check` → `{ previous, current, drop }` (scheduled re-grade helper).
+- `GET /assignments?teamId=` → `[{ plugin, team, intendedMode, observedMode, drift: bool }]`; `PUT /assignments { plugin, teamId, intendedMode }`.
+- `GET /marketplace/status` → `{ repo, branch, head, dirty, pluginCount, skillCount, lastSyncAt, mode: 'local'|'github' }`; `POST /marketplace/sync` → re-reads the repo into Skills (repo is source of truth for published skills).
+
+## Team (champion) — `api/src/ops/team.controller.ts`
+- `GET /team?teamId=` → `TeamView = { team: {id,name,slug,plugin,champion: PersonRef}, roster: [PersonRef & { lastActiveOnRealWork, hoursBackPerWeek, baselineMinutesPerWeek, stalled: bool, stalledDays, revisitsOverdue, activeDays30, masteryAvg }], backlogTop: WorkflowSummary[], reviewQueue: [{ submission: SubmissionView, exercise: ExerciseSummary, person: PersonRef }], promotionQueue: PromotionView[], library: SkillCard[], stats: { activePct7d, rungDistribution: number[6], hoursBackPerWeek, skillsPublished, promotionsPending } }`
+- `POST /team/reviews/:submissionId/grade { rubric, feedback, decision }` → `GradeView` (champion grading = L5 exercise; also records grader agreement vs the Grader's own draft).
+- `GET /team/readout?teamId=` → `Readout` (Auditor task `auditor.readout`, cached per day).
+
+## Mission Control (sponsor/admin) — `api/src/ops/mission-control.controller.ts`
+- `GET /mc/adoption?teamId=&range=30d|90d` → `{ active: {daily: [{day, active, seats}], weekly, monthly, pctOfSeats, trend}, depth: {sessionsPerActive, surfaces: [{name, users}], connectors, skillsActivated}, funnel: [{step, count, medianDays}], inactiveSeats: [PersonRef & {daysInactive}], byTeam: [{teamId, teamName, activePct, hoursBack}] }`
+- `GET /mc/people?sort=` → `{ people: [PersonRef & { activationScore: {composite, components: {rung, hoursBack, skillsPublished, influence, gradeQuality, activeDays}}, hoursBackPerWeek, skillsPublished, adoptedByOthers, gradeQuality, activeDays30, rising: bool, stalled: bool, stalledReason, championCandidate: bool }] }`
+- `GET /mc/people/:id` → `PersonPage = { person: PersonRef, ladder: LadderView, journey: [{at, type: 'placement'|'exercise'|'grade'|'skill'|'measurement'|'escalation', title, detail}], baselines, measurements, usageSeries: [{day, activeOnRealWork, messages}], coachNotes, escalations }`
+- `GET /mc/journey` → `{ heatmap: [{teamId, teamName, counts: number[6]}], cohorts: [{cohortWeek, counts: number[6]}], timeInRung: [{rung, medianDays, p90Days, stuck: PersonRef[]}], revisitCompliance: [{teamId, due, done}] }`
+- `GET /mc/groups` → `{ groups: [{teamId, teamName, size, activePct, rungMix: number[6], hoursBackPerPerson, skillsPublished, skillsAdopted, promotionThroughput, reworkRate, championQueueAgeDays}] }`; `GET /mc/groups/compare?a=&b=` → normalised pair.
+- `GET /mc/skills` → `{ health: SkillCard[] (with health flags), mostUsed, leastUsed, byTeam, unowned, regradeQueue }`
+- `GET /mc/governance` → `{ policy: {text, version, updatedAt}, boundary, promotionLog: [{at, skill, version, approvers, grade, decision}], complianceTouch: SkillCard[], drift: assignments[], events: [{at, type, actor, detail}] (Compliance API when configured else audit_log), exportUrl }`
+- `GET /mc/backlog` → same as `/backlog` plus per-team totals and `sowExport: {rows}`.
+- `GET /mc/cost` → `{ inputs: CostInput, seats: {total, active, inactive, costTotal, costInactive, costPerActive, byTeam}, premium: {seats, unused, cost}, program: {lightciFees, championHoursCost, learnerExerciseHoursCost}, return: {hoursBackPerMonth, valueUsd, roi, perTeam, perSkill}, waste: [{kind, count, costUsd}] }`; `PUT /mc/cost/inputs` → CostInput.
+- `GET /mc/readouts` / `POST /mc/readouts { scopeType, scopeId?, periodStart, periodEnd }` → Readout (Auditor); `GET /mc/readouts/:id`.
+- `GET /escalations?state=` / `POST /escalations/:id/resolve { resolution }` / `POST /escalations/:id/assign { personId }`.
+
+## Company admin — `api/src/orgs`
+- `GET /org` → Org (settings, marketplaceRepo, seats). `PATCH /org { settings?, seats?, premiumSeats?, marketplaceRepo? }`.
+- `GET /org/integrations` → `IntegrationSummary[]` (see `integrations.service.ts`). `PUT /org/integrations/:kind { secret, config? }` → summary after verifying (anthropic → AiService.verifyKey; claude_* → ClaudeEnterpriseService.probe with that key; github → GET /user). `DELETE /org/integrations/:kind`. `POST /org/integrations/:kind/verify`.
+- `GET /teams` / `POST /teams` / `PATCH /teams/:id { name?, championPersonId?, inProgram?, pluginName?, rbacGroupId? }` / `POST /teams/import-groups` (Admin API when configured).
+- `GET /people?teamId=` / `PATCH /people/:id { teamId?, roles?, title?, status? }`.
+- `GET /context/sources?layer=&ownerId=` / `POST /context/sources { layer, ownerId?, type, title, uri?, content? }` / `PATCH /context/sources/:id { reviewState }` / `GET /context/layers` / `POST /context/layers/:layer/:ownerId/rebuild` (AI summarises sources → ContextLayer, task `context.summarise`).
+- `GET /org/setup` → provisioning checklist `{ steps: [{key, label, done, detail}] }` for keys, SSO, groups, context, governance, repo, connector, baseline.
+
+## LightCI lead — `api/src/ops/lead.controller.ts`
+- `GET /lead/queue` → `{ escalations: Escalation[]+subject summaries, approvals: PromotionView[], stalled: [{org, team?, person?, metric, value, threshold}], waves: [{org: {id,name,slug}, wave: Wave, week, skillsShipped, target, baselineCoveragePct, activePct, status}] }` across all orgs.
+- `GET /lead/clients` → `[{ org, seats, activePct, rungDistribution, skillsPublished, openEscalations, wave }]`; `POST /lead/clients { name, slug, workosOrganizationId?, industry?, sponsorName?, seats }` → Org; `GET /lead/clients/:id` → detail + setup checklist + integrations summary.
+
+## MCP — `api/src/mcp` (see architecture.md)
+Streamable HTTP at `/mcp` (outside `/api`). Tools: `my_ladder`, `library`, `skill_detail`, `submit_skill`, `submit_artifact`, `map_workflow`, `team`, `org`, `promotion_queue`, `activate_api` (app-only broker: `{path, method, body}` → `{status, contentType, body}` calling the REST layer in-process as the authenticated person). Resource `ui://activate/app.html`.
+
+## Deviations
+(append here)
+- MCP (`api/src/mcp`): `library` tool accepts a `workflow` filter (name or id) and passes it through as `GET /library?workflow=`; the REST handler should treat it as "skills linked to that workflow" (contract lists `team, family, rung, status, q, sort` only).
+- MCP: tool results wrap the REST payload as `structuredContent = { tool, data: <payload>, links: { web }, viewer, input?, error? }`; `data` is the REST body verbatim. `activate_api` (app-only) returns `{ status, contentType, body }`.
+- MCP: `submit_skill` maps to `POST /skills` (or `PATCH /skills/:id` when `slug` given) then `POST /skills/:id/grade`; `sampleCases` items are `{ input, expected: 'should_trigger'|'should_not_trigger'|'ambiguous', note? }` and `boundary` keys are `readsDataClasses, mustNeverReceive, humanReview, systemsReadOnly` (all optional string arrays).
+- MCP dev override: with `NODE_ENV!=='production'` and `MCP_DEV_USER_EMAIL` set, `/mcp` acts as that person and the REST bridge sends `X-Activate-Dev-User: <email>` (no bearer). `WorkosGuard` does not yet honour that header; wire it (dev-only) or pass a real token for local REST calls.
+- Ops/Orgs/Context (`api/src/ops`, `api/src/orgs`, `api/src/context`):
+  - `GET /mc/people/:id` `ladder` is a reduced `LadderView` built from entities (`ops/ladder-lite.ts`: latest MasterySnapshot per competency, Grades for judgement, Baseline/Measurement for hoursBack, UsageSnapshot for streak) rather than `MasteryService.ladderFor`, to avoid a module dependency on learning. Same field list as the contract; `progress.toNextRung` is the mean of the gate ratios.
+  - `GET /mc/adoption` adds `source: 'analytics_api'|'seed'|'mixed'|'none'`; `active.weekly/monthly` points are bucketed by ISO week / calendar month (`day` = bucket start) and `pctOfSeats` is the trailing-7-day WAU ÷ seats. Funnel step names: `provisioned, logged_in, first_real_work, L1..L5`.
+  - `GET /mc/journey.revisitCompliance[]` also carries `teamName`. `timeInRung.stuck` uses a stuck threshold of `max(45, 3 × settings.stalledAfterDays)` days at the current rung.
+  - `GET /mc/governance` adds `complianceFeed: { configured, source: 'compliance_api'|'audit_log', detail? }`; each `events[]` row carries `source`. `policy`/`boundary` versions live in `org.settings.policyVersion|policyUpdatedAt|boundaryVersion|boundaryUpdatedAt` (bumped by `PATCH /org`, with AuditLog `policy.updated`/`boundary.updated`). `exportUrl` = `/api/mc/governance/export` (JSON rows).
+  - `GET /mc/cost.return` adds `baselineRefs[]` (baseline/measurement/cost_input ids) at every level; `premium` adds `costUnused`; `program` adds `total` (ROI denominator = fees + champion hours + learner exercise hours + seat + premium cost) and `learnerExerciseMinutes`; `roi` is `(value − cost) ÷ cost` and null when cost is 0.
+  - `GET /mc/groups/compare` returns `{ a, b }`, each `GroupRow & { programWeeks, normalised: {...per-person / per-week values} }`.
+  - `POST /team/reviews/:submissionId/grade`: `score` = mean of `rubric[].score`; the grader-agreement record is written to AuditLog `review.graded` (`meta.agreement = { draftGradeId, scoreDelta, decisionMatch, withinTolerance }`), not to the Grade row.
+  - `GET /escalations` rows are `Escalation & { assignee, subject }` (small person summaries). `POST /escalations/:id/assign` moves `open → in_progress`.
+  - `GET /lead/clients/:id` = `LeadClientRow & { org, setup, integrations, teams, waves, costInputs }`.
+  - `POST /org/sync-analytics?days=` (admin) runs the Analytics API sync now and returns `SyncResult` counts (skips with `skipped: true, reason` when no verified `claude_analytics` key). The Analytics `/skills` endpoint is aggregate, so `SkillUsage` rows written by the sync use the team champion (group-scoped) or the skill owner as `personId` carrier with `day` = range end; per-person skill attribution is not available from the API.
+  - `POST /context/layers/:layer/:ownerId/rebuild`: use `company` (or `org`/`-`) as `ownerId` for the company layer. `GET /context/layers[]` adds `sources: { total, reviewed, pending }`.
+  - `POST /teams/import-groups` returns 501 (problem-details `detail` explains) when no `claude_admin` key resolves for the org.
+  - Mock AI tasks registered: `auditor.readout`, `context.summarise`.
+- Learning / Interviews / Realtime (`api/src/learning`, `api/src/interviews`, `api/src/realtime`):
+  - `POST /exercises/:id/skip` also returns `escalated: bool`. `GET /exercises?status=` accepts a comma-separated list.
+  - `POST /exercises/:id/run` returns 409 (problem-details `detail` explains) until `POST /exercises/:id/expect` has stored `starter.draftExpectation`; the draft is cleared on submit. `ExerciseDetail.starter` still carries `draftExpectation` while it exists.
+  - `GradeView.expectationAccuracy` is `1 − asymmetric Brier` clamped to 0..1 (κ = 1.5 makes confident-wrong predictions bottom out at 0). `SubmitResponse.nextUp` is the same exercise when the decision is `revise`.
+  - `GET /competencies` returns the seeded `competencies` rows when present, else the in-code catalog (`COMPETENCY_CATALOG`, `id = code`).
+  - `ExerciseDetail.workflow.linkedSkills` is `[]` from the learning module's mapper (WorkflowsModule owns the canonical `WorkflowSummary`); `SkillCard.health` from `/my-skills` covers `unused_30d`, `grade_below_threshold`, `pending_review`, `boundary_gap` only.
+  - `InterviewView` adds `voice: bool` and `proposeFinish: bool` (completeness ≥ 0.85 or turnCount ≥ 14). Scribe roles (`scribe`, `checker`) are persisted on `InterviewSession.transcript` but filtered out of `InterviewView.transcript`.
+  - `POST /interviews/:id/complete` in champion mode does not run the Scorer (WorkflowsModule owns `ScorerService`); seed maps are saved as `candidate` with `result.scorerRun = 'pending'` for `POST /workflows/rescore?teamId=`. Intake writes the `IntakeProfile` into `Person.profile` (weeklyWorkflows as names) and sets `Person.onboardedAt`.
+  - `POST /realtime/session` is mounted through `InterviewsModule → RealtimeModule` (app.module.ts untouched); `expiresAt` is derived from OpenAI's `expires_at` unix seconds; the request also sends `expires_after: {anchor:'created_at', seconds: 600}`.
+  - Champion grading helper `GraderService.recordChampionGrade(submissionId, rubric, feedback, decision, championId)` computes the weighted score from the exercise rubric (mean when criteria do not match), writes a `champion-v1` Grade and a CoachNote with the Grader agreement (`{scoreDelta, decisionMatch, agreement}`), and updates the exercise status. The team controller's own implementation (above) may call this instead.
+  - Mock AI tasks registered: `coach.next-exercise`, `coach.run#text`, `grader.submission`, `grader.skill`, `grader.revisit`, `interviewer.turn`, `interviewer.complete`.
+
+### Skills & Library / Workflows (api/src/skills, api/src/workflows)
+- `GET /skills/:id/regrade-check` → `{ previous: number|null, current: number|null, drop: boolean, delta: number, threshold: number }` (scores of the last two grades; `drop` = fell > 5 points or crossed below the pass threshold; false without a previous grade).
+- `POST /workflows/:id/build` → `{ skill: SkillDetail, confidence: 0..1, openQuestions: string[], escalated: boolean }` (superset of `{skill}`).
+- `POST /workflows/rescore?teamId=` → `{ scored, skipped }` (`skipped` = candidates below completeness 0.6).
+- `POST /marketplace/sync` → `SyncResult = { created, updated, deprecated, versions, skills: string[], warnings: string[], syncedAt }`.
+- `POST /workflows/:id/baseline` and `POST /workflows/:id/measurements` return the updated `WorkflowDetail` (baselines/measurements arrays included) rather than the bare row; both accept optional `task` and, for champions, `personId` (defaults to the workflow owner). Measurements require an existing baseline (409 otherwise). Recording a measurement on a `shipped` workflow moves it to `measured`.
+- `PromotionView.approvals[]` entries are `{ person: PersonRef|null, personId, role, decision, note?, at }`.
+- `SkillDetail.usageByTeam[].teamId` may be `null` (usage with no team). `SkillCard.grade.decision` is `'pass'|'revise'`. `SkillCard.status` is the `SkillStatus` union.
+- `GET /library` filters: `team` accepts a team id, slug or name; `rung` accepts `2` or `L2`; `sort` ∈ `usage|grade|updated|name` (default `usage`). Facets: `rungs: [{rung,count}]`, `statuses: [{status,count}]`.
+- `POST /skills` also accepts optional `rungRequired`, `workflowFamily`. `POST /skills/:id/fork` accepts an optional body of `Partial<CreateSkillInput>` overrides; the fork lands in the caller's team plugin. `POST /skills/:id/comments` body `{ body }` is open to anyone in the org.
+- `GET /workflows?mine=true` restricts to the caller's own maps. `PATCH /workflows/:id { nextWave }` is champion-only; `POST /workflows/:id/score` and `/build` require the owner or a champion.
+- Roles: "learner+" gates are declared as `@Roles('learner','champion','sponsor')` (RolesGuard admits admin and lead automatically); approve/send-back/promotions list are `@Roles('champion','sponsor')`; assignments PUT and sync are `@Roles('admin')`. Approvers cannot approve their own request (leads excepted). Compliance approvals come from admin/sponsor roles.
+- Promotion merge creates a **new** `SkillVersion` (N = currentVersion + 1) tagged `<slug>@vN` with the approvers and grade attached, rather than tagging the promoted draft version; draft saves (PATCH) create untagged versions. Deprecating a *published* skill commits to `main` and tags a new version directly (no PR); deprecating a draft commits on its `skill/<slug>` branch.
+- High-exposure promotion requests create an `Escalation { kind: 'approval', sourceAgent: 'promoter', subjectType: 'promotion_request', slaDueAt: +2d }` at package time; low-confidence Builder drafts (< 0.6) create `{ kind: 'escalation', sourceAgent: 'builder', subjectType: 'skill' }`.
+- Repo semantics: skill `name` is the SKILL.md `# H1` (frontmatter `name` is the slug); skill dirs without `activate.yaml` are skipped by sync (Activate-owned plugins such as `activate-coach`); `activate.yaml` may carry an extra `family` key (→ `workflowFamily`); sync never overwrites a skill whose DB draft version is ahead of the last repo tag (manifest/versions still refresh); published skills missing from the repo are marked `deprecated`, never deleted; plugin ↔ team `SkillAssignment` rows are created as `available` on first sync (`shared` → every in-program team).
+- Nightly Scorer cron runs at 03:15 server time over candidates with completeness ≥ 0.6 (`SCORER_NIGHTLY=off` disables). Single scoring renormalises every composite in the org.

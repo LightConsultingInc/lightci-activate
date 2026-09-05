@@ -70,8 +70,9 @@ variable "environment" {
 }
 
 variable "db_secret_arn" {
-  description = "Secrets Manager ARN holding DB credentials."
+  description = "Secrets Manager ARN holding DB credentials. Null for services without a database (e.g. the web app)."
   type        = string
+  default     = null
 }
 
 variable "extra_secrets" {

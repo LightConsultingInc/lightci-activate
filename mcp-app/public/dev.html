@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Activate MCP App — card gallery</title>
+    <style>
+      body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #F4F3EF; color: #0F0F0F; margin: 0; padding: 32px; }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      p { color: #5a5751; margin: 0 0 20px; font-size: 13px; }
+      ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+      a { display: block; padding: 12px 14px; border: 1px solid #d9d6ce; border-radius: 10px; background: #fff; color: inherit; text-decoration: none; font-size: 13px; }
+      a:hover { border-color: #E8B84A; box-shadow: 0 0 0 3px rgba(232,184,74,.25); }
+      code { font-size: 11px; color: #5a5751; }
+    </style>
+  </head>
+  <body>
+    <h1>Activate cards (mock fixtures)</h1>
+    <p>Each link renders one card with fixture JSON, no MCP host required. Append <code>&amp;theme=dark</code> to preview the dark theme.</p>
+    <ul>
+      <li><a href="/?mock=my_ladder">Ladder <code>my_ladder</code></a></li>
+      <li><a href="/?mock=library">Library <code>library</code></a></li>
+      <li><a href="/?mock=skill_detail">Skill detail <code>skill_detail</code></a></li>
+      <li><a href="/?mock=submit_skill">Grade (skill) <code>submit_skill</code></a></li>
+      <li><a href="/?mock=submit_artifact">Grade (artifact) <code>submit_artifact</code></a></li>
+      <li><a href="/?mock=map_workflow">Scribe <code>map_workflow</code></a></li>
+      <li><a href="/?mock=team">Team <code>team</code></a></li>
+      <li><a href="/?mock=org">Org <code>org</code></a></li>
+      <li><a href="/?mock=promotion_queue">Promotion queue <code>promotion_queue</code></a></li>
+      <li><a href="/?mock=error">Error state</a></li>
+      <li><a href="/?mock=empty">Empty state</a></li>
+    </ul>
+  </body>
+</html>

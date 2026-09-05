@@ -14,3 +14,10 @@ infra/config/**/*.env
 .DS_Store
 
 node_modules/
+
+# e2e artifacts
+e2e/shots/
+e2e/test-results/
+e2e/playwright-report/
+e2e/playwright/.auth/
+mcp-app/dist/

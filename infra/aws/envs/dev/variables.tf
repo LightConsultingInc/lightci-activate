@@ -76,3 +76,21 @@ variable "extra_secrets" {
   type        = map(string)
   default     = {}
 }
+
+variable "web_domain_name" {
+  description = "Public hostname for the web app."
+  type        = string
+  default     = null
+}
+
+variable "web_environment" {
+  description = "Additional non-secret env vars for the web container."
+  type        = map(string)
+  default     = {}
+}
+
+variable "web_secrets" {
+  description = "Secret env vars for the web container: env var name -> Secrets Manager ARN."
+  type        = map(string)
+  default     = {}
+}

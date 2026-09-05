@@ -30,3 +30,11 @@ output "db_secret_arn" {
 output "db_endpoint" {
   value = module.database.cluster_endpoint
 }
+
+output "web_url" {
+  value = module.web.url
+}
+
+output "web_ecr_repository_url" {
+  value = module.web.ecr_repository_url
+}
