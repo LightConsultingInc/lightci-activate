@@ -64,7 +64,7 @@ Every skill declares `may_read`, `must_never_receive` and `human_review` in `act
 
 ## Git
 
-This folder is committed to the Activate monorepo as plain files (no nested `.git`). At runtime Activate's `GitRepoService.ensureRepo()` initialises a local git repo here on first use (`main`, one "Initial marketplace import" commit, tags `<slug>@v<activate-version>` from each SKILL.md) so branches, commits and tags work as described above. When a client links a real GitHub repo, that clone replaces this folder.
+This folder is committed to the Activate monorepo as plain files (no nested `.git`). At runtime Activate's `GitRepoService.ensureRepo()` initialises a local git repo on first use — in place when this folder is standalone (Docker `/marketplace`), or in a mirror work dir (`api/.marketplace-work/`, `LIBRARY_WORK_DIR`) when it sits inside another git work tree such as the monorepo (`main`, one "Initial marketplace import" commit, tags `<slug>@v<activate-version>` from each SKILL.md) so branches, commits and tags work as described above. When a client links a real GitHub repo, that clone replaces this folder.
 
 ## Validate locally
 

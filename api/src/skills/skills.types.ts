@@ -190,7 +190,9 @@ export interface MarketplaceStatus {
   pluginCount: number;
   skillCount: number;
   lastSyncAt: string | null;
-  mode: 'local' | 'github';
+  /** Effective repo path when the source folder is nested in another git work tree; null otherwise. */
+  workDir: string | null;
+  mode: 'local' | 'local-nested' | 'github';
 }
 
 export interface SyncResult {

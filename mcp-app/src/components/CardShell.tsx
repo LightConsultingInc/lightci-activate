@@ -20,7 +20,7 @@ export interface ShellProps {
 
 export function CardShell(p: ShellProps) {
   return (
-    <article className={`card fade-in${p.fullscreen ? ' fullscreen' : ''}`} data-testid={p.testId}>
+    <article className={`card${p.fullscreen ? ' fullscreen' : ''}`} data-testid={p.testId}>
       <header className="flex items-start justify-between gap-3 px-4 pt-3 pb-2">
         <div className="min-w-0">
           <div className="eyebrow">{p.eyebrow}</div>

@@ -127,7 +127,7 @@ export function Glyph({ kind }: { kind: 'empty' | 'error' | 'loading' | 'done' }
 
 export function StateBlock({ kind, title, detail, testId, action }: { kind: 'empty' | 'error' | 'loading' | 'done'; title: string; detail?: string; testId?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center text-center gap-2 px-6 py-8 fade-in" data-testid={testId}>
+    <div className="flex flex-col items-center text-center gap-2 px-6 py-8" data-testid={testId}>
       <Glyph kind={kind} />
       <div className="text-[13px] font-semibold">{title}</div>
       {detail ? <div className="text-[12px] max-w-[420px]" style={{ color: 'var(--fg-2)' }}>{detail}</div> : null}

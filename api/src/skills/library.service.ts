@@ -190,14 +190,15 @@ export class LibraryService {
       skillCount = read?.skills.length ?? 0;
     }
     return {
-      repo: this.git.githubMode ? process.env.GITHUB_REPO! : this.git.path,
+      repo: this.git.githubMode ? process.env.GITHUB_REPO! : this.git.sourcePath,
       branch: head.branch,
       head: head.head,
       dirty: head.dirty,
       pluginCount,
       skillCount,
       lastSyncAt: lastSyncAt.get(orgId) ?? null,
-      mode: this.git.githubMode ? 'github' : 'local',
+      workDir: this.git.mode === 'nested' ? this.git.workDir : null,
+      mode: this.git.githubMode ? 'github' : this.git.mode === 'nested' ? 'local-nested' : 'local',
     };
   }
 

@@ -42,6 +42,12 @@ export function ActivateApp() {
   const [result, setResult] = useState<ToolResultLike | null>(null);
   const [hostContext, setHostContext] = useState<McpUiHostContext | undefined>(undefined);
   const [connectError, setConnectError] = useState<string | null>(null);
+  // Only a genuine "connecting to host" state may be dimmed, and never for longer than ~1.5s.
+  const [connectTimedOut, setConnectTimedOut] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setConnectTimedOut(true), 1500);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const { app, isConnected, error } = useApp({
     appInfo: { name: 'Activate', version: '0.1.0' },
@@ -111,16 +117,26 @@ export function ActivateApp() {
   }
 
   // ---- Host routing -------------------------------------------------------
-  if (error || connectError) {
-    return <EmptyCard shell={shell} kind="error" title="Couldn't connect to the host" reason={(error?.message ?? connectError) || 'Unknown error'} />;
-  }
-  if (!isConnected) return <EmptyCard shell={shell} kind="loading" title="Connecting to Activate…" reason="" />;
-
+  // A received tool result always renders at full opacity, whatever the connection state says.
   const envelope = asEnvelope(result?.structuredContent);
   const toolName = envelope?.tool ?? (isToolName(hostContext?.toolInfo?.tool?.name) ? hostContext!.toolInfo!.tool.name as ToolName : null);
 
   if (!result) {
-    return <EmptyCard shell={shell} kind="loading" title={toolName ? `Loading ${toolName.replace(/_/g, ' ')}…` : 'Loading…'} reason={toolInput ? describeInput(toolInput) : ''} />;
+    if (error || connectError) {
+      return <EmptyCard shell={shell} kind="error" title="Couldn't connect to the host" reason={(error?.message ?? connectError) || 'Unknown error'} />;
+    }
+    // Dimmed only while genuinely connecting, and never past the 1.5s timeout.
+    const connecting = !isConnected && !connectTimedOut;
+    return (
+      <div className={connecting ? 'connecting' : undefined} data-state={connecting ? 'connecting' : 'waiting'}>
+        <EmptyCard
+          shell={shell}
+          kind="loading"
+          title={connecting ? 'Connecting to Activate…' : toolName ? `Loading ${toolName.replace(/_/g, ' ')}…` : 'Waiting for Activate…'}
+          reason={toolInput ? describeInput(toolInput) : ''}
+        />
+      </div>
+    );
   }
 
   if (!envelope) {

@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { simpleGit } from 'simple-git';
 import { GitRepoService, diffSummary } from './git-repo.service';
 import { composeSkillMd, isGitRepo, parseFrontmatter, readRepoSkills, readTree, resolveRepoPath } from './repo-reader';
@@ -92,6 +92,40 @@ describe('readRepoSkills against the demo marketplace', () => {
     const again = new GitRepoService();
     expect(await again.ensureRepo()).toBe(true);
     expect((await g.log()).total).toBe(1);
+  });
+
+  it('when the source folder is nested in another git work tree, ensureRepo mirrors to a work dir instead of nesting a repo', async () => {
+    const outer = mkdtempSync(join(tmpdir(), 'activate-outer-'));
+    const work = join(mkdtempSync(join(tmpdir(), 'activate-work-')), 'marketplace-work');
+    try {
+      await simpleGit(outer).init(['-b', 'main']);
+      const source = join(outer, 'marketplace');
+      cpSync(MARKETPLACE_SRC, source, { recursive: true, filter: (src) => !src.includes('/.git/') && !src.endsWith('/.git') });
+      process.env.LIBRARY_REPO_PATH = source;
+      process.env.LIBRARY_WORK_DIR = work;
+      const git = new GitRepoService();
+      expect(await git.ensureRepo()).toBe(true);
+      expect(git.mode).toBe('nested');
+      expect(git.workDir).toBe(work);
+      expect(git.path).toBe(work);
+      expect(isGitRepo(source)).toBe(false); // nothing initialised inside the outer work tree
+      expect(isGitRepo(work)).toBe(true);
+      expect((await simpleGit(work).tags()).all).toContain('advisor-meeting-prep@v2');
+      expect(readTree(work).skills.map((s) => s.slug).sort()).toEqual(SEEDED_SLUGS);
+      // a second instance reuses the work dir without re-mirroring (API-made commits persist)
+      const res = await git.publish('rmd-letter-draft', { 'plugins/fp-meeting-prep/skills/rmd-letter-draft/NOTE.md': 'persisted\n' }, 'test commit', { name: 'T', email: 't@x' }, 'rmd-letter-draft@v9');
+      expect(res?.sha).toMatch(/^[0-9a-f]{40}$/);
+      const again = new GitRepoService();
+      expect(await again.ensureRepo()).toBe(true);
+      expect(again.path).toBe(work);
+      expect(existsSync(join(work, 'plugins/fp-meeting-prep/skills/rmd-letter-draft/NOTE.md'))).toBe(true);
+      expect(existsSync(join(source, 'plugins/fp-meeting-prep/skills/rmd-letter-draft/NOTE.md'))).toBe(false);
+    } finally {
+      delete process.env.LIBRARY_WORK_DIR;
+      process.env.LIBRARY_REPO_PATH = dir;
+      rmSync(outer, { recursive: true, force: true });
+      rmSync(dirname(work), { recursive: true, force: true });
+    }
   });
 
   it('reads every plugin and skill on main with frontmatter, manifest, boundary and cases', () => {

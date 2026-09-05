@@ -1,6 +1,6 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { cpSync, existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { simpleGit, type SimpleGit } from 'simple-git';
 import { isGitRepo, readTree, resolveRepoPath } from './repo-reader';
 
@@ -23,18 +23,74 @@ export interface GitWriteResult {
 @Injectable()
 export class GitRepoService implements OnModuleInit {
   private readonly logger = new Logger(GitRepoService.name);
-  readonly path: string | null;
+  /** Configured source folder (LIBRARY_REPO_PATH). */
+  readonly sourcePath: string | null;
+  /** Effective repo path for all git operations: the source folder, or the work dir when nested. */
+  path: string | null;
+  /** Set when the source sits inside another git work tree and a mirror work dir is used. */
+  workDir: string | null = null;
+  mode: 'in-place' | 'nested' = 'in-place';
   readonly defaultBranch = process.env.LIBRARY_DEFAULT_BRANCH ?? 'main';
   private queue: Promise<unknown> = Promise.resolve();
+  private resolved = false;
 
   constructor() {
-    this.path = resolveRepoPath(
+    this.sourcePath = resolveRepoPath(
       process.env.LIBRARY_REPO_PATH ?? '../marketplace',
     );
-    if (!this.path || !existsSync(this.path))
+    this.path = this.sourcePath;
+    if (!this.sourcePath || !existsSync(this.sourcePath))
       this.logger.warn(
-        `Marketplace folder not found at ${this.path ?? '(unset)'}; library runs DB-only.`,
+        `Marketplace folder not found at ${this.sourcePath ?? '(unset)'}; library runs DB-only.`,
       );
+  }
+
+  /**
+   * Decide where the repo lives. If the source folder is a plain directory inside another git work
+   * tree (the monorepo), initialising there would create a nested repo the outer git treats as a
+   * submodule; instead mirror the plain files (skipping any .git) into a work dir and operate there.
+   * The mirror happens only when the work dir does not exist yet, so API-made commits persist across
+   * restarts. In Docker (/marketplace, no parent repo) the repo is initialised in place.
+   */
+  private async resolveLocation(): Promise<void> {
+    if (this.resolved || !this.sourcePath) return;
+    this.resolved = true;
+    if (isGitRepo(this.sourcePath)) {
+      this.logger.log(`Marketplace repo mode: in-place (${this.sourcePath} is already a git repo)`);
+      return;
+    }
+    let toplevel: string | null = null;
+    try {
+      toplevel = (await simpleGit(this.sourcePath).revparse(['--show-toplevel'])).trim() || null;
+    } catch {
+      toplevel = null;
+    }
+    const real = (p: string) => {
+      try {
+        return realpathSync(p);
+      } catch {
+        return resolve(p);
+      }
+    };
+    const source = real(this.sourcePath);
+    const nested = Boolean(toplevel) && real(toplevel!) !== source && source.startsWith(real(toplevel!) + sep);
+    if (!nested) {
+      this.logger.log(`Marketplace repo mode: in-place (${this.sourcePath})`);
+      return;
+    }
+    const workDir = resolveRepoPath(process.env.LIBRARY_WORK_DIR ?? '.marketplace-work')!;
+    if (!existsSync(workDir)) {
+      cpSync(this.sourcePath, workDir, {
+        recursive: true,
+        filter: (src) => !src.endsWith(`${sep}.git`) && !src.includes(`${sep}.git${sep}`),
+      });
+      this.logger.log(`Marketplace repo mode: nested inside ${toplevel}; mirrored plain files to work dir ${workDir}`);
+    } else {
+      this.logger.log(`Marketplace repo mode: nested inside ${toplevel}; reusing existing work dir ${workDir}`);
+    }
+    this.mode = 'nested';
+    this.workDir = workDir;
+    this.path = workDir;
   }
 
   async onModuleInit() {
@@ -54,10 +110,12 @@ export class GitRepoService implements OnModuleInit {
    * Resolves true when the folder is a usable git repo.
    */
   ensureRepo(): Promise<boolean> {
-    if (!this.path || !existsSync(this.path)) return Promise.resolve(false);
-    if (isGitRepo(this.path)) return Promise.resolve(true);
+    if (!this.sourcePath || !existsSync(this.sourcePath)) return Promise.resolve(false);
+    if (this.resolved && this.path && isGitRepo(this.path)) return Promise.resolve(true);
     return this.locked(async () => {
-      if (isGitRepo(this.path!)) return true;
+      await this.resolveLocation();
+      if (!this.path || !existsSync(this.path)) return false;
+      if (isGitRepo(this.path)) return true;
       try {
         const git = simpleGit(this.path!);
         await git.init(['-b', this.defaultBranch]);
