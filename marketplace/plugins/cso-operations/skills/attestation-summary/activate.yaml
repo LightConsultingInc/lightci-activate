@@ -1,0 +1,17 @@
+id: attestation-summary
+owner: tom.becker@meridianwealth.demo
+team: cso
+family: compliance-reporting
+rung_required: L1
+boundary:
+  may_read: [internal_templates, crm_summary_export, public_regulation, aggregated_client_summaries]
+  must_never_receive: [client_pii_documents, account_numbers, ssn, statements_raw]
+  human_review: [before_send]
+sample_cases: cases/
+baseline_task: "Quarterly attestation memo"
+promotion:
+  requested_by: tom.becker@meridianwealth.demo
+  grade_ref: grade_seed_attestation_summary_v1
+  approved_by: [sofia.alvarez@meridianwealth.demo, "compliance:elena.marsh@meridianwealth.demo"]
+  approved_at: 2026-09-01T09:10:00Z
+status: published

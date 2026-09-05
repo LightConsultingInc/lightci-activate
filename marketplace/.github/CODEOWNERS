@@ -1,0 +1,27 @@
+# Meridian Claude marketplace — code owners
+# Champions own their plugin directory; a PR into it needs their review (Activate approves as the
+# GitHub app on the champion's behalf after the one-screen approval). Anything that can touch a
+# restricted data class (client PII documents, account numbers, SSNs, raw statements) also requires
+# the compliance team. Governance files require LightCI Activate and compliance.
+
+# Financial Planning — champion Daniel Okafor
+/plugins/fp-meeting-prep/            @meridian-daniel-okafor
+
+# Wealth Advisors — champion Sofia Alvarez
+/plugins/wa-client-comms/            @meridian-sofia-alvarez
+
+# Client Service Ops — champion Tom Becker; highest boundary sensitivity, compliance co-owns
+/plugins/cso-operations/             @meridian-tom-becker @meridian-compliance-team
+
+# Shared plugin — any champion may approve; compliance co-owns the connector config
+/plugins/shared/                     @meridian-daniel-okafor @meridian-sofia-alvarez @meridian-tom-becker
+/plugins/shared/.mcp.json            @lightci-activate @meridian-compliance-team
+
+# Restricted classes: every manifest is owned by compliance in addition to the champion above
+**/activate.yaml                     @meridian-compliance-team
+
+# Catalogue, schema, CI and ownership itself
+/.claude-plugin/                     @lightci-activate @meridian-compliance-team
+/schema/                             @lightci-activate @meridian-compliance-team
+/scripts/                            @lightci-activate
+/.github/                            @lightci-activate @meridian-compliance-team

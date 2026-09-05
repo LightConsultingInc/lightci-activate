@@ -1,0 +1,9 @@
+{
+  "name": "cso-operations",
+  "version": "1.0.0",
+  "description": "Client Service Ops skills: onboarding packet QA, attestation summaries, rebalancing exception memos.",
+  "author": { "name": "Tom Becker", "email": "tom.becker@meridianwealth.demo" },
+  "homepage": "https://activate.lightci.com/library?plugin=cso-operations",
+  "license": "Proprietary",
+  "keywords": ["meridian", "activate"]
+}

@@ -1,0 +1,18 @@
+id: crm-note-cleanup
+owner: marcus.reid@meridianwealth.demo
+team: shared
+family: client-communications
+rung_required: L1
+boundary:
+  may_read: [crm_summary_export, internal_templates]
+  must_never_receive: [account_numbers, ssn, client_pii_documents, statements_raw]
+  human_review: [before_crm_entry]
+sample_cases: cases/
+baseline_task: "Client follow-up email and CRM note"
+promotion:
+  requested_by: marcus.reid@meridianwealth.demo
+  grade_ref: grade_seed_crm_note_cleanup_v1
+  approved_by: [sofia.alvarez@meridianwealth.demo]
+  approved_at: 2026-07-22T12:00:00Z
+status: deprecated
+successor: client-followup-notes

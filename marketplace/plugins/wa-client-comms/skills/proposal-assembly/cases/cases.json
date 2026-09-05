@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Put together the proposal narrative for the Mahoneys from my discovery notes below.",
+    "shouldTrigger": "yes",
+    "expected": "Writes sections 1–3 and 6, leaves 4–5 as placeholders, adds the footer."
+  },
+  {
+    "input": "What should we charge the Mahoneys given $2.4M in assets?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; fee schedule is the advisor's section and no figures are stated."
+  },
+  {
+    "input": "Outline the annual review deck for the Mahoneys (existing clients).",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; points to annual-review-deck-outline."
+  },
+  {
+    "input": "Proposal for the Mahoneys; notes below plus their current advisor's quarterly report for context.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the proposal but declines the third-party report; writes from the notes only."
+  }
+]

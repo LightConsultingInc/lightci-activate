@@ -1,0 +1,17 @@
+id: annual-review-deck-outline
+owner: priya.nair@meridianwealth.demo
+team: fp
+family: review-materials
+rung_required: L2
+boundary:
+  may_read: [aggregated_client_summaries, internal_templates, crm_summary_export]
+  must_never_receive: [statements_raw, account_numbers, ssn, client_pii_documents]
+  human_review: [before_client_meeting]
+sample_cases: cases/
+baseline_task: "Annual review deck assembly"
+promotion:
+  requested_by: priya.nair@meridianwealth.demo
+  grade_ref: grade_seed_annual_review_deck_outline_v1
+  approved_by: [daniel.okafor@meridianwealth.demo]
+  approved_at: 2026-08-19T16:40:00Z
+status: published

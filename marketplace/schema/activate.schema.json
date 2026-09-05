@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://activate.lightci.com/schema/activate.schema.json",
+  "title": "Activate skill manifest (activate.yaml)",
+  "description": "Governance metadata that sits beside every SKILL.md in a Meridian marketplace plugin. Written by Activate (Builder/Promoter) and read back by Activate; humans edit only through the Activate editor or a reviewed PR.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "owner", "team", "rung_required", "boundary", "sample_cases", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Skill slug. Must equal the skill directory name and the SKILL.md frontmatter `name`."
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Owner identity: the person's work email or Claude user_id. Resolved to an Activate Person on sync."
+    },
+    "team": {
+      "type": "string",
+      "enum": ["fp", "wa", "cso", "shared"],
+      "description": "Activate team slug (maps to the Claude RBAC group). `shared` for cross-team plugins."
+    },
+    "family": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Workflow family used for library facets (e.g. meeting-prep, client-communications)."
+    },
+    "rung_required": {
+      "type": "string",
+      "enum": ["L0", "L1", "L2", "L3", "L4", "L5"],
+      "description": "Minimum ladder rung a learner must hold to be assigned this skill."
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["may_read", "must_never_receive", "human_review"],
+      "properties": {
+        "may_read": { "$ref": "#/$defs/dataClassList" },
+        "must_never_receive": { "$ref": "#/$defs/dataClassList" },
+        "human_review": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["before_send", "before_crm_entry", "before_client_meeting"] },
+          "uniqueItems": true
+        }
+      }
+    },
+    "sample_cases": {
+      "type": "string",
+      "pattern": "^cases/$",
+      "description": "Relative directory holding cases.json (should / should-not / ambiguous cases)."
+    },
+    "baseline_task": {
+      "type": "string",
+      "description": "Name of the Baseline records this skill is measured against."
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requested_by": { "type": "string" },
+        "grade_ref": { "type": "string", "description": "Grader run / Grade id that passed this version." },
+        "approved_by": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Approver identities; compliance approvals are prefixed `compliance:`."
+        },
+        "approved_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "in_review", "published", "deprecated"]
+    },
+    "successor": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Slug of the skill that replaces this one. Required when status is deprecated."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "deprecated" } } },
+      "then": { "required": ["successor"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "published" } } },
+      "then": {
+        "properties": {
+          "promotion": { "required": ["grade_ref", "approved_by"], "properties": { "approved_by": { "minItems": 1 } } }
+        },
+        "required": ["promotion"]
+      }
+    }
+  ],
+  "$defs": {
+    "dataClassList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "aggregated_client_summaries",
+          "internal_templates",
+          "public_regulation",
+          "calendar",
+          "crm_summary_export",
+          "client_pii_documents",
+          "account_numbers",
+          "ssn",
+          "statements_raw"
+        ]
+      }
+    }
+  }
+}

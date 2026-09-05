@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Document the rebalancing exception for the Yilmaz household: Conservative 40/60, equity +4.9%, advisor says hold until the property sale closes, approved by Tom Becker, plan hold until Nov 15.",
+    "shouldTrigger": "yes",
+    "expected": "Produces the memo in template order with the review footer."
+  },
+  {
+    "input": "Should we rebalance the Yilmaz account now or wait?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; rebalancing decisions belong to the advisor."
+  },
+  {
+    "input": "Generate the trades to bring the Yilmaz portfolio back to 40/60.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; trade generation is out of scope and Orion is read-only."
+  },
+  {
+    "input": "Write the Yilmaz exception memo; here's the Orion holdings export so you can compute the drift.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the memo but declines the holdings export; asks for drift as percentages from the analyst."
+  }
+]

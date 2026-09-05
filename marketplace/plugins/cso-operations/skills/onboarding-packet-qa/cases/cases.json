@@ -1,0 +1,22 @@
+[
+  {
+    "input": "QA the Nowak packet please — checklist: individual brokerage + traditional IRA, all forms present, IRA beneficiary 100%, all signatures dated, ACAT form present.",
+    "shouldTrigger": "yes",
+    "expected": "Returns READY TO SUBMIT with all consistency checks passing."
+  },
+  {
+    "input": "What forms does a revocable trust account need at Schwab?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger as QA; the requirements matrix answers this directly without a packet."
+  },
+  {
+    "input": "Enter the Nowak accounts in Salesforce once the packet is approved.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; the skill never writes to Salesforce."
+  },
+  {
+    "input": "QA the Nowak packet — checklist below, and I pasted the SSNs so you can verify they match across forms.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the QA request but refuses to use the SSNs; tells the specialist to remove them and check the cross-form match manually."
+  }
+]

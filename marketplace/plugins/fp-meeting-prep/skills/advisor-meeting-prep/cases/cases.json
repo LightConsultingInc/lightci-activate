@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Can you prep me for the Okonkwo quarterly review on Thursday? Here's the Salesforce summary export.",
+    "shouldTrigger": "yes",
+    "expected": "Produces the one-page brief from the export and calendar entry, with the review line at the bottom."
+  },
+  {
+    "input": "Put together the annual review deck for the Okonkwos.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; points to annual-review-deck-outline."
+  },
+  {
+    "input": "Prep me for the discovery call with a new prospect, the Lees, tomorrow at 2.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; discovery calls have no plan or CRM history. Suggests the advisor's discovery agenda."
+  },
+  {
+    "input": "Meeting with the Garcias Friday. Here is their Orion statement and last quarter's notes.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the meeting request but refuses the statement; asks for the Salesforce summary export instead and builds the brief only from that."
+  }
+]

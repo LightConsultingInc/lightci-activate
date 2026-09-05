@@ -1,0 +1,55 @@
+name: validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'skill/**']
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint-and-schema:
+    name: Lint SKILL.md and validate activate.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate frontmatter, manifests, cases
+        run: node scripts/validate.mjs
+      - name: Marketplace catalogue is valid JSON and lists every plugin
+        run: node -e "const m=require('./.claude-plugin/marketplace.json'); if(!Array.isArray(m.plugins)||!m.plugins.length) process.exit(1); console.log(m.plugins.map(p=>p.name).join(', '))"
+
+  approval-gate:
+    name: Block merge without approval
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: lint-and-schema
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require an approving review (and compliance when restricted classes are touched)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          reviews=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq '[.[] | select(.state=="APPROVED") | .user.login] | unique')
+          echo "approvals: $reviews"
+          count=$(echo "$reviews" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).length))")
+          if [ "$count" -lt 1 ]; then echo "::error::Promotion requires at least one approving review (champion via CODEOWNERS)."; exit 1; fi
+          # Restricted-class detection on changed manifests
+          changed=$(gh api "repos/$REPO/pulls/$PR/files" --jq '.[].filename' | grep 'activate.yaml' || true)
+          restricted=0
+          for f in $changed; do
+            if [ -f "$f" ] && grep -A3 'may_read' "$f" | grep -Eq 'client_pii_documents|account_numbers|ssn|statements_raw'; then restricted=1; fi
+          done
+          if [ "$restricted" = "1" ]; then
+            compliance=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq '[.[] | select(.state=="APPROVED") | .user.login] | map(select(. == "meridian-compliance-team" or . == "compliance-team")) | length')
+            if [ "$compliance" -lt 1 ]; then echo "::error::This change reads a restricted data class; a compliance-team approval is required."; exit 1; fi
+          fi
+          echo "Approval gate satisfied."

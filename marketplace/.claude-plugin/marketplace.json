@@ -1,0 +1,98 @@
+{
+  "name": "meridian-claude-marketplace",
+  "owner": {
+    "name": "Meridian Wealth Partners",
+    "email": "compliance@meridianwealth.demo"
+  },
+  "metadata": {
+    "description": "Governed Claude skills for Meridian Wealth Partners. Every plugin here was published through the LightCI Activate promotion queue: each skill has an owner, a Grader pass, a compliance boundary declaration and a named approver.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "fp-meeting-prep",
+      "source": "./plugins/fp-meeting-prep",
+      "description": "Financial Planning: meeting briefs, RMD letters and annual review deck outlines built from templates and CRM summaries.",
+      "version": "1.2.0",
+      "author": {
+        "name": "Daniel Okafor",
+        "email": "daniel.okafor@meridianwealth.demo"
+      },
+      "category": "productivity",
+      "keywords": [
+        "financial-planning",
+        "meeting-prep",
+        "rmd",
+        "annual-review"
+      ]
+    },
+    {
+      "name": "wa-client-comms",
+      "source": "./plugins/wa-client-comms",
+      "description": "Wealth Advisors: same-day follow-up emails with CRM notes, proposal assembly, fee-change communications and IPS refresh checklists.",
+      "version": "1.2.0",
+      "author": {
+        "name": "Sofia Alvarez",
+        "email": "sofia.alvarez@meridianwealth.demo"
+      },
+      "category": "productivity",
+      "keywords": [
+        "client-communications",
+        "proposals",
+        "ips",
+        "fees"
+      ]
+    },
+    {
+      "name": "cso-operations",
+      "source": "./plugins/cso-operations",
+      "description": "Client Service Ops: onboarding packet QA, compliance attestation summaries and rebalancing exception memos. Highest boundary sensitivity; compliance co-owns.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Tom Becker",
+        "email": "tom.becker@meridianwealth.demo"
+      },
+      "category": "operations",
+      "keywords": [
+        "onboarding",
+        "attestation",
+        "rebalancing",
+        "operations"
+      ]
+    },
+    {
+      "name": "shared",
+      "source": "./plugins/shared",
+      "description": "Cross-team skills assigned to every in-program group. Also carries the Activate connector (.mcp.json) and the Activate Coach skill.",
+      "version": "1.1.0",
+      "author": {
+        "name": "LightCI Activate",
+        "email": "activate@lightci.com"
+      },
+      "category": "productivity",
+      "keywords": [
+        "shared",
+        "activate",
+        "coach"
+      ]
+    },
+    {
+      "name": "activate-coach",
+      "source": "./plugins/activate-coach",
+      "description": "LightCI Activate Coach: ladder, next exercise, grading, workflow mapping, team and promotion views inside Claude. Bundles the Activate MCP connector.",
+      "version": "0.1.0",
+      "author": {
+        "name": "LightCI Activate",
+        "email": "activate@lightci.com"
+      },
+      "category": "productivity",
+      "keywords": [
+        "activate",
+        "coach",
+        "ladder",
+        "enablement",
+        "mcp"
+      ]
+    }
+  ]
+}

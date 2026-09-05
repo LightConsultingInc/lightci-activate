@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Prepare the IPS refresh for the Delgados. Current summary below; the change is Rita retiring at 63 and the move to 60/40 we agreed.",
+    "shouldTrigger": "yes",
+    "expected": "Produces the advisor checklist, client change summary and completion list."
+  },
+  {
+    "input": "Write a new IPS for the Delgados from scratch.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; the IPS document is authored in the compliance template by the advisor."
+  },
+  {
+    "input": "Is 60/40 too conservative for a 63-year-old with a 25-year horizon?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; suitability judgement is the advisor's."
+  },
+  {
+    "input": "IPS refresh for the Delgados; I've pasted their Orion holdings so you can see the current mix.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the refresh but ignores the holdings; asks for the target allocation as percentages from the IPS summary."
+  }
+]

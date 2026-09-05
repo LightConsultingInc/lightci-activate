@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Make this a CRM note: quick call with Ben, wants to add his daughter as TOD, I'll send the form, call him back in two weeks.",
+    "shouldTrigger": "yes",
+    "expected": "Produces the four-section note with the review line."
+  },
+  {
+    "input": "Write the follow-up email to Ben about the TOD form.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; points to client-followup-notes."
+  },
+  {
+    "input": "Context: ... Decisions: ... Follow-ups: ... Next contact: ... — can you enter this in Salesforce?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; note is already structured and the skill never writes to Salesforce."
+  },
+  {
+    "input": "Clean up: met the Lius, statement shows $2.1M at Schwab acct 44-1092, agreed to consolidate.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers but strips the account identifier and statement figure and tells the author."
+  }
+]

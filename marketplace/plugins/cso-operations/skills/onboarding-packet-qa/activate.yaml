@@ -1,0 +1,17 @@
+id: onboarding-packet-qa
+owner: tom.becker@meridianwealth.demo
+team: cso
+family: onboarding
+rung_required: L1
+boundary:
+  may_read: [internal_templates, crm_summary_export]
+  must_never_receive: [client_pii_documents, account_numbers, ssn, statements_raw]
+  human_review: [before_crm_entry, before_send]
+sample_cases: cases/
+baseline_task: "Onboarding packet QA"
+promotion:
+  requested_by: tom.becker@meridianwealth.demo
+  grade_ref: grade_seed_onboarding_packet_qa_v1
+  approved_by: [daniel.okafor@meridianwealth.demo, "compliance:elena.marsh@meridianwealth.demo"]
+  approved_at: 2026-08-28T13:45:00Z
+status: published

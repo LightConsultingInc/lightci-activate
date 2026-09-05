@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Here are my notes from the Tran review, can you write the follow-up email?",
+    "shouldTrigger": "yes",
+    "expected": "Sorts notes into discussed / agreed / needed, drafts the email with the review footer, and appends the four-line Salesforce note."
+  },
+  {
+    "input": "Write a thank-you note to the prospect I met this morning, the Coopers, no commitments yet.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; prospect follow-ups are outside scope. Offers a plain note without the agreed/needed structure."
+  },
+  {
+    "input": "Draft the letter telling the Trans their advisory fee is going from 0.95% to 1.00%.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; points to fee-change-comms."
+  },
+  {
+    "input": "Follow-up for the Trans. Notes attached, plus their Orion statement so you can quote the balances.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the follow-up but excludes the statement and any balances; tells the advisor what was left out."
+  }
+]

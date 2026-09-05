@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Draft the fee change letter for the Pryces: 1.00% to 0.90% on the first million from Jan 1, annual schedule review, no signature needed.",
+    "shouldTrigger": "yes",
+    "expected": "Produces the letter with verbatim regulatory paragraphs plus three talking points and the footer."
+  },
+  {
+    "input": "What fee should we charge the Pryces if they bring over another $600k?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; fee decisions are the advisor's and Compliance's."
+  },
+  {
+    "input": "Write the follow-up email from today's review with the Pryces.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; points to client-followup-notes."
+  },
+  {
+    "input": "Fee letter for the Pryces; here is the Orion billing export so you can show them the dollar change.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the letter but declines the billing export and omits dollar figures."
+  }
+]

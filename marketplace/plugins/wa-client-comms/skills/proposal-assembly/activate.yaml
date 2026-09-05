@@ -1,0 +1,17 @@
+id: proposal-assembly
+owner: sofia.alvarez@meridianwealth.demo
+team: wa
+family: proposals
+rung_required: L2
+boundary:
+  may_read: [internal_templates, aggregated_client_summaries, public_regulation]
+  must_never_receive: [client_pii_documents, account_numbers, ssn, statements_raw]
+  human_review: [before_send, before_client_meeting]
+sample_cases: cases/
+baseline_task: "Proposal assembly"
+promotion:
+  requested_by: sofia.alvarez@meridianwealth.demo
+  grade_ref: grade_seed_proposal_assembly_v1
+  approved_by: [daniel.okafor@meridianwealth.demo]
+  approved_at: 2026-08-07T14:15:00Z
+status: published

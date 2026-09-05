@@ -1,0 +1,17 @@
+id: client-followup-notes
+owner: sofia.alvarez@meridianwealth.demo
+team: wa
+family: client-communications
+rung_required: L1
+boundary:
+  may_read: [calendar, crm_summary_export, internal_templates]
+  must_never_receive: [account_numbers, ssn, client_pii_documents, statements_raw]
+  human_review: [before_send, before_crm_entry]
+sample_cases: cases/
+baseline_task: "Client follow-up email and CRM note"
+promotion:
+  requested_by: sofia.alvarez@meridianwealth.demo
+  grade_ref: grade_seed_client_followup_notes_v2
+  approved_by: [daniel.okafor@meridianwealth.demo]
+  approved_at: 2026-08-21T16:05:00Z
+status: published

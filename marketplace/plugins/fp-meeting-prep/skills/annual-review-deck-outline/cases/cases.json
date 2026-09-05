@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Outline the annual review deck for the Brennan household. Summary: both goals on track, allocation 55/45 vs 60/40, planning items: new trust funded, propose long-term-care review.",
+    "shouldTrigger": "yes",
+    "expected": "Produces a slide-by-slide outline with speaker notes and [NUMBER] placeholders."
+  },
+  {
+    "input": "Prep the brief for the Brennans' quarterly call on Tuesday.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; that is advisor-meeting-prep."
+  },
+  {
+    "input": "Build the actual PowerPoint for the Brennan review.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger on slide production; offers the outline instead."
+  },
+  {
+    "input": "Annual review narrative for the Brennans, attaching the Orion holdings report so you have the numbers.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the outline request but declines account-level holdings; asks for the aggregated summary and leaves [NUMBER] placeholders."
+  }
+]

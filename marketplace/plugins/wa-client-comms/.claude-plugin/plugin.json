@@ -1,0 +1,9 @@
+{
+  "name": "wa-client-comms",
+  "version": "1.2.0",
+  "description": "Wealth Advisor skills: follow-up emails with CRM notes, proposals, fee-change comms, IPS refresh.",
+  "author": { "name": "Sofia Alvarez", "email": "sofia.alvarez@meridianwealth.demo" },
+  "homepage": "https://activate.lightci.com/library?plugin=wa-client-comms",
+  "license": "Proprietary",
+  "keywords": ["meridian", "activate"]
+}

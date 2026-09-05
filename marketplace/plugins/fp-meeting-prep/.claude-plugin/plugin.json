@@ -1,0 +1,9 @@
+{
+  "name": "fp-meeting-prep",
+  "version": "1.2.0",
+  "description": "Financial Planning skills: meeting briefs, RMD letters and annual review deck outlines.",
+  "author": { "name": "Daniel Okafor", "email": "daniel.okafor@meridianwealth.demo" },
+  "homepage": "https://activate.lightci.com/library?plugin=fp-meeting-prep",
+  "license": "Proprietary",
+  "keywords": ["meridian", "activate"]
+}

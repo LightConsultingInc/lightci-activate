@@ -1,0 +1,17 @@
+id: rebalancing-exception-memo
+owner: tom.becker@meridianwealth.demo
+team: cso
+family: operations-exceptions
+rung_required: L2
+boundary:
+  may_read: [aggregated_client_summaries, internal_templates]
+  must_never_receive: [client_pii_documents, ssn, statements_raw]
+  human_review: [before_crm_entry]
+sample_cases: cases/
+baseline_task: "Rebalancing exception documentation"
+promotion:
+  requested_by: tom.becker@meridianwealth.demo
+  grade_ref: grade_seed_rebalancing_exception_memo_v1
+  approved_by: [daniel.okafor@meridianwealth.demo]
+  approved_at: 2026-09-02T15:30:00Z
+status: published

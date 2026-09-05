@@ -1,0 +1,17 @@
+id: rmd-letter-draft
+owner: priya.nair@meridianwealth.demo
+team: fp
+family: client-letters
+rung_required: L1
+boundary:
+  may_read: [internal_templates, aggregated_client_summaries, public_regulation]
+  must_never_receive: [account_numbers, ssn, client_pii_documents, statements_raw]
+  human_review: [before_send]
+sample_cases: cases/
+baseline_task: "RMD letter drafting"
+promotion:
+  requested_by: priya.nair@meridianwealth.demo
+  grade_ref: grade_seed_rmd_letter_draft_v1
+  approved_by: [daniel.okafor@meridianwealth.demo]
+  approved_at: 2026-08-02T10:05:00Z
+status: published

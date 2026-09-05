@@ -1,0 +1,15 @@
+id: fee-change-comms
+owner: marcus.reid@meridianwealth.demo
+team: wa
+family: client-communications
+rung_required: L1
+boundary:
+  may_read: [internal_templates, crm_summary_export, public_regulation]
+  must_never_receive: [account_numbers, ssn, client_pii_documents, statements_raw]
+  human_review: [before_send]
+sample_cases: cases/
+baseline_task: "Fee-change client comms"
+promotion:
+  requested_by: marcus.reid@meridianwealth.demo
+  grade_ref: grade_seed_fee_change_comms_v1
+status: in_review

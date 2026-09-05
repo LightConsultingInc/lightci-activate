@@ -1,0 +1,17 @@
+id: ips-refresh-checklist
+owner: sofia.alvarez@meridianwealth.demo
+team: wa
+family: client-communications
+rung_required: L2
+boundary:
+  may_read: [internal_templates, aggregated_client_summaries, crm_summary_export]
+  must_never_receive: [client_pii_documents, account_numbers, ssn, statements_raw]
+  human_review: [before_client_meeting, before_send]
+sample_cases: cases/
+baseline_task: "IPS refresh summary"
+promotion:
+  requested_by: sofia.alvarez@meridianwealth.demo
+  grade_ref: grade_seed_ips_refresh_checklist_v1
+  approved_by: [daniel.okafor@meridianwealth.demo]
+  approved_at: 2026-08-26T11:00:00Z
+status: published

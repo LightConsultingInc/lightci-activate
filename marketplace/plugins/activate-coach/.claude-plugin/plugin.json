@@ -1,0 +1,15 @@
+{
+  "name": "activate-coach",
+  "version": "0.1.0",
+  "description": "Coach for LightCI Activate: your place on the ladder, the next exercise, grading of skills and artifacts, workflow mapping, team and promotion views, all inside Claude via the Activate connector.",
+  "author": { "name": "LightCI Activate", "email": "activate@lightci.com" },
+  "homepage": "https://activate.lightci.com",
+  "license": "Proprietary",
+  "keywords": ["activate", "coach", "ladder", "skills", "enablement"],
+  "mcpServers": {
+    "activate": {
+      "type": "http",
+      "url": "${ACTIVATE_MCP_URL:-https://lightci-activate-api.lciventure.com/mcp}"
+    }
+  }
+}

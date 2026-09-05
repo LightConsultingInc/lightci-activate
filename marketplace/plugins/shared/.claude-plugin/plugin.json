@@ -1,0 +1,9 @@
+{
+  "name": "shared",
+  "version": "1.1.0",
+  "description": "Cross-team skills assigned to every in-program group, plus the Activate connector and Coach.",
+  "author": { "name": "LightCI Activate", "email": "activate@lightci.com" },
+  "homepage": "https://activate.lightci.com/library?plugin=shared",
+  "license": "Proprietary",
+  "keywords": ["meridian", "activate"]
+}

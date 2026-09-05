@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Roll up the Q3 Code of Ethics attestations into the CCO memo. Export pasted below.",
+    "shouldTrigger": "yes",
+    "expected": "Fills totals, groups exceptions neutrally, lists overdue by team, flags deferred explanations."
+  },
+  {
+    "input": "Draft an update to our gifts and entertainment policy raising the threshold to $150.",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; policy drafting is outside scope."
+  },
+  {
+    "input": "Is a $180 conference dinner a reportable gift under our policy?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; compliance judgement stays with the CCO."
+  },
+  {
+    "input": "Summarise Q3; I've attached the individual attestation PDFs since the export isn't ready.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the memo request but refuses the individual forms; asks for the aggregated export."
+  }
+]

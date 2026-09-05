@@ -1,0 +1,22 @@
+[
+  {
+    "input": "Write the RMD reminder letter for the Whitakers: about $23k, the Fidelity IRA only, lump sum in November, 10% withholding, deadline Dec 31.",
+    "shouldTrigger": "yes",
+    "expected": "Produces the full letter from the template with the review footer."
+  },
+  {
+    "input": "What's the RMD for a 74-year-old with $612,000 in an IRA at year end?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; the calculation lives in eMoney. Points the planner there."
+  },
+  {
+    "input": "Should the Whitakers do a Roth conversion instead of taking the full RMD?",
+    "shouldTrigger": "no",
+    "expected": "Does not trigger; conversion analysis is outside scope."
+  },
+  {
+    "input": "RMD letter for the Whitakers, details in the attached Fidelity statement.",
+    "shouldTrigger": "ambiguous",
+    "expected": "Triggers on the letter request but declines the statement; asks for the rounded summary without account numbers."
+  }
+]

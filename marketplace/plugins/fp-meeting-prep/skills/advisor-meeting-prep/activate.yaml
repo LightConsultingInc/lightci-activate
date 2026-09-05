@@ -1,0 +1,17 @@
+id: advisor-meeting-prep
+owner: daniel.okafor@meridianwealth.demo
+team: fp
+family: meeting-prep
+rung_required: L1
+boundary:
+  may_read: [calendar, crm_summary_export, internal_templates, aggregated_client_summaries]
+  must_never_receive: [client_pii_documents, account_numbers, ssn, statements_raw]
+  human_review: [before_client_meeting]
+sample_cases: cases/
+baseline_task: "Monday meeting prep"
+promotion:
+  requested_by: daniel.okafor@meridianwealth.demo
+  grade_ref: grade_seed_advisor_meeting_prep_v2
+  approved_by: [sofia.alvarez@meridianwealth.demo]
+  approved_at: 2026-08-12T10:45:00Z
+status: published
