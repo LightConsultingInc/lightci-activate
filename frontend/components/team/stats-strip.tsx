@@ -26,7 +26,7 @@ export function StatsStrip({ stats }: { stats: TeamView["stats"] }) {
         </div>
         <p className="mt-1 text-[11px] text-muted-foreground">{people} people</p>
       </div>
-      <Tile label="Hours back · per week" value={`${stats.hoursBackPerWeek.toFixed(1)}h`} hint="Net of rework, against baseline" />
+      <Tile label="Hours back · per week" value={`${(stats.hoursBackPerWeek ?? 0).toFixed(1)}h`} hint="Net of rework, against baseline" />
       <Tile label="Skills published" value={fmt.num(stats.skillsPublished)} hint="Through the promotion queue" />
       <Tile label="Promotions pending" value={fmt.num(stats.promotionsPending)} hint={stats.promotionsPending ? "Waiting on you" : "Queue is clear"} tone={stats.promotionsPending ? "glow" : undefined} />
     </div>

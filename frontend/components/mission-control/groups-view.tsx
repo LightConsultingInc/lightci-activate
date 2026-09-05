@@ -41,12 +41,12 @@ function Inner() {
 
 const METRICS: { key: keyof GroupRow; label: string; fmt: (v: number) => string; higherIsBetter: boolean; perPerson?: boolean }[] = [
   { key: "activePct", label: "Active on real work", fmt: (v) => fmt.pct(v), higherIsBetter: true },
-  { key: "hoursBackPerPerson", label: "Hours back / person / wk", fmt: (v) => `${v.toFixed(1)}h`, higherIsBetter: true },
-  { key: "skillsPublished", label: "Skills published per 10 people", fmt: (v) => v.toFixed(1), higherIsBetter: true, perPerson: true },
-  { key: "skillsAdopted", label: "Skills adopted per 10 people", fmt: (v) => v.toFixed(1), higherIsBetter: true, perPerson: true },
-  { key: "promotionThroughput", label: "Promotions / wk", fmt: (v) => v.toFixed(2), higherIsBetter: true },
+  { key: "hoursBackPerPerson", label: "Hours back / person / wk", fmt: (v) => `${(v ?? 0).toFixed(1)}h`, higherIsBetter: true },
+  { key: "skillsPublished", label: "Skills published per 10 people", fmt: (v) => (v ?? 0).toFixed(1), higherIsBetter: true, perPerson: true },
+  { key: "skillsAdopted", label: "Skills adopted per 10 people", fmt: (v) => (v ?? 0).toFixed(1), higherIsBetter: true, perPerson: true },
+  { key: "promotionThroughput", label: "Promotions / wk", fmt: (v) => (v ?? 0).toFixed(2), higherIsBetter: true },
   { key: "reworkRate", label: "Rework rate (revise ÷ pass)", fmt: (v) => fmt.pct(v), higherIsBetter: false },
-  { key: "championQueueAgeDays", label: "Champion queue age", fmt: (v) => `${v.toFixed(1)}d`, higherIsBetter: false },
+  { key: "championQueueAgeDays", label: "Champion queue age", fmt: (v) => `${(v ?? 0).toFixed(1)}d`, higherIsBetter: false },
 ]
 
 function Body({ d, teamId }: { d: Groups; teamId: string | null }) {
@@ -117,11 +117,11 @@ function Body({ d, teamId }: { d: Groups; teamId: string | null }) {
             ) },
             { key: "activePct", header: "Active", align: "right", sortValue: (g) => g.activePct, render: (g) => <Bar01 value={g.activePct} /> },
             { key: "rungMix", header: "Rung mix", sortValue: (g) => weightedRung(g.rungMix), render: (g) => <RungMixBar counts={g.rungMix} className="w-28" /> },
-            { key: "hoursBackPerPerson", header: "Hours back / person", align: "right", sortValue: (g) => g.hoursBackPerPerson, render: (g) => `${g.hoursBackPerPerson.toFixed(1)}h` },
+            { key: "hoursBackPerPerson", header: "Hours back / person", align: "right", sortValue: (g) => g.hoursBackPerPerson, render: (g) => `${(g.hoursBackPerPerson ?? 0).toFixed(1)}h` },
             { key: "skills", header: "Published / adopted", align: "right", sortValue: (g) => g.skillsPublished, render: (g) => `${g.skillsPublished} / ${g.skillsAdopted}` },
-            { key: "promotionThroughput", header: "Promotions / wk", align: "right", sortValue: (g) => g.promotionThroughput, render: (g) => g.promotionThroughput.toFixed(2) },
+            { key: "promotionThroughput", header: "Promotions / wk", align: "right", sortValue: (g) => g.promotionThroughput, render: (g) => (g.promotionThroughput ?? 0).toFixed(2) },
             { key: "reworkRate", header: "Rework", align: "right", sortValue: (g) => g.reworkRate, render: (g) => <span className={g.reworkRate > 0.5 ? "text-revise" : ""}>{fmt.pct(g.reworkRate)}</span> },
-            { key: "queue", header: "Champion queue", align: "right", sortValue: (g) => g.championQueueAgeDays, render: (g) => <span className={g.championQueueAgeDays > 5 ? "text-fail" : ""}>{g.championQueueAgeDays.toFixed(1)}d</span> },
+            { key: "queue", header: "Champion queue", align: "right", sortValue: (g) => g.championQueueAgeDays, render: (g) => <span className={g.championQueueAgeDays > 5 ? "text-fail" : ""}>{(g.championQueueAgeDays ?? 0).toFixed(1)}d</span> },
           ]}
         />
       </Panel>

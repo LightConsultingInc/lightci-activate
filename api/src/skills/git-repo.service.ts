@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { simpleGit, type SimpleGit } from 'simple-git';
-import { isGitRepo, resolveRepoPath } from './repo-reader';
+import { isGitRepo, readTree, resolveRepoPath } from './repo-reader';
 
 export interface GitAuthor {
   name: string;
@@ -21,7 +21,7 @@ export interface GitWriteResult {
  * writes never depend on git succeeding (DB is canonical; the repo is the published projection).
  */
 @Injectable()
-export class GitRepoService {
+export class GitRepoService implements OnModuleInit {
   private readonly logger = new Logger(GitRepoService.name);
   readonly path: string | null;
   readonly defaultBranch = process.env.LIBRARY_DEFAULT_BRANCH ?? 'main';
@@ -31,14 +31,54 @@ export class GitRepoService {
     this.path = resolveRepoPath(
       process.env.LIBRARY_REPO_PATH ?? '../marketplace',
     );
-    if (!this.available())
+    if (!this.path || !existsSync(this.path))
       this.logger.warn(
-        `Marketplace repo not found at ${this.path ?? '(unset)'}; library runs DB-only.`,
+        `Marketplace folder not found at ${this.path ?? '(unset)'}; library runs DB-only.`,
       );
   }
 
+  async onModuleInit() {
+    await this.ensureRepo();
+  }
+
+  /** The folder exists and already is a git repo (sync check; use ensureRepo() before git work). */
   available(): boolean {
     return Boolean(this.path && existsSync(this.path) && isGitRepo(this.path));
+  }
+
+  /**
+   * The marketplace is committed to the monorepo (and copied into the image) as plain files: no
+   * nested .git. On first use, initialise a local repo in place: `main`, a local bot identity, one
+   * "Initial marketplace import" commit, and a tag `<slug>@v<N>` per skill where N is the SKILL.md
+   * `metadata.activate-version` (earlier versions only exist in the DB). Idempotent; never throws.
+   * Resolves true when the folder is a usable git repo.
+   */
+  ensureRepo(): Promise<boolean> {
+    if (!this.path || !existsSync(this.path)) return Promise.resolve(false);
+    if (isGitRepo(this.path)) return Promise.resolve(true);
+    return this.locked(async () => {
+      if (isGitRepo(this.path!)) return true;
+      try {
+        const git = simpleGit(this.path!);
+        await git.init(['-b', this.defaultBranch]);
+        await git.addConfig('user.name', 'Activate Bot', false, 'local');
+        await git.addConfig('user.email', 'activate@lightci.com', false, 'local');
+        await git.add(['-A']);
+        await git.commit('Initial marketplace import\n\nImported from plain files by LightCI Activate GitRepoService.ensureRepo().', undefined, {
+          '--author': 'Activate Bot <activate@lightci.com>',
+        });
+        const tree = readTree(this.path!);
+        for (const skill of tree.skills) {
+          const tag = `${skill.slug}@v${skill.declaredVersion}`;
+          await git.addAnnotatedTag(tag, `${skill.slug} v${skill.declaredVersion} — imported as current content`);
+        }
+        this.logger.log(`Initialised marketplace repo at ${this.path} (${tree.skills.length} skills tagged)`);
+        return true;
+      } catch (e) {
+        this.logger.error(`ensureRepo failed at ${this.path}: ${(e as Error).message}`);
+        return isGitRepo(this.path!);
+      }
+    });
   }
 
   get githubMode(): boolean {
@@ -89,13 +129,13 @@ export class GitRepoService {
    * Commit skill files on branch `skill/<slug>` (created from main when missing), then return to main.
    * Files are relative to the repo root.
    */
-  writeOnBranch(
+  async writeOnBranch(
     slug: string,
     files: Record<string, string>,
     message: string,
     author: GitAuthor,
   ): Promise<GitWriteResult | null> {
-    if (!this.available()) return Promise.resolve(null);
+    if (!(await this.ensureRepo())) return null;
     const branch = `skill/${slug}`;
     return this.locked(async () => {
       const git = this.git();
@@ -124,14 +164,14 @@ export class GitRepoService {
   }
 
   /** Write the published content directly on main, commit and tag. */
-  publish(
+  async publish(
     slug: string,
     files: Record<string, string>,
     message: string,
     author: GitAuthor,
     tag: string,
   ): Promise<GitWriteResult | null> {
-    if (!this.available()) return Promise.resolve(null);
+    if (!(await this.ensureRepo())) return null;
     return this.locked(async () => {
       const git = this.git();
       try {
@@ -158,8 +198,8 @@ export class GitRepoService {
   }
 
   /** Push a branch to origin (GitHub PR mode). */
-  pushBranch(branch: string): Promise<boolean> {
-    if (!this.available()) return Promise.resolve(false);
+  async pushBranch(branch: string): Promise<boolean> {
+    if (!(await this.ensureRepo())) return false;
     return this.locked(async () => {
       try {
         const remotes = await this.git().getRemotes();
@@ -176,7 +216,7 @@ export class GitRepoService {
   }
 
   async fileAt(ref: string, rel: string): Promise<string | null> {
-    if (!this.available()) return null;
+    if (!(await this.ensureRepo())) return null;
     return this.git()
       .show([`${ref}:${rel}`])
       .catch(() => null);
@@ -187,7 +227,7 @@ export class GitRepoService {
     head: string | null;
     dirty: boolean;
   }> {
-    if (!this.available()) return { branch: null, head: null, dirty: false };
+    if (!(await this.ensureRepo())) return { branch: null, head: null, dirty: false };
     const git = this.git();
     const [branch, head, status] = await Promise.all([
       git.revparse(['--abbrev-ref', 'HEAD']).catch(() => null),

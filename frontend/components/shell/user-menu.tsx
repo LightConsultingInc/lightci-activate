@@ -6,7 +6,7 @@ import { useMe } from "@/hooks/use-me"
 import { fmt } from "@/lib/format"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenuButton } from "@/components/ui/sidebar"
 
@@ -36,22 +36,26 @@ export function UserMenu() {
           </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" className="w-64">
-        <DropdownMenuLabel className="font-normal">
-          <div className="text-sm font-medium">{u.name}</div>
-          <div className="text-xs text-muted-foreground">{u.email}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{u.roles.join(" · ")}</div>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-normal">
+            <div className="text-sm font-medium">{u.name}</div>
+            <div className="text-xs text-muted-foreground">{u.email}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{u.roles.join(" · ")}</div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         {me.orgs.length > 1 && (
           <>
-            <DropdownMenuLabel className="eyebrow">Client</DropdownMenuLabel>
-            {me.orgs.map((o) => (
-              <DropdownMenuItem key={o.id} onClick={() => switchOrg(o.id)} data-testid={`org-switch-${o.slug}`}>
-                <Building2 className="size-4" />
-                <span className="flex-1 truncate">{o.name}</span>
-                {me.org?.id === o.id && <Check className="size-4" />}
-              </DropdownMenuItem>
-            ))}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="eyebrow">Client</DropdownMenuLabel>
+              {me.orgs.map((o) => (
+                <DropdownMenuItem key={o.id} onClick={() => switchOrg(o.id)} data-testid={`org-switch-${o.slug}`}>
+                  <Building2 className="size-4" />
+                  <span className="flex-1 truncate">{o.name}</span>
+                  {me.org?.id === o.id && <Check className="size-4" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
           </>
         )}

@@ -215,7 +215,7 @@ export interface FunnelPerson {
 
 export function funnel(people: readonly FunnelPerson[]): FunnelStep[] {
   const steps: FunnelStep[] = [
-    { step: 'provisioned', count: people.length, medianDays: null },
+    { step: 'provisioned', count: people.length, medianDays: 0, sampled: 0 },
   ];
   const stepDates = (p: FunnelPerson): (Date | null)[] => [
     p.provisionedAt,
@@ -256,7 +256,8 @@ export function funnel(people: readonly FunnelPerson[]): FunnelStep[] {
     steps.push({
       step: labels[i],
       count,
-      medianDays: md === null ? null : round(md, 1),
+      medianDays: md === null ? 0 : round(md, 1),
+      sampled: durations.length,
     });
   }
   return steps;
@@ -311,8 +312,9 @@ export function rungAt(
 
 export interface TimeInRungRow {
   rung: number;
-  medianDays: number | null;
-  p90Days: number | null;
+  medianDays: number;
+  p90Days: number;
+  sampled: number;
   stuckPersonIds: string[];
 }
 
@@ -352,8 +354,9 @@ export function timeInRung(
   }
   return dwell.map((ds, rung) => ({
     rung,
-    medianDays: ds.length ? round(median(ds)!, 1) : null,
-    p90Days: ds.length ? round(percentile(ds, 90)!, 1) : null,
+    medianDays: ds.length ? round(median(ds)!, 1) : 0,
+    p90Days: ds.length ? round(percentile(ds, 90)!, 1) : 0,
+    sampled: ds.length,
     stuckPersonIds: stuck[rung],
   }));
 }
@@ -404,17 +407,28 @@ export function markRising(gains: ReadonlyMap<string, number>): Set<string> {
 // ============================================================================
 
 export interface StalledInput {
-  /** Latest placement (any rung) or, failing that, when the person was provisioned. */
+  /** Latest placement that raised the rung (any placement when none did), else provisioning date. */
   lastProgressionAt: Date;
+  /** Latest submission, if any. */
+  lastSubmissionAt: Date | null;
   activeDaysThisMonth: number;
   activeDaysPriorMonth: number;
   latestNoteTags: readonly string[];
+  /** Eligibility: inactive people, non-learner sponsors/admins/leads and L5 champions are never "stalled". */
+  rung?: number;
+  status?: 'invited' | 'active' | 'inactive';
+  roles?: readonly string[];
 }
 
 export interface StalledResult {
   stalled: boolean;
+  /** Days since the last progression or submission. */
   stalledDays: number;
   reason: string | null;
+  /** The day the stall began (last activity + stalledAfterDays); null when not stalled. */
+  stalledSince: Date | null;
+  /** SLA for a human to act: stall start + 3 days. */
+  slaDueAt: Date | null;
 }
 
 export const STALL_REASONS: Record<string, string> = {
@@ -424,32 +438,35 @@ export const STALL_REASONS: Record<string, string> = {
   escalated: 'escalated',
 };
 
+export const STALL_SLA_DAYS = 3;
+
+export function stallEligible(input: Pick<StalledInput, 'rung' | 'status' | 'roles'>): boolean {
+  if (input.status === 'inactive') return false;
+  if ((input.rung ?? 0) >= 5) return false;
+  const roles = input.roles ?? ['learner'];
+  if (!roles.includes('learner') && roles.some((r) => r === 'sponsor' || r === 'admin' || r === 'lead')) return false;
+  return true;
+}
+
 /**
- * Stalled when no progression in `stalledAfterDays` OR activity dropped by more than half
- * versus the prior month (only when the prior month had activity to drop from).
+ * Stalled when the person has NOT passed a rung in `stalledAfterDays` AND either has made no
+ * submission in that window OR their active-on-real-work days in the last 30 dropped by more
+ * than half versus the prior 30 (only when the prior month had activity to drop from).
  */
-export function detectStalled(
-  input: StalledInput,
-  now: Date,
-  stalledAfterDays: number,
-): StalledResult {
-  const stalledDays = Math.max(
-    0,
-    Math.floor(daysBetween(input.lastProgressionAt, now)),
-  );
-  const noProgression = stalledDays >= stalledAfterDays;
-  const activityDrop =
-    input.activeDaysPriorMonth > 0 &&
-    input.activeDaysThisMonth < input.activeDaysPriorMonth * 0.5;
-  const stalled = noProgression || activityDrop;
-  if (!stalled) return { stalled: false, stalledDays, reason: null };
+export function detectStalled(input: StalledInput, now: Date, stalledAfterDays: number): StalledResult {
+  const none: StalledResult = { stalled: false, stalledDays: 0, reason: null, stalledSince: null, slaDueAt: null };
+  const lastActivity = new Date(Math.max(input.lastProgressionAt.getTime(), input.lastSubmissionAt?.getTime() ?? 0));
+  const stalledDays = Math.max(0, Math.floor(daysBetween(lastActivity, now)));
+  if (!stallEligible(input)) return { ...none, stalledDays };
+  const noRungPass = daysBetween(input.lastProgressionAt, now) >= stalledAfterDays;
+  const noSubmission = !input.lastSubmissionAt || daysBetween(input.lastSubmissionAt, now) >= stalledAfterDays;
+  const activityDrop = input.activeDaysPriorMonth > 0 && input.activeDaysThisMonth < input.activeDaysPriorMonth * 0.5;
+  const stalled = noRungPass && (noSubmission || activityDrop);
+  if (!stalled) return { ...none, stalledDays };
   const tag = input.latestNoteTags.find((t) => t in STALL_REASONS);
-  const reason = tag
-    ? STALL_REASONS[tag]
-    : activityDrop
-      ? 'activity dropped >50% vs prior month'
-      : `no progression in ${stalledDays} days`;
-  return { stalled: true, stalledDays, reason };
+  const reason = tag ? STALL_REASONS[tag] : noSubmission ? `no rung passed and no submission in ${stalledDays} days` : 'no rung passed; activity dropped >50% vs prior month';
+  const stalledSince = new Date(Math.min(now.getTime(), lastActivity.getTime() + stalledAfterDays * DAY_MS));
+  return { stalled: true, stalledDays, reason, stalledSince, slaDueAt: new Date(stalledSince.getTime() + STALL_SLA_DAYS * DAY_MS) };
 }
 
 // ============================================================================
@@ -630,22 +647,22 @@ export function revisitCompliance(
   return out;
 }
 
-/** revise ÷ pass. With no passes: null when nothing was graded, else the revise count itself. */
+/** revise ÷ pass. With no passes: 0 when nothing was graded, else the revise count itself. */
 export function reworkRate(
   decisions: readonly ('pass' | 'revise')[],
-): number | null {
+): number {
   const pass = decisions.filter((d) => d === 'pass').length;
   const revise = decisions.length - pass;
-  if (decisions.length === 0) return null;
+  if (decisions.length === 0) return 0;
   return pass === 0 ? revise : round(revise / pass);
 }
 
-/** Mean age in days of still-pending items; null when the queue is empty. */
+/** Mean age in days of still-pending items; 0 when the queue is empty. */
 export function queueAgeDays(
   pending: readonly { createdAt: Date }[],
   now: Date,
-): number | null {
-  if (pending.length === 0) return null;
+): number {
+  if (pending.length === 0) return 0;
   return round(mean(pending.map((p) => daysBetween(p.createdAt, now))), 1);
 }
 
@@ -911,31 +928,29 @@ export function skillsPublishedBy(f: OrgFacts, personId: string): number {
 export function stalledFor(f: OrgFacts, person: Person): StalledResult {
   const now = f.now;
   const today = isoDay(now);
-  const lastPlacement = f.placements
-    .filter((p) => p.personId === person.id)
-    .map((p) => p.placedAt)
-    .sort((a, b) => b.getTime() - a.getTime())[0];
-  const lastProgressionAt =
-    lastPlacement ?? person.onboardedAt ?? person.createdAt;
+  const mine = f.placements.filter((p) => p.personId === person.id).sort((a, b) => a.placedAt.getTime() - b.placedAt.getTime());
+  // last placement that actually raised the rung (a re-placement at the same rung is not progression)
+  let lastRaise: Date | null = null;
+  let prev = -1;
+  for (const p of mine) {
+    if (p.rung > prev) lastRaise = p.placedAt;
+    prev = Math.max(prev, p.rung);
+  }
+  const lastProgressionAt = lastRaise ?? mine[mine.length - 1]?.placedAt ?? person.onboardedAt ?? person.createdAt;
+  const lastSubmissionAt = f.submissions.filter((s) => s.personId === person.id).map((s) => s.submittedAt).sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
   const monthAgo = isoDay(new Date(now.getTime() - 30 * DAY_MS));
   const twoMonthsAgo = isoDay(new Date(now.getTime() - 60 * DAY_MS));
   const tags = f.notes.find((n) => n.personId === person.id)?.tags ?? [];
   return detectStalled(
     {
       lastProgressionAt,
-      activeDaysThisMonth: activeDaysCount(
-        f.activeDays,
-        person.id,
-        addDaysIso(monthAgo, 1),
-        today,
-      ),
-      activeDaysPriorMonth: activeDaysCount(
-        f.activeDays,
-        person.id,
-        addDaysIso(twoMonthsAgo, 1),
-        monthAgo,
-      ),
+      lastSubmissionAt,
+      activeDaysThisMonth: activeDaysCount(f.activeDays, person.id, addDaysIso(monthAgo, 1), today),
+      activeDaysPriorMonth: activeDaysCount(f.activeDays, person.id, addDaysIso(twoMonthsAgo, 1), monthAgo),
       latestNoteTags: tags,
+      rung: f.rungs.get(person.id) ?? 0,
+      status: person.status,
+      roles: person.roles,
     },
     now,
     f.stalledAfterDays,

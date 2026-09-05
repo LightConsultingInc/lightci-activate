@@ -1,20 +1,36 @@
-import { execSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { diffSummary } from './git-repo.service';
+import { simpleGit } from 'simple-git';
+import { GitRepoService, diffSummary } from './git-repo.service';
 import { composeSkillMd, isGitRepo, parseFrontmatter, readRepoSkills, readTree, resolveRepoPath } from './repo-reader';
 
 /** The demo marketplace repo, two levels up from api/src/skills. */
 export const MARKETPLACE_SRC = resolve(__dirname, '../../../marketplace');
 
-/** Copy the real marketplace (including .git) into a temp dir so tests never touch the source. */
+/** The ten governed skills seeded on main plus the in-review draft (fee-change-comms). */
+export const SEEDED_SLUGS = [
+  'advisor-meeting-prep', 'annual-review-deck-outline', 'attestation-summary', 'client-followup-notes', 'crm-note-cleanup', 'fee-change-comms',
+  'ips-refresh-checklist', 'onboarding-packet-qa', 'proposal-assembly', 'rebalancing-exception-memo', 'rmd-letter-draft',
+];
+
+/** Warnings about skills Activate does not govern (e.g. the coach agent's plugin) are expected. */
+export const governedWarnings = (w: string[]) => w.filter((x) => !x.includes('activate-coach'));
+
+/** Copy the plain-file marketplace (no .git in the monorepo) into a temp dir so tests never touch the source. */
 export function copyMarketplace(): string {
   const dir = mkdtempSync(join(tmpdir(), 'activate-marketplace-'));
-  cpSync(MARKETPLACE_SRC, dir, { recursive: true });
-  // other agents may have uncommitted work in the source tree; test against committed HEAD of main
-  execSync('git checkout -q main -- . && git clean -fdq', { cwd: dir, stdio: 'ignore' });
+  cpSync(MARKETPLACE_SRC, dir, { recursive: true, filter: (src) => !src.includes('/.git/') && !src.endsWith('/.git') });
   return dir;
+}
+
+/** Point GitRepoService at a folder and let ensureRepo() initialise it. */
+export async function repoFor(dir: string): Promise<GitRepoService> {
+  process.env.LIBRARY_REPO_PATH = dir;
+  delete process.env.GITHUB_TOKEN;
+  const git = new GitRepoService();
+  expect(await git.ensureRepo()).toBe(true);
+  return git;
 }
 
 describe('parseFrontmatter', () => {
@@ -52,24 +68,37 @@ describe('resolveRepoPath', () => {
 
 describe('readRepoSkills against the demo marketplace', () => {
   let dir: string;
-  beforeAll(() => {
+  beforeAll(async () => {
     dir = copyMarketplace();
+    expect(isGitRepo(dir)).toBe(false); // plain files in the monorepo
+    await repoFor(dir);
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  it('the demo repo exists and is a git repo', () => {
+  it('ensureRepo turns the plain folder into a repo on main with one import commit and a tag per skill; idempotent', async () => {
     expect(existsSync(join(dir, '.claude-plugin/marketplace.json'))).toBe(true);
     expect(isGitRepo(dir)).toBe(true);
+    const g = simpleGit(dir);
+    expect((await g.revparse(['--abbrev-ref', 'HEAD'])).trim()).toBe('main');
+    expect((await g.status()).isClean()).toBe(true);
+    const log = await g.log();
+    expect(log.total).toBe(1);
+    expect(log.latest?.message).toBe('Initial marketplace import');
+    expect(log.latest?.author_email).toBe('activate@lightci.com');
+    expect((await g.getConfig('user.name', 'local')).value).toBe('Activate Bot');
+    const tags = (await g.tags()).all.sort();
+    expect(tags).toEqual(expect.arrayContaining(['advisor-meeting-prep@v2', 'client-followup-notes@v2', 'crm-note-cleanup@v2', 'fee-change-comms@v1', 'rmd-letter-draft@v1']));
+    expect(tags.filter((t) => SEEDED_SLUGS.some((slug) => t.startsWith(`${slug}@`)))).toHaveLength(11);
+    const again = new GitRepoService();
+    expect(await again.ensureRepo()).toBe(true);
+    expect((await g.log()).total).toBe(1);
   });
 
   it('reads every plugin and skill on main with frontmatter, manifest, boundary and cases', () => {
     const tree = readTree(dir);
-    expect(tree.plugins.sort()).toEqual(['cso-operations', 'fp-meeting-prep', 'shared', 'wa-client-comms']);
-    expect(tree.skills.map((s) => s.slug).sort()).toEqual([
-      'advisor-meeting-prep', 'annual-review-deck-outline', 'attestation-summary', 'client-followup-notes', 'crm-note-cleanup',
-      'ips-refresh-checklist', 'onboarding-packet-qa', 'proposal-assembly', 'rebalancing-exception-memo', 'rmd-letter-draft',
-    ]);
-    expect(tree.warnings).toEqual([]);
+    expect(tree.plugins).toEqual(expect.arrayContaining(['cso-operations', 'fp-meeting-prep', 'shared', 'wa-client-comms']));
+    expect(tree.skills.map((s) => s.slug).sort()).toEqual(SEEDED_SLUGS);
+    expect(governedWarnings(tree.warnings)).toEqual([]);
     for (const s of tree.skills) {
       expect(s.triggerLine).toMatch(/Use when/);
       expect(s.triggerLine).toMatch(/Do not use/);
@@ -87,50 +116,45 @@ describe('readRepoSkills against the demo marketplace', () => {
     expect(prep.teamSlug).toBe('fp');
     expect(prep.family).toBe('meeting-prep');
     expect(prep.rungRequired).toBe(1);
+    expect(prep.declaredVersion).toBe(2);
     expect(prep.status).toBe('published');
     expect(prep.boundary.humanReview).toEqual(['before_client_meeting']);
-    const deck = tree.skills.find((s) => s.slug === 'annual-review-deck-outline')!;
-    expect(deck.rungRequired).toBe(2);
+    expect(tree.skills.find((s) => s.slug === 'annual-review-deck-outline')!.rungRequired).toBe(2);
+    expect(tree.skills.find((s) => s.slug === 'rmd-letter-draft')!.declaredVersion).toBe(1);
+    const fee = tree.skills.find((s) => s.slug === 'fee-change-comms')!;
+    expect(fee).toMatchObject({ status: 'in_review', plugin: 'wa-client-comms', teamSlug: 'wa', ownerIdentity: 'marcus.reid@meridianwealth.demo', declaredVersion: 1 });
     const dep = tree.skills.find((s) => s.slug === 'crm-note-cleanup')!;
-    expect(dep.status).toBe('deprecated');
-    expect(dep.successor).toBe('client-followup-notes');
-    expect(dep.plugin).toBe('shared');
-    expect(dep.teamSlug).toBe('shared');
+    expect(dep).toMatchObject({ status: 'deprecated', successor: 'client-followup-notes', plugin: 'shared', teamSlug: 'shared', declaredVersion: 2 });
   });
 
-  it('reads versions from <slug>@vN tags with commit sha, author and changelog', async () => {
+  it('reads one version per skill from the import tags (<slug>@v<activate-version>)', async () => {
     const read = await readRepoSkills(dir);
     expect(read.isGit).toBe(true);
     expect(read.branch).toBe('main');
     expect(read.head).toMatch(/^[0-9a-f]{40}$/);
     expect(read.dirty).toBe(false);
+    for (const s of read.skills) {
+      expect(s.versions).toHaveLength(1);
+      expect(s.versions[0]).toMatchObject({ version: s.declaredVersion, tag: `${s.slug}@v${s.declaredVersion}`, skillMd: s.skillMd, authorEmail: 'activate@lightci.com', changelog: 'Initial marketplace import' });
+      expect(s.versions[0].commitSha).toBe(read.head);
+      expect(s.headSha).toBe(read.head);
+    }
     const followup = read.skills.find((s) => s.slug === 'client-followup-notes')!;
-    expect(followup.versions.map((v) => v.tag)).toEqual(['client-followup-notes@v1', 'client-followup-notes@v2']);
-    expect(followup.versions[0].skillMd).not.toContain('SALESFORCE NOTE');
-    expect(followup.versions[1].skillMd).toContain('SALESFORCE NOTE');
-    expect(followup.versions[1].skillMd).toBe(followup.skillMd);
-    expect(followup.versions[1].authorEmail).toBe('sofia.alvarez@meridianwealth.demo');
-    expect(followup.versions[1].changelog).toMatch(/Salesforce activity note/);
-    expect(followup.versions[1].manifest?.boundary.human_review).toEqual(['before_send', 'before_crm_entry']);
-    expect(followup.versions[0].manifest?.boundary.human_review).toEqual(['before_send']);
-    const rmd = read.skills.find((s) => s.slug === 'rmd-letter-draft')!;
-    expect(rmd.versions).toHaveLength(1);
-    expect(rmd.versions[0].commitSha).toMatch(/^[0-9a-f]{40}$/);
-    expect(rmd.headSha).toBe(rmd.versions[0].commitSha);
-    const dep = read.skills.find((s) => s.slug === 'crm-note-cleanup')!;
-    expect(dep.versions.map((v) => v.version)).toEqual([1, 2]);
-    expect(dep.versions[0].manifest?.status).toBe('published');
-    expect(dep.versions[1].manifest?.status).toBe('deprecated');
+    expect(followup.versions[0].tag).toBe('client-followup-notes@v2');
+    expect(followup.versions[0].skillMd).toContain('SALESFORCE NOTE');
+    expect(followup.versions[0].manifest?.boundary.human_review).toEqual(['before_send', 'before_crm_entry']);
+    expect(read.skills.find((s) => s.slug === 'crm-note-cleanup')!.versions[0].manifest?.status).toBe('deprecated');
   });
 
-  it('a non-git folder still reads as a tree', async () => {
+  it('a non-git folder still reads as a tree (versions fall back to the declared activate-version)', async () => {
     const plain = mkdtempSync(join(tmpdir(), 'activate-plain-'));
     try {
       cpSync(join(dir, 'plugins'), join(plain, 'plugins'), { recursive: true });
       const read = await readRepoSkills(plain);
       expect(read.isGit).toBe(false);
-      expect(read.skills).toHaveLength(10);
+      expect(read.skills).toHaveLength(11);
       expect(read.skills.every((s) => s.versions.length === 0)).toBe(true);
+      expect(read.skills.find((s) => s.slug === 'advisor-meeting-prep')!.declaredVersion).toBe(2);
     } finally {
       rmSync(plain, { recursive: true, force: true });
     }

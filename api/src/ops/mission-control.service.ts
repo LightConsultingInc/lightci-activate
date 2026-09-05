@@ -217,9 +217,8 @@ export class MissionControlService {
           teamId: t.id,
           teamName: t.name,
           activePct: members.length ? round(tw / members.length) : 0,
-          hoursBack: hb.measuredTasks
-            ? round(hb.minutesBackPerWeek / 60, 1)
-            : null,
+          hoursBack: hb.measuredTasks ? round(hb.minutesBackPerWeek / 60, 1) : 0,
+          hasBaseline: hb.measuredTasks > 0,
         };
       });
 
@@ -274,6 +273,7 @@ export class MissionControlService {
       return {
         id: p.id,
         rung: f.rungs.get(p.id) ?? 0,
+        hasBaseline: hb.measuredTasks > 0,
         hoursBackPerWeek: hb.measuredTasks
           ? round(hb.minutesBackPerWeek / 60, 1)
           : null,
@@ -304,14 +304,18 @@ export class MissionControlService {
       return {
         ...personRef(p, f),
         activationScore: score,
-        hoursBackPerWeek: r.hoursBackPerWeek,
+        hoursBackPerWeek: r.hoursBackPerWeek ?? 0,
+        hasBaseline: r.hasBaseline,
         skillsPublished: r.skillsPublished,
         adoptedByOthers: r.influence,
-        gradeQuality: r.gradeQuality,
+        gradeQuality: r.gradeQuality ?? 0,
+        hasGrades: r.gradeQuality !== null,
         activeDays30: r.activeDays30,
         rising: rising.has(p.id),
         stalled: stalled.stalled,
         stalledReason: stalled.reason,
+        stalledSince: stalled.stalledSince,
+        slaDueAt: stalled.slaDueAt,
         championCandidate: isChampionCandidate(score, r.rung, r.influence),
       };
     });
@@ -465,6 +469,7 @@ export class MissionControlService {
       timeInRung: tir.map((r) => ({
         rung: r.rung,
         medianDays: r.medianDays,
+        sampled: r.sampled,
         p90Days: r.p90Days,
         stuck: r.stuckPersonIds
           .map((id) => personById(f, id))
@@ -503,16 +508,15 @@ export class MissionControlService {
     const pending = f.promotions.filter(
       (p) => p.decision === 'pending' && teamSkillIds.has(p.skillId),
     );
+    const recentGrades = f.grades.filter((g) => ids.has(g.personId) && g.gradedAt >= since);
     return {
       teamId,
       teamName: team.name,
       size: members.length,
       activePct: members.length ? round(wau / members.length) : 0,
       rungMix: rungDistribution(members.map((m) => f.rungs.get(m.id) ?? 0)),
-      hoursBackPerPerson:
-        hb.measuredTasks && members.length
-          ? round(hb.minutesBackPerWeek / 60 / members.length, 2)
-          : null,
+      hoursBackPerPerson: hb.measuredTasks && members.length ? round(hb.minutesBackPerWeek / 60 / members.length, 2) : 0,
+      hasBaseline: hb.measuredTasks > 0,
       skillsPublished: teamSkills.filter((s) => s.status === 'published')
         .length,
       skillsAdopted: f.adoptions.filter((a) => ids.has(a.personId)).length,
@@ -523,12 +527,10 @@ export class MissionControlService {
           p.decidedAt &&
           p.decidedAt >= since,
       ).length,
-      reworkRate: reworkRate(
-        f.grades
-          .filter((g) => ids.has(g.personId) && g.gradedAt >= since)
-          .map((g) => g.decision),
-      ),
+      reworkRate: reworkRate(recentGrades.map((g) => g.decision)),
+      hasGrades: recentGrades.length > 0,
       championQueueAgeDays: queueAgeDays(pending, f.now),
+      hasPendingPromotions: pending.length > 0,
     };
   }
 

@@ -274,13 +274,11 @@ export function workflowSummary(
     linkedSkills: f.skills
       .filter((s) => w.linkedSkillIds.includes(s.id))
       .map((s) => skillCard(s, f, viewerId)),
-    baselineMinutesPerWeek: f.baselines.some((b) => b.workflowMapId === w.id)
-      ? baseline
-      : null,
-    measuredMinutesPerWeek: hb.measuredTasks ? hb.currentMinutesPerWeek : null,
-    hoursBackPerWeek: hb.measuredTasks
-      ? Math.round((hb.minutesBackPerWeek / 60) * 10) / 10
-      : null,
+    baselineMinutesPerWeek: baseline,
+    measuredMinutesPerWeek: hb.measuredTasks ? hb.currentMinutesPerWeek : 0,
+    hoursBackPerWeek: hb.measuredTasks ? Math.round((hb.minutesBackPerWeek / 60) * 10) / 10 : 0,
+    hasBaseline: f.baselines.some((b) => b.workflowMapId === w.id),
+    hasMeasurement: hb.measuredTasks > 0,
     updatedAt: w.updatedAt,
   };
 }

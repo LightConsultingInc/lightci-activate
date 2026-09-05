@@ -184,7 +184,7 @@ export class LibraryService {
     const head = await this.git.head();
     let pluginCount = 0;
     let skillCount = 0;
-    if (this.git.available()) {
+    if (await this.git.ensureRepo()) {
       const read = await readRepoSkills(this.git.path!).catch(() => null);
       pluginCount = read?.plugins.length ?? 0;
       skillCount = read?.skills.length ?? 0;
@@ -205,7 +205,7 @@ export class LibraryService {
     orgId: string,
     actorPersonId: string | null = null,
   ): Promise<SyncResult> {
-    if (!this.git.available())
+    if (!(await this.git.ensureRepo()))
       throw new ConflictException(
         `Marketplace repo not available at ${this.git.path ?? 'LIBRARY_REPO_PATH'}; nothing to sync.`,
       );
@@ -296,12 +296,12 @@ export class LibraryService {
       skill.boundary ??= rs.boundary;
       skill = await this.skills.save(skill);
 
-      // versions from tags (or a synthetic v1 from HEAD when untagged)
+      // versions from tags (or the declared activate-version from HEAD when the repo has no tags)
       const repoVersions = rs.versions.length
         ? rs.versions
         : [
             {
-              version: 1,
+              version: rs.declaredVersion,
               tag: null as string | null,
               commitSha: rs.headSha ?? '',
               skillMd: rs.skillMd,
@@ -1647,7 +1647,7 @@ export class LibraryService {
 
   /** Repo-side record for a skill, if present on main (used for previousSkillMd on promotions). */
   async repoSkill(slug: string): Promise<RepoSkill | null> {
-    if (!this.git.available()) return null;
+    if (!(await this.git.ensureRepo())) return null;
     const read = await readRepoSkills(this.git.path!).catch(() => null);
     return read?.skills.find((s) => s.slug === slug) ?? null;
   }

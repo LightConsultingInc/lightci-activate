@@ -152,6 +152,9 @@ export class LeadService {
           metric: 'weeklyActivePct',
           value: round(pct),
           threshold: ACTIVE_PCT_TARGET,
+          reason: 'weekly active on real work below target',
+          stalledSince: null,
+          slaDueAt: null,
         });
     }
     for (const t of f.teams.filter((x) => x.inProgram)) {
@@ -172,6 +175,9 @@ export class LeadService {
           metric: 'weeklyActivePct',
           value: round(pct),
           threshold: ACTIVE_PCT_TARGET,
+          reason: 'weekly active on real work below target',
+          stalledSince: null,
+          slaDueAt: null,
         });
     }
     for (const p of f.people) {
@@ -183,11 +189,12 @@ export class LeadService {
             ? { id: p.teamId, name: f.teamName.get(p.teamId) ?? '' }
             : null,
           person: personRef(p, f),
-          metric: s.reason?.startsWith('activity')
-            ? 'activityDrop'
-            : 'stalledDays',
+          metric: s.reason?.includes('activity dropped') ? 'activityDrop' : 'stalledDays',
           value: s.stalledDays,
           threshold: f.stalledAfterDays,
+          reason: s.reason,
+          stalledSince: s.stalledSince,
+          slaDueAt: s.slaDueAt,
         });
     }
     return rows;

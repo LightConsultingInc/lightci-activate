@@ -160,9 +160,11 @@ export interface WorkflowSummary {
   score: WorkflowScore | null;
   nextWave: boolean;
   linkedSkills: SkillCard[];
-  baselineMinutesPerWeek: number | null;
-  measuredMinutesPerWeek: number | null;
-  hoursBackPerWeek: number | null;
+  baselineMinutesPerWeek: number;
+  measuredMinutesPerWeek: number;
+  hoursBackPerWeek: number;
+  hasBaseline: boolean;
+  hasMeasurement: boolean;
   updatedAt: Date;
 }
 
@@ -187,9 +189,11 @@ export interface LadderCompetency {
 
 export interface HoursBack {
   thisMonthMinutes: number;
-  baselineMinutesPerWeek: number | null;
-  currentMinutesPerWeek: number | null;
-  netOfReworkMinutes: number | null;
+  baselineMinutesPerWeek: number;
+  currentMinutesPerWeek: number;
+  netOfReworkMinutes: number;
+  hasBaseline: boolean;
+  hasMeasurement: boolean;
   series: { week: string; minutesBack: number }[];
 }
 
@@ -246,13 +250,18 @@ export interface LadderView {
 
 export interface RosterEntry extends PersonRef {
   lastActiveOnRealWork: string | null;
-  hoursBackPerWeek: number | null;
-  baselineMinutesPerWeek: number | null;
+  hoursBackPerWeek: number;
+  baselineMinutesPerWeek: number;
+  hasBaseline: boolean;
+  hasMeasurement: boolean;
   stalled: boolean;
   stalledDays: number;
+  stalledReason: string | null;
+  slaDueAt: Date | null;
   revisitsOverdue: number;
   activeDays30: number;
-  masteryAvg: number | null;
+  masteryAvg: number;
+  hasMastery: boolean;
 }
 
 export interface TeamView {
@@ -275,7 +284,8 @@ export interface TeamView {
   stats: {
     activePct7d: number;
     rungDistribution: number[];
-    hoursBackPerWeek: number | null;
+    hoursBackPerWeek: number;
+    hasBaseline: boolean;
     skillsPublished: number;
     promotionsPending: number;
   };
@@ -294,7 +304,8 @@ export interface ActiveSeries {
 export interface FunnelStep {
   step: string;
   count: number;
-  medianDays: number | null;
+  medianDays: number;
+  sampled: number;
 }
 
 export interface AdoptionView {
@@ -311,7 +322,8 @@ export interface AdoptionView {
     teamId: string;
     teamName: string;
     activePct: number;
-    hoursBack: number | null;
+    hoursBack: number;
+    hasBaseline: boolean;
   }[];
   source: 'analytics_api' | 'seed' | 'mixed' | 'none';
 }
@@ -330,14 +342,18 @@ export interface ActivationScore {
 
 export interface PeopleEntry extends PersonRef {
   activationScore: ActivationScore;
-  hoursBackPerWeek: number | null;
+  hoursBackPerWeek: number;
+  hasBaseline: boolean;
   skillsPublished: number;
   adoptedByOthers: number;
-  gradeQuality: number | null;
+  gradeQuality: number;
+  hasGrades: boolean;
   activeDays30: number;
   rising: boolean;
   stalled: boolean;
   stalledReason: string | null;
+  stalledSince: Date | null;
+  slaDueAt: Date | null;
   championCandidate: boolean;
 }
 
@@ -371,8 +387,9 @@ export interface JourneyView {
   cohorts: { cohortWeek: string; counts: number[] }[];
   timeInRung: {
     rung: number;
-    medianDays: number | null;
-    p90Days: number | null;
+    medianDays: number;
+    p90Days: number;
+    sampled: number;
     stuck: PersonRef[];
   }[];
   revisitCompliance: {
@@ -389,12 +406,15 @@ export interface GroupRow {
   size: number;
   activePct: number;
   rungMix: number[];
-  hoursBackPerPerson: number | null;
+  hoursBackPerPerson: number;
+  hasBaseline: boolean;
   skillsPublished: number;
   skillsAdopted: number;
   promotionThroughput: number;
-  reworkRate: number | null;
-  championQueueAgeDays: number | null;
+  reworkRate: number;
+  hasGrades: boolean;
+  championQueueAgeDays: number;
+  hasPendingPromotions: boolean;
 }
 
 export interface SkillsView {
@@ -483,7 +503,7 @@ export interface CostView {
     inactive: number;
     costTotal: number;
     costInactive: number;
-    costPerActive: number | null;
+    costPerActive: number;
     byTeam: {
       teamId: string;
       teamName: string;
@@ -504,7 +524,9 @@ export interface CostView {
   return: {
     hoursBackPerMonth: number;
     valueUsd: number;
-    roi: number | null;
+    roi: number;
+    hasCost: boolean;
+    hasBaseline: boolean;
     baselineRefs: BaselineRef[];
     perTeam: {
       teamId: string | null;
@@ -550,6 +572,9 @@ export interface LeadQueue {
     metric: string;
     value: number;
     threshold: number;
+    reason: string | null;
+    stalledSince: Date | null;
+    slaDueAt: Date | null;
   }[];
   waves: {
     org: { id: string; name: string; slug: string };

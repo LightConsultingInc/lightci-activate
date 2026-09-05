@@ -70,7 +70,7 @@ describe('cost math', () => {
   it('roi is (value - cost) / cost and null without cost', () => {
     expect(roi(200, 100)).toBe(1);
     expect(roi(50, 100)).toBe(-0.5);
-    expect(roi(50, 0)).toBeNull();
+    expect(roi(50, 0)).toBe(0);
   });
   it('seat cost splits active/inactive and uses org seats when they exceed people rows', () => {
     const c = computeCost(facts());
@@ -141,9 +141,11 @@ describe('cost math', () => {
         perSkill: [],
       }),
     );
-    expect(c.seats.costPerActive).toBeNull();
+    expect(c.seats.costPerActive).toBe(0);
     expect(c.return.valueUsd).toBe(0);
     expect(c.return.roi).toBe(-1); // fees are still a cost
     expect(c.return.baselineRefs.map((r) => r.kind)).toEqual(['cost_input']);
+    expect(c.return.hasBaseline).toBe(false);
+    expect(c.return.hasCost).toBe(true);
   });
 });

@@ -158,9 +158,13 @@ export function ladderLite(f: OrgFacts, person: Person): LadderView {
     thisMonthMinutes: hb.measuredTasks
       ? round(hb.minutesBackPerWeek * weeksThisMonth, 1)
       : 0,
-    baselineMinutesPerWeek: hb.measuredTasks ? hb.baselineMinutesPerWeek : null,
-    currentMinutesPerWeek: hb.measuredTasks ? hb.currentMinutesPerWeek : null,
-    netOfReworkMinutes: hb.measuredTasks ? hb.minutesBackPerWeek : null,
+    baselineMinutesPerWeek: hb.measuredTasks
+      ? hb.baselineMinutesPerWeek
+      : f.baselines.filter((b) => b.personId === person.id).reduce((s, b) => s + b.minutesPerWeek + b.reworkMinutesPerWeek, 0),
+    currentMinutesPerWeek: hb.measuredTasks ? hb.currentMinutesPerWeek : 0,
+    netOfReworkMinutes: hb.measuredTasks ? hb.minutesBackPerWeek : 0,
+    hasBaseline: f.baselines.some((b) => b.personId === person.id),
+    hasMeasurement: hb.measuredTasks > 0,
     series,
   };
 

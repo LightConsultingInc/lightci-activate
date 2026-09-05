@@ -91,7 +91,7 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
             columns={[
               { key: "team", header: "Team", sortValue: (r) => r.teamName, render: (r) => <span className="font-medium">{r.teamName}</span> },
               { key: "activePct", header: "Active", align: "right", sortValue: (r) => r.activePct, render: (r) => <Bar01 value={r.activePct} /> },
-              { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (r) => r.hoursBack, render: (r) => <span className={r.baselineHours == null && r.baseline == null ? "text-muted-foreground" : ""}>{r.hoursBack.toFixed(1)}h</span> },
+              { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (r) => r.hoursBack, render: (r) => <span className={r.baselineHours == null && r.baseline == null ? "text-muted-foreground" : ""}>{(r.hoursBack ?? 0).toFixed(1)}h</span> },
             ]}
           />
         </Panel>

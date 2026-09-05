@@ -64,7 +64,7 @@ function Body({ d, teamId }: { d: McPeople; teamId: string | null }) {
           columns={[
             { key: "person", header: "Person", sortValue: (p) => p.name, render: (p) => <PersonCell person={p} sub={p.teamName ?? p.title ?? undefined} /> },
             { key: "rung", header: "Rung", sortValue: (p) => p.rung, render: (p) => <RungBadge rung={p.rung} showName={false} /> },
-            { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (p) => p.hoursBackPerWeek, render: (p) => <span className={p.baselineMinutesPerWeek === null ? "text-muted-foreground" : ""}>{p.hoursBackPerWeek.toFixed(1)}h</span> },
+            { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (p) => p.hoursBackPerWeek, render: (p) => <span className={p.baselineMinutesPerWeek === null ? "text-muted-foreground" : ""}>{(p.hoursBackPerWeek ?? 0).toFixed(1)}h</span> },
             { key: "skillsPublished", header: "Skills published", align: "right", sortValue: (p) => p.skillsPublished, render: (p) => p.skillsPublished },
             { key: "influence", header: "Influence", align: "right", sortValue: (p) => p.adoptedByOthers, render: (p) => <span title="Skills adopted by others">{p.adoptedByOthers}</span> },
             { key: "gradeQuality", header: "Grade quality", align: "right", sortValue: (p) => p.gradeQuality, render: (p) => fmt.pct(p.gradeQuality) },

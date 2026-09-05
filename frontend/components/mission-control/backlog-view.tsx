@@ -129,7 +129,7 @@ function Body({ d, nextWave, setNextWave }: { d: Backlog; nextWave: boolean; set
             dense
             columns={[
               { key: "team", header: "Team", sortValue: (t) => t.teamName, render: (t) => <Link href={`/mission-control/backlog?team=${t.teamId}`} className="font-medium hover:underline">{t.teamName}</Link> },
-              { key: "hours", header: "Hours at stake / wk", align: "right", sortValue: (t) => t.hoursAtStake, render: (t) => `${t.hoursAtStake.toFixed(1)}h` },
+              { key: "hours", header: "Hours at stake / wk", align: "right", sortValue: (t) => t.hoursAtStake, render: (t) => `${(t.hoursAtStake ?? 0).toFixed(1)}h` },
               { key: "candidates", header: "Candidates", align: "right", sortValue: (t) => t.candidates, render: (t) => t.candidates },
               { key: "nextWave", header: "Next wave", align: "right", sortValue: (t) => t.nextWave ?? 0, render: (t) => t.nextWave ?? "—" },
               { key: "shipped", header: "Shipped", align: "right", sortValue: (t) => t.shipped ?? 0, render: (t) => t.shipped ?? "—" },

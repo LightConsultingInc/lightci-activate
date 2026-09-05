@@ -160,7 +160,8 @@ describe('funnel', () => {
     expect(steps[2].medianDays).toBe(2);
     expect(steps[3].medianDays).toBe(10);
     expect(steps[4].medianDays).toBe(31);
-    expect(steps[5].medianDays).toBeNull();
+    expect(steps[5].medianDays).toBe(0);
+    expect(steps[5].sampled).toBe(0);
   });
   it('skips over missing intermediate steps when a diagnostic placement jumps rungs', () => {
     const steps = funnel([
@@ -199,7 +200,8 @@ describe('rungs', () => {
     expect(rows[3].medianDays).toBe(16);
     expect(rows[3].stuckPersonIds).toEqual([]);
     expect(rows[0].stuckPersonIds).toEqual([]); // c only 6 days at L0
-    expect(rows[4].medianDays).toBeNull();
+    expect(rows[4].medianDays).toBe(0);
+    expect(rows[4].sampled).toBe(0);
   });
   it('rungGains and markRising pick the fastest movers', () => {
     const gains = rungGains(placements, ['a', 'b', 'c'], NOW, 30);
@@ -233,58 +235,35 @@ describe('rungs', () => {
 });
 
 describe('stalled', () => {
-  it('flags no progression beyond the threshold with the coach reason when tagged', () => {
-    const r = detectStalled(
-      {
-        lastProgressionAt: d('2026-08-01'),
-        activeDaysThisMonth: 5,
-        activeDaysPriorMonth: 5,
-        latestNoteTags: ['blocked'],
-      },
-      NOW,
-      14,
-    );
-    expect(r).toEqual({ stalled: true, stalledDays: 35, reason: 'blocked' });
-  });
-  it('flags a >50% activity drop even with recent progression', () => {
-    const r = detectStalled(
-      {
-        lastProgressionAt: d('2026-09-01'),
-        activeDaysThisMonth: 2,
-        activeDaysPriorMonth: 10,
-        latestNoteTags: [],
-      },
-      NOW,
-      14,
-    );
+  const base = { activeDaysThisMonth: 5, activeDaysPriorMonth: 5, latestNoteTags: [] as string[], rung: 2, status: 'active' as const, roles: ['learner'] };
+  it('flags no rung pass AND no submission beyond the threshold, with the coach reason when tagged and an SLA', () => {
+    const r = detectStalled({ ...base, lastProgressionAt: d('2026-08-01'), lastSubmissionAt: d('2026-08-10'), latestNoteTags: ['blocked'] }, NOW, 14);
     expect(r.stalled).toBe(true);
-    expect(r.reason).toBe('activity dropped >50% vs prior month');
+    expect(r.stalledDays).toBe(26); // since the last submission
+    expect(r.reason).toBe('blocked');
+    expect(r.stalledSince).toEqual(d('2026-08-24')); // last activity + 14 days
+    expect(r.slaDueAt).toEqual(d('2026-08-27')); // + 3 days
   });
-  it('does not flag a quiet prior month or a healthy learner', () => {
-    expect(
-      detectStalled(
-        {
-          lastProgressionAt: d('2026-09-01'),
-          activeDaysThisMonth: 0,
-          activeDaysPriorMonth: 0,
-          latestNoteTags: [],
-        },
-        NOW,
-        14,
-      ).stalled,
-    ).toBe(false);
-    expect(
-      detectStalled(
-        {
-          lastProgressionAt: d('2026-08-30'),
-          activeDaysThisMonth: 8,
-          activeDaysPriorMonth: 9,
-          latestNoteTags: ['no_time'],
-        },
-        NOW,
-        14,
-      ).stalled,
-    ).toBe(false);
+  it('a recent submission keeps a slow-progressing learner out of the stalled list unless activity collapsed', () => {
+    const recent = { ...base, lastProgressionAt: d('2026-07-01'), lastSubmissionAt: d('2026-09-01') };
+    expect(detectStalled(recent, NOW, 14).stalled).toBe(false);
+    const collapsed = detectStalled({ ...recent, activeDaysThisMonth: 2, activeDaysPriorMonth: 10 }, NOW, 14);
+    expect(collapsed.stalled).toBe(true);
+    expect(collapsed.reason).toBe('no rung passed; activity dropped >50% vs prior month');
+  });
+  it('a recent rung pass is never stalled, even with no submissions and an activity drop', () => {
+    expect(detectStalled({ ...base, lastProgressionAt: d('2026-09-01'), lastSubmissionAt: null, activeDaysThisMonth: 1, activeDaysPriorMonth: 10 }, NOW, 14).stalled).toBe(false);
+  });
+  it('does not flag a quiet prior month by itself', () => {
+    expect(detectStalled({ ...base, lastProgressionAt: d('2026-07-01'), lastSubmissionAt: d('2026-09-01'), activeDaysThisMonth: 0, activeDaysPriorMonth: 0 }, NOW, 14).stalled).toBe(false);
+  });
+  it('excludes inactive people, non-learner sponsors/admins/leads and L5 champions', () => {
+    const stale = { ...base, lastProgressionAt: d('2026-06-01'), lastSubmissionAt: null };
+    expect(detectStalled(stale, NOW, 14).stalled).toBe(true);
+    expect(detectStalled({ ...stale, status: 'inactive' }, NOW, 14).stalled).toBe(false);
+    expect(detectStalled({ ...stale, roles: ['sponsor', 'admin'] }, NOW, 14).stalled).toBe(false);
+    expect(detectStalled({ ...stale, roles: ['sponsor', 'learner'] }, NOW, 14).stalled).toBe(true);
+    expect(detectStalled({ ...stale, rung: 5 }, NOW, 14).stalled).toBe(false);
   });
 });
 
@@ -455,7 +434,7 @@ describe('revisits, rework, queue age', () => {
   it('rework rate is revise/pass', () => {
     expect(reworkRate(['pass', 'pass', 'revise'])).toBe(0.5);
     expect(reworkRate(['revise', 'revise'])).toBe(2);
-    expect(reworkRate([])).toBeNull();
+    expect(reworkRate([])).toBe(0);
   });
   it('queue age is the mean age of pending items', () => {
     expect(
@@ -464,6 +443,6 @@ describe('revisits, rework, queue age', () => {
         NOW,
       ),
     ).toBe(3);
-    expect(queueAgeDays([], NOW)).toBeNull();
+    expect(queueAgeDays([], NOW)).toBe(0);
   });
 });

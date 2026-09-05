@@ -82,6 +82,8 @@ export interface RepoSkillVersion {
 export interface RepoSkill {
   slug: string;
   plugin: string;
+  /** SKILL.md metadata.activate-version (the version the current content claims to be); 1 when absent. */
+  declaredVersion: number;
   /** Path relative to the repo root, e.g. plugins/fp-meeting-prep/skills/advisor-meeting-prep */
   repoPath: string;
   name: string;
@@ -148,6 +150,12 @@ export function boundaryToManifest(
     must_never_receive: b?.mustNeverReceive ?? [],
     human_review: b?.humanReview ?? [],
   };
+}
+
+/** `metadata.activate-version` as a positive integer, else 1. */
+export function declaredVersion(meta: Record<string, unknown> | null | undefined): number {
+  const n = Number.parseInt(String(meta?.['activate-version'] ?? ''), 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
 const VALID_STATUS: SkillStatus[] = [
@@ -250,6 +258,7 @@ export function readSkillDir(
     ),
     family: typeof manifest.family === 'string' ? manifest.family : null,
     rungRequired: rungFromLabel(manifest.rung_required, 1),
+    declaredVersion: declaredVersion(meta),
     status,
     successor:
       typeof manifest.successor === 'string' ? manifest.successor : null,

@@ -52,9 +52,9 @@ export function valueOfMinutesPerWeek(
   };
 }
 
-/** ROI = (value − cost) ÷ cost; null when cost is zero (nothing to divide by). */
-export function roi(valueUsd: number, costUsd: number): number | null {
-  return costUsd > 0 ? round((valueUsd - costUsd) / costUsd) : null;
+/** ROI = (value − cost) ÷ cost; 0 when cost is zero (nothing to divide by; see `hasCost`). */
+export function roi(valueUsd: number, costUsd: number): number {
+  return costUsd > 0 ? round((valueUsd - costUsd) / costUsd) : 0;
 }
 
 export function computeCost(f: CostFacts): CostView {
@@ -140,6 +140,8 @@ export function computeCost(f: CostFacts): CostView {
     hoursBackPerMonth: totalReturn.hoursPerMonth,
     valueUsd: totalReturn.valueUsd,
     roi: roi(totalReturn.valueUsd, program.total),
+    hasCost: program.total > 0,
+    hasBaseline: f.hoursBackTotal.refs.some((r) => r.kind === 'baseline'),
     baselineRefs: [...f.hoursBackTotal.refs, costInputRef],
     perTeam: f.perTeam.map((t) => {
       const v = valueOfMinutesPerWeek(
@@ -188,7 +190,7 @@ export function computeCost(f: CostFacts): CostView {
       inactive,
       costTotal,
       costInactive,
-      costPerActive: active > 0 ? round(costTotal / active, 2) : null,
+      costPerActive: active > 0 ? round(costTotal / active, 2) : 0,
       byTeam,
     },
     premium,

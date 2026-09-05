@@ -71,7 +71,7 @@ function parseBlocks(src: string): Block[] {
 /** Inline: `code`, **bold**, *italic*. Tokenised left to right; unmatched markers are literal. */
 export function renderInline(text: string): ReactNode[] {
   const out: ReactNode[] = []
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(_[^_]+_)/g
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|((?<![A-Za-z0-9])_[^_\s][^_]*_(?![A-Za-z0-9]))/g
   let last = 0
   let m: RegExpExecArray | null
   let k = 0

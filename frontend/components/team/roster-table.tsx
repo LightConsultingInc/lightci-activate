@@ -58,8 +58,9 @@ export function RosterTable({ roster, className }: { roster: RosterRow[]; classN
         <TableBody>
           {rows.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">Nobody on the roster yet. Invite advisors from Company admin; their intake interview places them on the ladder.</TableCell></TableRow>}
           {rows.map((r) => {
-            const baselineH = r.baselineMinutesPerWeek / 60
-            const ratio = baselineH > 0 ? r.hoursBackPerWeek / baselineH : 0
+            const baselineH = (r.baselineMinutesPerWeek ?? 0) / 60
+            const hoursBack = r.hoursBackPerWeek ?? 0
+            const ratio = baselineH > 0 ? hoursBack / baselineH : 0
             return (
               <TableRow key={r.id} className="cursor-pointer" onClick={() => router.push(`/people/${r.id}`)} onKeyDown={(e) => { if (e.key === "Enter") router.push(`/people/${r.id}`) }} tabIndex={0} data-testid="roster-row" data-person-id={r.id}>
                 <TableCell><PersonChip person={r} size="sm" showTitle /></TableCell>
@@ -71,7 +72,7 @@ export function RosterTable({ roster, className }: { roster: RosterRow[]; classN
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <MicroBar value={ratio} color="var(--glow)" showValue={false} width={64} />
-                    <span className="text-sm tabular">{r.hoursBackPerWeek.toFixed(1)}h</span>
+                    <span className="text-sm tabular">{hoursBack.toFixed(1)}h</span>
                     <span className="text-xs text-muted-foreground tabular">/ {baselineH.toFixed(1)}h</span>
                   </div>
                 </TableCell>

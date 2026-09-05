@@ -13,7 +13,7 @@ import { FindOperator } from 'typeorm';
 import type { Person } from '../orgs/entities/person.entity';
 import { GitRepoService } from './git-repo.service';
 import { LibraryService } from './library.service';
-import { copyMarketplace } from './repo-reader.spec';
+import { SEEDED_SLUGS, copyMarketplace, governedWarnings, repoFor } from './repo-reader.spec';
 
 // ───────────────────────── in-memory repository ─────────────────────────
 
@@ -134,9 +134,7 @@ describe('LibraryService against the demo marketplace', () => {
 
   beforeAll(async () => {
     dir = copyMarketplace();
-    process.env.LIBRARY_REPO_PATH = dir;
-    delete process.env.GITHUB_TOKEN;
-    git = new GitRepoService();
+    git = await repoFor(dir);
     const refOf = (p: Row) => ({ id: p.id, name: p.name, email: p.email, title: p.title ?? null, avatarUrl: null, teamId: p.teamId ?? null, teamName: null, rung: 1, roles: p.roles });
     const refs = {
       refs: async (persons: Row[]) => persons.map(refOf),
@@ -165,18 +163,20 @@ describe('LibraryService against the demo marketplace', () => {
   it('status reports the repo on main, clean, with counts', async () => {
     expect(git.available()).toBe(true);
     const s = await lib.status(ORG_ID);
-    expect(s).toMatchObject({ branch: 'main', dirty: false, pluginCount: 4, skillCount: 10, mode: 'local', lastSyncAt: null });
+    expect(s).toMatchObject({ branch: 'main', dirty: false, skillCount: 11, mode: 'local', lastSyncAt: null });
+    expect(s.pluginCount).toBeGreaterThanOrEqual(4);
     expect(s.repo).toBe(dir);
   });
 
   it('sync creates every skill with versions from tags, resolved owners/teams and successors', async () => {
     const r = await lib.sync(ORG_ID, daniel.id);
-    expect(r.created).toBe(10);
+    expect(r.created).toBe(11);
     expect(r.updated).toBe(0);
     expect(r.deprecated).toBe(0);
-    expect(r.versions).toBe(13); // 10 × v1 + advisor@v2 + followup@v2 + crm-note-cleanup@v2
-    expect(r.warnings).toEqual([]);
-    expect(repos.skills.rows).toHaveLength(10);
+    expect(r.versions).toBe(11); // one import tag per skill at its declared activate-version
+    expect(governedWarnings(r.warnings)).toEqual([]);
+    expect(r.skills.sort()).toEqual(SEEDED_SLUGS);
+    expect(repos.skills.rows).toHaveLength(11);
     const bySlug = (slug: string) => repos.skills.rows.find((s) => s.slug === slug)!;
     const prep = bySlug('advisor-meeting-prep');
     expect(prep).toMatchObject({ orgId: ORG_ID, plugin: 'fp-meeting-prep', ownerPersonId: daniel.id, teamId: teamIds.fp, status: 'published', rungRequired: 1, currentVersion: 2, workflowFamily: 'meeting-prep', repoPath: 'plugins/fp-meeting-prep/skills/advisor-meeting-prep' });
@@ -188,10 +188,12 @@ describe('LibraryService against the demo marketplace', () => {
     const dep = bySlug('crm-note-cleanup');
     expect(dep).toMatchObject({ status: 'deprecated', teamId: null, plugin: 'shared', successorSkillId: bySlug('client-followup-notes').id });
     const followupVersions = repos.versions.rows.filter((v) => v.skillId === bySlug('client-followup-notes').id).sort((a, b) => a.version - b.version);
-    expect(followupVersions.map((v) => v.tag)).toEqual(['client-followup-notes@v1', 'client-followup-notes@v2']);
-    expect(followupVersions[1].authorPersonId).toBe(sofia.id);
-    expect(followupVersions[1].approverPersonIds).toEqual([daniel.id]);
-    expect(followupVersions[1].commitSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(followupVersions.map((v) => [v.version, v.tag])).toEqual([[2, 'client-followup-notes@v2']]); // v1 only exists in the DB seed
+    expect(followupVersions[0].authorPersonId).toBe(sofia.id); // bot author is not a person → owner
+    expect(followupVersions[0].approverPersonIds).toEqual([daniel.id]);
+    expect(followupVersions[0].commitSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(bySlug('fee-change-comms')).toMatchObject({ status: 'in_review', ownerPersonId: marcus.id, teamId: teamIds.wa, plugin: 'wa-client-comms', currentVersion: 1 });
+    expect(bySlug('fee-change-comms').publishedAt ?? null).toBeNull();
     expect(repos.assignments.rows.map((a) => `${a.plugin}→${a.teamId === teamIds.fp ? 'fp' : a.teamId === teamIds.wa ? 'wa' : 'cso'}`).sort()).toEqual(
       ['cso-operations→cso', 'fp-meeting-prep→fp', 'shared→cso', 'shared→fp', 'shared→wa', 'wa-client-comms→wa'],
     );
@@ -201,11 +203,12 @@ describe('LibraryService against the demo marketplace', () => {
 
   it('lists the library with cards, facets, filters and health flags', async () => {
     const all = await lib.listLibrary(ORG_ID, { personId: marcus.id });
-    expect(all.skills).toHaveLength(10);
+    expect(all.skills).toHaveLength(11);
     expect(all.facets.teams.map((t) => t.name).sort()).toEqual(['Client Service Ops', 'Financial Planning', 'Wealth Advisors']);
-    expect(all.facets.statuses).toEqual(expect.arrayContaining([{ status: 'published', count: 9 }, { status: 'deprecated', count: 1 }]));
-    expect(all.facets.rungs).toEqual([{ rung: 1, count: 6 }, { rung: 2, count: 4 }]);
-    expect(all.facets.families.find((f) => f.name === 'client-communications')?.count).toBe(3);
+    expect(all.facets.statuses).toEqual(expect.arrayContaining([{ status: 'published', count: 9 }, { status: 'deprecated', count: 1 }, { status: 'in_review', count: 1 }]));
+    expect(all.facets.rungs).toEqual([{ rung: 1, count: 7 }, { rung: 2, count: 4 }]);
+    expect(all.facets.families.find((f) => f.name === 'client-communications')?.count).toBe(4);
+    expect(all.skills.find((s) => s.slug === 'fee-change-comms')!.health).toContain('pending_review');
     const card = all.skills.find((s) => s.slug === 'onboarding-packet-qa')!;
     expect(card).toMatchObject({ plugin: 'cso-operations', team: { id: teamIds.cso, name: 'Client Service Ops' }, status: 'published', rungRequired: 1, version: 1, grade: null, boundaryBadge: 'amber', activeUsers30d: 0, runs30d: 0, adoptedByMe: false });
     expect(card.owner).toMatchObject({ id: tom.id, email: 'tom.becker@meridianwealth.demo' });
@@ -214,9 +217,10 @@ describe('LibraryService against the demo marketplace', () => {
     expect(all.skills.find((s) => s.slug === 'crm-note-cleanup')!.health).not.toContain('unused_30d');
     expect(all.skills.every((s) => !s.health.includes('owner_left'))).toBe(true);
     expect((await lib.listLibrary(ORG_ID, { team: 'fp' })).skills.map((s) => s.slug).sort()).toEqual(['advisor-meeting-prep', 'annual-review-deck-outline', 'rmd-letter-draft']);
-    expect((await lib.listLibrary(ORG_ID, { team: teamIds.wa })).skills).toHaveLength(3);
+    expect((await lib.listLibrary(ORG_ID, { team: teamIds.wa })).skills).toHaveLength(4);
     expect((await lib.listLibrary(ORG_ID, { rung: 2 })).skills).toHaveLength(4);
     expect((await lib.listLibrary(ORG_ID, { status: 'deprecated' })).skills.map((s) => s.slug)).toEqual(['crm-note-cleanup']);
+    expect((await lib.listLibrary(ORG_ID, { status: 'in_review' })).skills.map((s) => s.slug)).toEqual(['fee-change-comms']);
     expect((await lib.listLibrary(ORG_ID, { q: 'RMD' })).skills.map((s) => s.slug)).toEqual(['rmd-letter-draft']);
     expect((await lib.listLibrary(ORG_ID, { family: 'proposals' })).skills.map((s) => s.slug)).toEqual(['proposal-assembly']);
     const byName = (await lib.listLibrary(ORG_ID, { sort: 'name' })).skills.map((s) => s.name);
@@ -227,8 +231,8 @@ describe('LibraryService against the demo marketplace', () => {
     const d = await lib.getDetail(ORG_ID, 'crm-note-cleanup', marcus.id);
     expect(d.status).toBe('deprecated');
     expect(d.successor?.slug).toBe('client-followup-notes');
-    expect(d.versions.map((v) => v.version)).toEqual([2, 1]);
-    expect(d.versions[0].author?.email).toBe('sofia.alvarez@meridianwealth.demo');
+    expect(d.versions.map((v) => v.version)).toEqual([2]);
+    expect(d.versions[0].author?.email).toBe('marcus.reid@meridianwealth.demo');
     expect(d.manifest?.successor).toBe('client-followup-notes');
     expect(d.skillMd).toContain('Deprecated (Aug 2026)');
     expect(d.usageByTeam).toEqual([]);
@@ -243,9 +247,9 @@ describe('LibraryService against the demo marketplace', () => {
 
   it('a second sync is idempotent', async () => {
     const r = await lib.sync(ORG_ID);
-    expect(r).toMatchObject({ created: 0, updated: 10, deprecated: 0, versions: 0 });
-    expect(repos.skills.rows).toHaveLength(10);
-    expect(repos.versions.rows).toHaveLength(13);
+    expect(r).toMatchObject({ created: 0, updated: 11, deprecated: 0, versions: 0 });
+    expect(repos.skills.rows).toHaveLength(11);
+    expect(repos.versions.rows).toHaveLength(11);
     expect(repos.assignments.rows).toHaveLength(6);
   });
 
@@ -253,9 +257,9 @@ describe('LibraryService against the demo marketplace', () => {
     await repos.skills.save({ orgId: ORG_ID, slug: 'gone-skill', name: 'Gone', triggerLine: 'Use when gone.', plugin: 'shared', repoPath: 'plugins/shared/skills/gone-skill', status: 'published', rungRequired: 1, skillMd: '# Gone', boundary: { mayRead: [], mustNeverReceive: [], humanReview: [] }, sampleCases: [], manifest: null, currentVersion: 1 });
     const r = await lib.sync(ORG_ID);
     expect(r.deprecated).toBe(1);
-    expect(r.warnings).toEqual(['gone-skill: no longer in the repo; marked deprecated']);
+    expect(governedWarnings(r.warnings)).toEqual(['gone-skill: no longer in the repo; marked deprecated']);
     expect(repos.skills.rows.find((s) => s.slug === 'gone-skill')!.status).toBe('deprecated');
-    expect(repos.skills.rows).toHaveLength(11);
+    expect(repos.skills.rows).toHaveLength(12);
   });
 
   it('patch by the owner creates a draft version, commits on skill/<slug>, and sync keeps the local draft', async () => {
@@ -285,7 +289,7 @@ describe('LibraryService against the demo marketplace', () => {
     expect(byChampion.version).toBe(3);
     // sync keeps the local draft ahead of the repo
     const r = await lib.sync(ORG_ID);
-    expect(r.warnings).toContain('rmd-letter-draft: local draft ahead of the repo; kept DB content, refreshed manifest/versions only');
+    expect(governedWarnings(r.warnings)).toContain('rmd-letter-draft: local draft ahead of the repo; kept DB content, refreshed manifest/versions only');
     const after = repos.skills.rows.find((s) => s.slug === 'rmd-letter-draft')!;
     expect(after.skillMd).toContain('Draft edit by Priya');
     expect(after.name).toBe('RMD letter draft (planning)');
