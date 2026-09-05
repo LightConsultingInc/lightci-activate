@@ -1,0 +1,19 @@
+services:
+  postgres:
+    container_name: lightci-activate
+    image: "postgres:15-alpine3.17"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lightci_activate
+    volumes:
+      - ./db-data/:/var/lib/postgresql/
+      - ./db-logs:/var/log/postgresql/
+    healthcheck:
+      test: ["CMD", "psql", "-U", "postgres", "-W", "postgres", "-d", "lightci_activate"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 5s

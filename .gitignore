@@ -1,0 +1,16 @@
+# local postgres volumes (docker-compose)
+db-data/
+db-logs/
+
+# real deploy config (copy from *.env.example)
+infra/config/**/*.env
+
+# terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+
+# OS
+.DS_Store
+
+node_modules/

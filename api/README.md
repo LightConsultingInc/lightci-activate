@@ -96,3 +96,21 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Database & migrations
+
+The API uses TypeORM against PostgreSQL. Start a local database with the compose file at the repo root
+(`docker compose up -d`; set `DB_PORT` if 5432 is taken), then copy `.env.example` to `.env`.
+
+Connection settings come from `src/typeorm.config.ts`: flat `DB_*` vars locally, or a single `DB` JSON
+secret (`{host, port, username, password, dbname}`) injected by ECS in AWS. Pending migrations run
+automatically on boot.
+
+```bash
+yarn migration:generate   # diff entities -> new migration in src/database/migrations
+yarn migration:create     # empty migration
+yarn migration:run
+yarn migration:revert
+```
+
+Deployment lives in `../infra` (Terraform, AWS ECS Fargate + RDS) and `../.github/workflows/deploy-api.yml`.
