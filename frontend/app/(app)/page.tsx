@@ -6,6 +6,7 @@ export const metadata = { title: "My Ladder" }
 
 export default async function Page() {
   const me = await getMe().catch(() => null)
-  if (me?.user && !me.user.consentAt) redirect("/onboarding")
+  // Only people who belong to a client org are onboarded; leads without a client stay on the ladder.
+  if (me?.user && !me.user.consentAt && me.org) redirect("/onboarding")
   return <LadderView />
 }

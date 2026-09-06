@@ -12,7 +12,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams
   return (
     <main className="grid min-h-svh lg:grid-cols-[1.1fr_1fr]">
-      <Paper className="hidden bg-ink text-paper lg:flex lg:flex-col lg:justify-between p-12">
+      <Paper className="hidden bg-ink text-paper lg:block" contentClassName="flex h-full min-h-svh flex-col justify-between p-12">
         <LightciWordmark className="h-6 text-paper" />
         <div className="max-w-xl">
           <p className="eyebrow text-paper/60">Activation and enablement for Claude Enterprise</p>

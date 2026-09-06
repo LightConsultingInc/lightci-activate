@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -64,6 +65,13 @@ export class InterviewsController {
     @OrgId() orgId: string,
     @Body() dto: StartDto,
   ): Promise<InterviewView> {
+    if (!orgId) {
+      throw new BadRequestException(
+        user.roles.includes('lead')
+          ? 'Choose a client first (the switcher in the Lead Console) before starting an interview.'
+          : 'Your account is not linked to a company yet. Ask your LightCI lead to add you to a client.',
+      );
+    }
     const session = await this.interviewer.start(user, orgId, {
       mode: dto.mode,
       workflowMapId: dto.workflowMapId ?? null,

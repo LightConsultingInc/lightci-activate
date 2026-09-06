@@ -3,6 +3,7 @@ import { OnboardingFlow } from "@/components/learner/onboarding/onboarding-flow"
 
 export const metadata = { title: "Welcome" }
 
+/** `?mode=workflow|champion` picks the interview kind; `?mode=chat` starts the interviewer in typing mode. */
 type SP = { interview?: string; mode?: string; workflow?: string }
 
 export default async function Page({ searchParams }: { searchParams: Promise<SP> }) {
@@ -14,6 +15,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<SP>
       interviewId={sp.interview ?? null}
       mode={mode}
       workflowMapId={sp.workflow ?? null}
+      initialMode={sp.mode === "chat" ? "chat" : "voice"}
     />
   )
 }
