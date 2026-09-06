@@ -10,3 +10,4 @@ export const test = base.extend<{ role: RoleKey; page: Page }>({
 })
 
 export { expect } from "@playwright/test"
+export type { Page, APIRequestContext, Locator } from "@playwright/test"

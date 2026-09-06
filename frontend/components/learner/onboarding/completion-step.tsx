@@ -39,7 +39,7 @@ export function CompletionStep({ result, workflows, mode }: { result: InterviewC
         {placed?.evidence && (
           <div className="relative mt-6 rounded-lg border border-paper/15 bg-paper/5 p-4" data-testid="placement-evidence">
             <p className="eyebrow text-paper/60">Evidence</p>
-            <MarkdownLite text={placed.evidence} className="mt-1 text-paper/85" />
+            <MarkdownLite text={Array.isArray(placed.evidence) ? placed.evidence.map((e) => `- ${e}`).join("\n") : placed.evidence} className="mt-1 text-paper/85" />
           </div>
         )}
       </div>

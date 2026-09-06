@@ -3,8 +3,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
 import { Repository } from 'typeorm';
-import { CurrentUser, Public } from '../common/decorators';
-import { currentStore } from '../common/request-context';
+import { CurrentUser, OrgId, Public } from '../common/decorators';
 import { RUNG_META } from '../common/roles';
 import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
@@ -66,11 +65,10 @@ export class AuthController {
     summary:
       'The signed-in person with org, team and rung; { user: null } when signed out.',
   })
-  async me(@CurrentUser() user?: Person): Promise<MeResponse> {
+  async me(@CurrentUser() user?: Person, @OrgId() scopedOrgId?: string | null): Promise<MeResponse> {
     if (!user) return { user: null, org: null, team: null, orgs: [] };
     const isLead = user.roles.includes('lead');
-    const store = currentStore();
-    const orgId = store.orgId ?? user.orgId;
+    const orgId = scopedOrgId ?? user.orgId;
     const org = orgId
       ? await this.orgs.findOne({ where: { id: orgId } })
       : null;
@@ -131,9 +129,8 @@ export class AuthController {
   @ApiOperation({
     summary: 'Invite a person by email via WorkOS (org-scoped).',
   })
-  async invite(@CurrentUser() inviter: Person, @Body() dto: InviteDto) {
-    const store = currentStore();
-    const orgId = store.orgId ?? inviter.orgId;
+  async invite(@CurrentUser() inviter: Person, @Body() dto: InviteDto, @OrgId() scopedOrgId?: string | null) {
+    const orgId = scopedOrgId ?? inviter.orgId;
     const org = orgId
       ? await this.orgs.findOne({ where: { id: orgId } })
       : null;

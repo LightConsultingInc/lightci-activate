@@ -26,7 +26,7 @@ export function HintsPanel({ hints, hintsRevealed, hintsTotal, onReveal, pending
       {hints.length > 0 && (
         <ol className="mt-3 space-y-2">
           {hints.map((h, i) => (
-            <li key={i} className="flex gap-2 rounded-md bg-glow-soft/60 p-2.5 text-sm animate-rise" data-testid={`hint-${i + 1}`}>
+            <li key={i} className="flex gap-2 rounded-md bg-glow-soft/60 p-2.5 text-sm" data-testid={`hint-${i + 1}`}>
               <span className="tabular mt-0.5 shrink-0 text-xs font-semibold text-glow-foreground">{i + 1}</span>
               <MarkdownLite text={h} className="space-y-1" />
             </li>

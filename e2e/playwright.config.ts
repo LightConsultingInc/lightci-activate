@@ -24,6 +24,7 @@ export default defineConfig({
   },
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/ },
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
+    // devices[] carries its own 1280x720 viewport; restate ours so the project does not shrink the window.
+    { name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } }, dependencies: ["setup"] },
   ],
 })

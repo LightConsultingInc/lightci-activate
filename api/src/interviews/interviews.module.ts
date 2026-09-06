@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Exercise } from '../learning/entities/exercise.entity';
 import { ContextLayer } from '../context/entities/context-layer.entity';
 import { ContextSource } from '../context/entities/context-source.entity';
 import { Placement } from '../learning/entities/placement.entity';
@@ -20,6 +21,7 @@ import './interviewer.mocks';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      Exercise,
       InterviewSession,
       WorkflowMap,
       ContextLayer,

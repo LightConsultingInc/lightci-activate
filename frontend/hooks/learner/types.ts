@@ -276,7 +276,7 @@ export type InterviewView = {
 export type InterviewComplete = {
   interview: InterviewView
   workflowMapIds: string[]
-  placement?: { rung: number; evidence: string }
+  placement?: { rung: number; evidence: string | string[] }
   exercises: ExerciseSummary[]
 }
 

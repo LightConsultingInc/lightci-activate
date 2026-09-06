@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useRef, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowUpRight, ClipboardCheck, GitPullRequest } from "lucide-react"
@@ -26,7 +26,13 @@ export function ReviewQueue() {
   const queue = q.data?.reviewQueue
   const items = useMemo(() => queue ?? [], [queue])
   const selectedId = sp.get("submission")
-  const selected = useMemo(() => items.find((i) => i.submission.id === selectedId) ?? items[0] ?? null, [items, selectedId])
+  // Remember items we have shown so a just-graded submission stays on screen after it leaves the queue.
+  const seen = useRef(new Map<string, ReviewItem>())
+  items.forEach((i) => seen.current.set(i.submission.id, i))
+  const selected = useMemo(
+    () => items.find((i) => i.submission.id === selectedId) ?? (selectedId ? seen.current.get(selectedId) : undefined) ?? items[0] ?? null,
+    [items, selectedId],
+  )
   const promos = q.data?.promotionQueue.length ?? 0
 
   if (q.isPending) return <><PageHeader eyebrow="Champion" title="Review Queue" /><div className="grid gap-4 lg:grid-cols-[20rem_1fr]"><Skeleton className="h-64" /><Skeleton className="h-96" /></div></>
@@ -40,7 +46,7 @@ export function ReviewQueue() {
         description="Teammates' L3/L4 submissions waiting on your grade. Grading is your L5 exercise: the Grader's draft is there for reference, your read is the one that counts."
         actions={promos > 0 && <Button variant="outline" render={<Link href="/promotions" />} data-testid="reviews-to-promotions"><GitPullRequest data-icon="inline-start" /> {promos} promotion{promos === 1 ? "" : "s"} awaiting you</Button>}
       />
-      {items.length === 0 ? (
+      {items.length === 0 && !selected ? (
         <EmptyState icon={<ClipboardCheck className="size-5" />} title="Nothing to grade right now" description="When someone on the team submits a skill exercise, say an RMD letter drafter with its sample cases, it lands here with the learner's expectation and critique alongside the artifact." action={promos > 0 ? <Button render={<Link href="/promotions" />}>Review promotions instead</Button> : undefined} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">

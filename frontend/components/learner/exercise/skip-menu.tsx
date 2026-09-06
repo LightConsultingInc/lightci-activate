@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { SkipForward } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useSkipExercise } from "@/hooks/learner/queries"
@@ -45,7 +45,7 @@ export function SkipMenu({ exerciseId, disabled }: { exerciseId: string; disable
           <SkipForward data-icon="inline-start" /> Skip
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuLabel>Why are you skipping?</DropdownMenuLabel>
+          <DropdownMenuGroup><DropdownMenuLabel>Why are you skipping?</DropdownMenuLabel></DropdownMenuGroup>
           <DropdownMenuSeparator />
           {REASONS.map((r) => (
             <DropdownMenuItem key={r.value} onClick={() => setReason(r.value)} data-testid={`skip-${r.value}`}>

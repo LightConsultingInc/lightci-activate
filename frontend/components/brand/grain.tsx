@@ -19,9 +19,9 @@ export function Grain({ opacity = 0.05, className }: { opacity?: number; classNa
 }
 
 /** Paper surface: faint grid plus grain, for heroes and empty states. */
-export function Paper({ className, children }: { className?: string; children?: React.ReactNode }) {
+export function Paper({ className, children, ...rest }: { className?: string; children?: React.ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("relative overflow-hidden paper-grid", className)}>
+    <div className={cn("relative overflow-hidden paper-grid", className)} {...rest}>
       <div className="mix-blend-multiply dark:mix-blend-screen">
         <Grain opacity={0.12} />
       </div>

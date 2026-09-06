@@ -94,6 +94,7 @@ export class MissionControlController {
   }
 
   @Get('people/:id')
+  @Roles('champion', 'sponsor', 'admin')
   @ApiOperation({
     summary:
       'Person page: ladder, journey timeline, baselines, measurements, usage series, coach notes, escalations.',

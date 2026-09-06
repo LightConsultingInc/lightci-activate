@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Exercise } from '../learning/entities/exercise.entity';
 import { In, IsNull, Repository } from 'typeorm';
 import type { ZodType } from 'zod';
 import { AiService } from '../ai/ai.service';
@@ -74,6 +75,7 @@ export class InterviewerService {
     @InjectRepository(Placement)
     private readonly placements: Repository<Placement>,
     @InjectRepository(Person) private readonly people: Repository<Person>,
+    @InjectRepository(Exercise) private readonly exercises: Repository<Exercise>,
     @InjectRepository(Team) private readonly teams: Repository<Team>,
     private readonly ai: AiService,
     private readonly coach: CoachService,
@@ -342,11 +344,19 @@ export class InterviewerService {
     orgId: string,
   ): Promise<InterviewCompleteResponse> {
     if (session.status === 'complete') {
+      const ids = (session.result?.exerciseIds as string[] | undefined) ?? [];
+      const prior = ids.length
+        ? await this.exercises.find({ where: { id: In(ids) } })
+        : await this.exercises.find({
+            where: { personId: session.personId, status: In(['active', 'queued']) },
+            order: { createdAt: 'ASC' },
+            take: 1,
+          });
       return {
         interview: this.view(session),
         workflowMapIds:
           (session.result?.workflowMapIds as string[] | undefined) ?? [],
-        exercises: [],
+        exercises: prior.map(toExerciseSummary),
         ...(session.result?.placement
           ? {
               placement: session.result.placement as {
@@ -454,6 +464,15 @@ export class InterviewerService {
         this.logger.warn(
           `First exercise after intake failed: ${error instanceof Error ? error.message : String(error)}`,
         );
+      }
+      if (exercises.length === 0) {
+        // Fall back to whatever Coach already has queued so the learner always leaves intake with a next step.
+        const queued = await this.exercises.find({
+          where: { personId: subject.id, status: In(['active', 'queued']) },
+          order: { createdAt: 'ASC' },
+          take: 1,
+        });
+        exercises = queued.map(toExerciseSummary);
       }
       session.result = {
         profile,

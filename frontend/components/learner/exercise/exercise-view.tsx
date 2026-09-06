@@ -186,7 +186,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
           )}
         </section>
 
-        <aside className="rounded-xl border bg-card lg:col-span-2 lg:sticky lg:top-16 lg:max-h-[calc(100svh-5rem)] lg:self-start">
+        <aside className="rounded-xl border bg-card lg:col-span-2 lg:sticky lg:top-16 lg:max-h-[calc(100svh-5rem)] lg:self-start lg:overflow-y-auto">
           <ExpectationCritiqueStepper
             step={step}
             maxReached={maxReached}

@@ -5,18 +5,14 @@ import { useMe } from "@/hooks/use-me"
 import { useLeadClients } from "@/hooks/mc/use-mc"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-function currentOrgCookie() {
-  if (typeof document === "undefined") return null
-  const m = document.cookie.match(/(?:^|; )activate_org=([^;]*)/)
-  return m ? decodeURIComponent(m[1]) : null
-}
-
 /** Switches the org the whole app is scoped to (X-Activate-Org via the activate_org cookie), then reloads. */
 export function ClientSwitcher({ className }: { className?: string }) {
   const me = useMe()
   const clients = useLeadClients()
   const options = (clients.data?.map((c) => c.org) ?? me.orgs ?? []).filter((o, i, arr) => arr.findIndex((x) => x.id === o.id) === i)
-  const current = currentOrgCookie() ?? me.org?.id ?? ""
+  // `me.org` already reflects the activate_org cookie (the API scopes /auth/me by X-Activate-Org), so it is
+  // safe to render on the server; reading document.cookie here caused a hydration mismatch.
+  const current = me.org?.id ?? ""
   const switchTo = (id: string) => {
     if (!id || id === current) return
     document.cookie = `activate_org=${encodeURIComponent(id)}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`

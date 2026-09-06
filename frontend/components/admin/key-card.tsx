@@ -72,15 +72,15 @@ export function KeyCard({ summary, canWrite, onSave, onVerify, onRemove, busy }:
 }) {
   const meta = KEY_META[summary.kind]
   const usingPlatform = summary.configured && summary.source === "platform"
-  const status: { label: string; tone: string; icon: React.ReactNode } = !summary.configured
+  const status: { label: string; tone: string; icon: React.ReactNode } = summary.status === "invalid"
+    ? { label: "Invalid", tone: "border-fail/40 bg-fail-soft text-foreground", icon: <ShieldAlertIcon className="size-3" /> }
+    : !summary.configured
     ? { label: "Not configured", tone: "border-border text-muted-foreground", icon: <CircleDashedIcon className="size-3" /> }
     : usingPlatform
       ? { label: "Using LightCI's key", tone: "border-glow bg-glow-soft text-glow-foreground", icon: <KeyRoundIcon className="size-3" /> }
       : summary.status === "verified"
         ? { label: "Verified", tone: "border-pass/40 bg-pass-soft text-foreground", icon: <CheckCircle2Icon className="size-3" /> }
-        : summary.status === "invalid"
-          ? { label: "Invalid", tone: "border-fail/40 bg-fail-soft text-foreground", icon: <ShieldAlertIcon className="size-3" /> }
-          : { label: "Unverified", tone: "border-revise/40 bg-revise-soft text-foreground", icon: <CircleDashedIcon className="size-3" /> }
+        : { label: "Unverified", tone: "border-revise/40 bg-revise-soft text-foreground", icon: <CircleDashedIcon className="size-3" /> }
 
   return (
     <section className={cn("flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10", summary.status === "invalid" && "ring-fail/40")} data-testid={`key-card-${summary.kind}`} data-state={status.label}>
