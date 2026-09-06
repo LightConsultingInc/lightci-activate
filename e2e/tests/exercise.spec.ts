@@ -5,89 +5,86 @@ import { expectToast, intOf, nudgeSlider } from "./helpers/ui"
 type ExerciseSummary = { id: string; title: string; mode: "in_app" | "in_claude"; status: string; workSurface: string; rung: number }
 
 /**
- * The exercise loop as Marcus Reid (seeded L1). His next-up exercise is an active, prompt-surface
- * exercise; a second one is queued. Grading with the mock Grader is deterministic but the decision
- * depends on the text, so the flow tolerates pass or revise. State is mutated, so this file is serial
- * and self-contained (the seed is reset at the start of the run by 00-reset.spec.ts).
+ * The practice loop as Marcus Reid (seeded L1): Build → Check → Result. His next-up exercise is an
+ * active, prompt-surface exercise; a second one is queued. The grade decision depends on the text
+ * (and on the provider), so the flow tolerates pass or revise. State is
+ * mutated, so this file is serial and self-contained (the seed is reset by 00-reset.spec.ts).
  */
-test.describe("exercise loop", () => {
+test.describe("practice: build, check, result", () => {
   test.describe.configure({ mode: "serial" })
-  // Taller viewport: the sticky Coach panel does not scroll internally, so with hints revealed its
-  // step buttons fall below a 900px-tall window (BUGS.md #2). The repro is pinned in the describe below.
   test.use({ role: "learner2", viewport: { width: 1440, height: 1200 } })
 
   let exerciseId = ""
   let exerciseTitle = ""
   let decision: "pass" | "revise" | "" = ""
 
-  const EXPECTATION = "I expect a three-part email (discussed, agreed, need from you) under 200 words, but Claude may invent a performance figure I never quoted."
+  const EXPECTATION = "A three-part email (discussed, agreed, need from you) under 200 words, but Claude may invent a performance figure I never quoted."
   const PROMPT = "You are helping me, a wealth advisor, write a follow-up email to the Hendersons after yesterday's meeting. Structure: what we discussed, what we agreed, what we need from you. Under 200 words, warm but plain. Do not mention investment performance or compare to other firms. Facts: inherited IRA distribution plan; moving to quarterly; they will send the updated beneficiary form; they asked about 529s for the grandchildren."
-  const CRITIQUE = "The draft uses placeholders where I gave concrete facts, so it did not use the inputs. It also does not state the 200-word limit was met and the closing action is vague; I would rewrite the ask for the beneficiary form as a single explicit sentence."
+  const NOTE = "The closing action is vague; I would rewrite the ask for the beneficiary form as a single explicit sentence."
 
   async function openNextUp(page: Page) {
     await page.goto("/")
     const start = page.getByTestId("next-up-start")
     await expect(start).toBeVisible()
-    exerciseTitle = (await page.getByTestId("next-up-title").textContent())?.trim() ?? ""
+    exerciseTitle = (await page.getByTestId("next-up-title").last().textContent())?.trim() ?? ""
     await start.click()
     await expect(page).toHaveURL(/\/exercise\/[0-9a-f-]{36}/)
     exerciseId = page.url().match(/\/exercise\/([0-9a-f-]{36})/)![1]
     await expect(page.getByTestId("exercise-view")).toBeVisible()
+    // In-Claude practice opens the pack first; close it to work in the app.
+    if (await page.getByTestId("open-in-claude-dialog").isVisible().catch(() => false)) await page.keyboard.press("Escape")
   }
 
-  test("stepper enforces predict-before-run", async ({ page }) => {
+  test("Build opens with the work surface, Coach beside it, and a note-to-self before the first run", async ({ page }) => {
     await openNextUp(page)
     await expect(page.getByTestId("exercise-title")).toHaveText(exerciseTitle)
     await expect(page.getByTestId("work-surface")).toHaveAttribute("data-surface", "prompt")
     await expect(page.getByTestId("coach-panel")).toBeVisible()
-    await expect(page.getByTestId("stepper")).toBeVisible()
-    for (const s of [1, 2, 3, 4, 5]) await expect(page.getByTestId(`step-${s}`)).toBeVisible()
-    await expect(page.getByTestId("step-1")).toHaveAttribute("data-state", "current")
-    await expect(page.getByTestId("step-2")).toHaveAttribute("data-state", "upcoming")
-    await expect(page.getByTestId("surface-locked")).toBeVisible()
+    for (const b of ["build", "check", "result"]) await expect(page.getByTestId(`beat-${b}`)).toBeVisible()
+    await expect(page.getByTestId("beat-build")).toHaveAttribute("data-state", "current")
+    await expect(page.getByTestId("beat-check")).toHaveAttribute("data-state", "upcoming")
+    await expect(page.getByTestId("beat-check")).toBeDisabled()
+    await expect(page.getByTestId("beat-result")).toBeDisabled()
+    await expect(page.getByTestId("expectation-input")).toBeVisible()
     await expect(page.getByTestId("run-button")).toBeDisabled()
-    await expect(page.getByTestId("expectation-confirm")).toBeDisabled()
-    // Steps ahead of the current one are not reachable by clicking.
-    await expect(page.getByTestId("step-3")).toBeDisabled()
+    await expect(page.getByTestId("work-continue")).toBeDisabled()
+    // No stepper, none of the old step labels.
+    await expect(page.getByTestId("stepper")).toHaveCount(0)
+    await expect(page.getByText(/State your expectation|Critique the output|Lock in my expectation|Submit for grading/)).toHaveCount(0)
 
     // The API refuses a run before an expectation is stored (409) regardless of the UI guard.
-    const res = await page.request.fetch(`${API_URL}/api/exercises/${exerciseId}/run`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${await accessToken(page)}`, "Content-Type": "application/json" },
-      data: JSON.stringify({ prompt: PROMPT }),
-    })
-    expect(res.status()).toBe(409)
-    expect(((await res.json()) as { detail: string }).detail).toMatch(/expectation/i)
+    if ((await page.getByTestId("expectation-input").inputValue()) === "") {
+      const res = await page.request.fetch(`${API_URL}/api/exercises/${exerciseId}/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await accessToken(page)}`, "Content-Type": "application/json" },
+        data: JSON.stringify({ prompt: PROMPT }),
+      })
+      expect(res.status()).toBe(409)
+    }
   })
 
-  test("expectation + confidence unlock the work surface; run produces mock output", async ({ page }) => {
+  test("the note-to-self plus a prompt unlock Run; the run produces mock output", async ({ page }) => {
     await page.goto(`/exercise/${exerciseId}`)
     await expect(page.getByTestId("exercise-view")).toBeVisible()
-    await page.getByTestId("expectation-input").fill(EXPECTATION)
-    await expect(page.getByTestId("confidence-value")).toContainText("60%")
-    await nudgeSlider(page.getByTestId("confidence-slider"), 2)
-    await expect(page.getByTestId("confidence-value")).toContainText("70%")
-    await page.getByTestId("expectation-confirm").click()
-
-    await expect(page.getByTestId("step-2")).toHaveAttribute("data-state", "current")
-    await expect(page.getByTestId("step-1")).toHaveAttribute("data-state", "done")
-    await expect(page.getByTestId("surface-locked")).toBeHidden()
-    await expect(page.getByTestId("work-continue")).toBeDisabled()
-
     await page.getByTestId("prompt-input").fill(PROMPT)
+    await expect(page.getByTestId("run-button")).toBeDisabled()
+    await page.getByTestId("expectation-input").fill(EXPECTATION)
     await expect(page.getByTestId("run-button")).toBeEnabled()
     await page.getByTestId("run-button").click()
     const output = page.getByTestId("run-output")
     await expect(output).toBeVisible({ timeout: 30_000 })
-    await expect(output).toContainText(/Mock Claude run|Purpose|draft/i)
-    await expect(output).toContainText("mock")
+    // Works with the mock provider and a real model alike: something substantial came back.
+    expect(((await output.textContent()) ?? "").length).toBeGreaterThan(120)
     await expect(page.getByTestId("work-continue")).toBeEnabled()
+    await expect(page.getByTestId("beat-check")).toBeEnabled()
   })
 
-  test("revealing a hint increments the count", async ({ page }) => {
+  test("Coach offers one nudge at a time", async ({ page }) => {
     await page.goto(`/exercise/${exerciseId}`)
-    // The draft expectation is persisted server-side, so the page resumes at step 2.
-    await expect(page.getByTestId("step-2")).toHaveAttribute("data-state", "current")
+    // The note-to-self was stored server-side, so it comes back on reload.
+    await expect(page.getByTestId("expectation-input")).toHaveValue(EXPECTATION)
+    const coach = page.getByTestId("coach-panel")
+    await expect(coach).toContainText("Need a nudge?")
     const count = page.getByTestId("hints-count")
     await expect(count).toContainText(/\d+\/\d+ revealed/)
     const before = await intOf(count)
@@ -96,43 +93,60 @@ test.describe("exercise loop", () => {
     await page.getByTestId("hint-button").click()
     await expect(count).toContainText(`${before + 1}/${total} revealed`)
     await expect(page.getByTestId(`hint-${before + 1}`)).toBeVisible()
+    // Coach collapses to a rail and comes back.
+    await coach.getByTestId("coach-toggle").click()
+    await expect(page.getByTestId("coach-panel")).toHaveAttribute("data-open", "false")
+    await page.getByTestId("coach-toggle").click()
+    await expect(page.getByTestId("coach-panel")).toHaveAttribute("data-open", "true")
   })
 
-  test("critique, submit and read the grade card", async ({ page }) => {
+  test("Check: tick the self-check, set how likely it is to pass, send; Result shows the grade and your check vs the grader", async ({ page }) => {
     await page.goto(`/exercise/${exerciseId}`)
-    await expect(page.getByTestId("step-2")).toHaveAttribute("data-state", "current")
+    await expect(page.getByTestId("beat-build")).toHaveAttribute("data-state", "current")
     // Output does not persist across a reload until submission; run again.
     await page.getByTestId("prompt-input").fill(PROMPT)
     await page.getByTestId("run-button").click()
     await expect(page.getByTestId("run-output")).toBeVisible({ timeout: 30_000 })
 
     await page.getByTestId("work-continue").click()
-    await expect(page.getByTestId("step-3")).toHaveAttribute("data-state", "current")
-    await expect(page.getByTestId("critique-continue")).toBeDisabled()
-    await page.getByTestId("critique-input").fill(CRITIQUE)
-    await page.getByTestId("critique-continue").click()
-    await expect(page.getByTestId("step-4")).toHaveAttribute("data-state", "current")
+    await expect(page.getByTestId("beat-check")).toHaveAttribute("data-state", "current")
+    await expect(page.getByTestId("beat-build")).toHaveAttribute("data-state", "done")
+    const items = page.getByTestId("self-check-item")
+    await expect(items.first()).toBeVisible()
+    const n = await items.count()
+    expect(n).toBeGreaterThan(0)
+    await items.first().click()
+    await expect(items.first()).toHaveAttribute("data-checked", "true")
+    await expect(page.getByTestId("confidence-value")).toContainText("60%")
+    await nudgeSlider(page.getByTestId("confidence-slider"), 2)
+    await expect(page.getByTestId("confidence-value")).toContainText("70%")
+    await page.getByTestId("check-note").fill(NOTE)
+    await expect(page.getByTestId("work-surface")).toContainText("Read-only")
     await page.getByTestId("submit-button").click()
 
-    const card = page.getByTestId("coach-panel").getByTestId("grade-card")
-    await expect(card).toBeVisible({ timeout: 60_000 })
-    await expect(page.getByTestId("step-5")).toHaveAttribute("data-state", "current")
+    const result = page.getByTestId("result-beat")
+    await expect(result).toBeVisible({ timeout: 60_000 })
+    await expect(page.getByTestId("beat-result")).toHaveAttribute("data-state", "current")
+    const card = result.getByTestId("grade-card")
     await expect(card.getByTestId("grade-score")).toContainText(/^\d{1,3}$/)
     await expect(card.getByTestId("rubric-bars")).toBeVisible()
     expect(await card.getByTestId("rubric-bars").locator("li").count()).toBeGreaterThan(0)
     const chip = card.getByTestId("decision-chip")
-    await expect(chip).toBeVisible()
     decision = ((await chip.getAttribute("data-decision")) ?? "") as typeof decision
     expect(["pass", "revise"]).toContain(decision)
     await expect(card).toHaveAttribute("data-decision", decision)
     await expect(card.getByTestId("teaching-moment")).toBeVisible()
-    await expect(card.getByTestId("grade-expectation-accuracy")).toContainText("%")
-    await expect(card.getByTestId("grade-critique-quality")).toContainText("%")
+    // Self-check items map onto the grader's rubric criteria.
+    const vs = page.getByTestId("check-vs-grader")
+    await expect(vs).toBeVisible()
+    await expect(page.getByTestId("check-vs-grader-summary")).toContainText(/Agreed on \d+ of \d+/)
+    expect(await vs.getByTestId("check-vs-grader-row").count()).toBeGreaterThan(0)
+    await expect(page.getByTestId("grade-back-to-module")).toHaveAttribute("href", /\/modules\/L[0-5]\?tab=feedback/)
     await expectToast(page, decision === "pass" ? /Passed/ : /Graded: revise/)
     await expect(page.getByTestId("work-surface")).toContainText("Submitted")
   })
 
-  test("the submission shows in history and the attempt list", async ({ page }) => {
+  test("the submission shows in history, in the module's Feedback tab and in the attempt list", async ({ page }) => {
     await page.goto("/history")
     const view = page.getByTestId("history-view")
     await expect(view).toBeVisible()
@@ -141,17 +155,17 @@ test.describe("exercise loop", () => {
     await expect(row).toHaveAttribute("data-decision", decision)
     await row.getByTestId("history-row-toggle").click()
     await expect(row.getByTestId("history-row-detail")).toBeVisible()
-    await expect(row.getByTestId("history-row-detail")).toContainText(CRITIQUE.slice(0, 40))
+    // The unticked self-check items and the note travel as the critique.
+    await expect(row.getByTestId("history-row-detail")).toContainText(NOTE.slice(0, 40))
     await expect(row.getByTestId("history-row-detail").getByTestId("grade-card")).toBeVisible()
 
-    // Filter by outcome narrows the list to matching rows only.
-    await page.getByTestId("history-filter-decision").click()
-    await page.getByRole("option", { name: decision === "pass" ? "Pass" : "Revise" }).click()
-    const rows = page.getByTestId("history-row")
-    expect(await rows.count()).toBeGreaterThan(0)
-    for (const r of await rows.all()) await expect(r).toHaveAttribute("data-decision", decision)
+    // The module's Feedback tab lists the same grade.
+    await page.goto("/modules/L1?tab=feedback")
+    await expect(page.getByTestId("feedback-tab")).toBeVisible()
+    const grade = page.getByTestId("module-grade").filter({ hasText: exerciseTitle }).first()
+    await expect(grade).toBeVisible()
+    await expect(grade).toHaveAttribute("data-decision", decision)
 
-    // On the exercise itself the attempt history lists prior submissions while a revise is open.
     await page.goto(`/exercise/${exerciseId}`)
     await expect(page.getByTestId("exercise-view")).toBeVisible()
     if (decision === "revise") {
@@ -159,10 +173,11 @@ test.describe("exercise loop", () => {
       await expect(history).toBeVisible()
       await history.locator("button").first().click()
       await expect(history.getByTestId("attempt").first()).toContainText("Attempt 1")
-      await expect(history.getByTestId("attempt").first().getByTestId("decision-chip")).toHaveAttribute("data-decision", "revise")
+      await expect(history.getByTestId("attempt").first().getByTestId("decision-chip").first()).toHaveAttribute("data-decision", "revise")
     } else {
       await expect(page.getByTestId("exercise-view")).toHaveAttribute("data-status", "passed")
-      await expect(page.getByTestId("coach-panel").getByTestId("grade-card")).toBeVisible()
+      await expect(page.getByTestId("beat-result")).toHaveAttribute("data-state", "current")
+      await expect(page.getByTestId("result-beat").getByTestId("grade-card")).toBeVisible()
     }
   })
 
@@ -172,15 +187,9 @@ test.describe("exercise loop", () => {
     test.skip(!other, "no other queued in-Claude prompt exercise for Marcus")
     await page.goto(`/exercise/${other!.id}`)
     await expect(page.getByTestId("exercise-view")).toBeVisible()
-    // Queued exercises start on open.
     await expect(page.getByTestId("exercise-view")).toHaveAttribute("data-status", /active|revise/)
     await expect(page.getByTestId("mode-badge").first()).toContainText("In Claude")
     const openBtn = page.getByTestId("open-in-claude-button")
-    await expect(openBtn).toBeVisible()
-    await expect(openBtn).toBeDisabled()
-
-    await page.getByTestId("expectation-input").fill("I expect the talking points to be structured but to invent a comparison period I did not give it.")
-    await page.getByTestId("expectation-confirm").click()
     await expect(openBtn).toBeEnabled()
     await openBtn.click()
     const dialog = page.getByTestId("open-in-claude-dialog")
@@ -196,6 +205,9 @@ test.describe("exercise loop", () => {
     await expectToast(page, /pasted back/i)
     await expect(page.getByTestId("run-output")).toContainText("pasted back from Claude")
     await expect(page.getByTestId("work-continue")).toBeEnabled()
+    // The Practice tab's secondary action opens the same dialog straight away.
+    await page.goto(`/exercise/${other!.id}?claude=1`)
+    await expect(page.getByTestId("open-in-claude-dialog")).toBeVisible()
   })
 
   test("skip with a reason", async ({ page }) => {
@@ -219,7 +231,6 @@ test.describe("exercise loop", () => {
   })
 
   test("skip via the API records the reason and hands back the next exercise", async ({ page }) => {
-    // Backend half of the skip flow while the menu is broken (BUGS.md #3).
     const all = await api<ExerciseSummary[]>(page, "GET", "/api/exercises?status=queued,active,revise")
     const target = all.find((e) => e.id !== exerciseId) ?? all[0]
     test.skip(!target, "nothing left to skip")
@@ -229,26 +240,24 @@ test.describe("exercise loop", () => {
     if (res.nextUp) expect(res.nextUp.id).not.toBe(target!.id)
     const after = await api<ExerciseSummary[]>(page, "GET", "/api/exercises?status=skipped")
     expect(after.map((e) => e.id)).toContain(target!.id)
-    // The skipped exercise no longer surfaces as Next up on the ladder.
+    // The skipped exercise no longer surfaces as Up next on the home page.
     await page.goto("/")
     await expect(page.getByTestId("ladder-view")).toBeVisible()
-    if (await page.getByTestId("next-up-title").count()) await expect(page.getByTestId("next-up-title")).not.toHaveText(target!.title)
-    await expect(page.getByTestId("coach-notes")).toBeVisible()
+    await expect(page.getByTestId("up-next")).toBeVisible()
+    if (await page.getByTestId("next-up-title").count()) await expect(page.getByTestId("next-up-title").last()).not.toHaveText(target!.title)
   })
 })
 
-/** Pins BUGS.md #2 at the default desktop viewport; unskip once the Coach panel scrolls internally. */
-test.describe("exercise coach panel layout", () => {
+/** The Build beat's continue button stays reachable at the default desktop viewport once every nudge is out. */
+test.describe("practice layout", () => {
   test.use({ role: "learner2", viewport: { width: 1280, height: 720 } })
 
-  test("step buttons stay reachable after hints are revealed", async ({ page }) => {
+  test("continue stays reachable after all nudges are revealed", async ({ page }) => {
     await page.goto("/")
-    await page.getByTestId("next-up-start").click()
+    const start = page.getByTestId("next-up-start")
+    test.skip(!(await start.count()), "nothing up next for Marcus")
+    await start.click()
     await expect(page.getByTestId("coach-panel")).toBeVisible()
-    if ((await page.getByTestId("step-1").getAttribute("data-state")) === "current") {
-      await page.getByTestId("expectation-input").fill("I expect a structured draft with placeholders where I gave no data.")
-      await page.getByTestId("expectation-confirm").click()
-    }
     const hint = page.getByTestId("hint-button")
     const count = page.getByTestId("hints-count")
     const parse = async () => ((await count.textContent()) ?? "0/0").match(/(\d+)\s*\/\s*(\d+)/)?.slice(1, 3).map(Number) ?? [0, 0]

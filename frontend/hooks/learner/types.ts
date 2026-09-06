@@ -232,6 +232,26 @@ export type LadderView = {
   coachNotes: { note: string; tags: string[]; createdAt: string }[]
 }
 
+/** GET /lessons/:slug/personalised: the example and check rewritten around the learner's own work (or the static content echoed back). */
+export type LessonPersonalised = {
+  example: { title: string; text: string }
+  check: { question: string; options: string[]; answer: number; explanation: string }
+  personalised: boolean
+}
+
+/** One entry of GET /competencies (seeded rows or the in-code catalog). */
+export type CompetencyCatalogEntry = {
+  id: string
+  code: string
+  rung: number
+  name: string
+  description: string
+  rubric: { key: string; label: string; description: string; weight: number }[]
+  orderIndex: number
+  minContexts: number
+  masteryThreshold: number
+}
+
 export type MySkills = {
   adopted: (SkillCard & { myActivations30d: number })[]
   authored: (SkillCard & { usageByOthers30d: number })[]

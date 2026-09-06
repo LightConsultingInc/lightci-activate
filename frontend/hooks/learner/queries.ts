@@ -2,9 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import type { Lesson } from "@/content/lessons/types"
 import { api, ApiError } from "@/lib/api"
 import type {
-  Artifact, Baseline, ExerciseDetail, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
+  Artifact, Baseline, CompetencyCatalogEntry, ExerciseDetail, LessonPersonalised, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
   Measurement, MySkills, RealtimeSession, RevisitAnswer, SkillDetail, SubmitResult, VoiceTranscriptTurn, WorkflowDetail, WorkflowSchema, WorkflowSummary,
 } from "./types"
 
@@ -12,6 +13,9 @@ export const keys = {
   ladder: ["ladder"] as const,
   mySkills: ["my-skills"] as const,
   exercise: (id: string) => ["exercise", id] as const,
+  exercises: (status: string) => ["exercises", status] as const,
+  competencies: ["competencies"] as const,
+  lessonPersonalised: (slug: string) => ["lesson-personalised", slug] as const,
   history: ["history"] as const,
   workflows: ["workflows", "mine"] as const,
   workflow: (id: string) => ["workflow", id] as const,
@@ -37,7 +41,35 @@ export function useAnswerRevisit() {
   })
 }
 
+// ─────────────────────────── Lessons ───────────────────────────
+/** The lesson's example and check, tailored to the learner's interview when one exists. */
+/** The API personalises on top of the generic lesson we send it (it has no copy of the content). */
+export const useLessonPersonalised = (lesson: Lesson | undefined) =>
+  useQuery({
+    queryKey: keys.lessonPersonalised(lesson?.slug ?? ""),
+    enabled: Boolean(lesson),
+    queryFn: () =>
+      api.post<LessonPersonalised>(`/api/lessons/${encodeURIComponent(lesson!.slug)}/personalised`, {
+        rung: lesson!.rung,
+        title: lesson!.title,
+        promise: lesson!.promise,
+        body: lesson!.body,
+        keyPoints: lesson!.keyPoints,
+        example: lesson!.example,
+        check: lesson!.check,
+      }),
+    staleTime: 5 * 60_000,
+  })
+
 // ─────────────────────────── Exercise ───────────────────────────
+/** All of the caller's exercises, optionally narrowed to a comma-separated status list. */
+export const useExercises = (status?: string) =>
+  useQuery({ queryKey: keys.exercises(status ?? "all"), queryFn: () => api.get<ExerciseSummary[]>(`/api/exercises${status ? `?status=${encodeURIComponent(status)}` : ""}`) })
+
+/** The competency catalog: names and rubric labels per code. Rarely changes, so it is cached for the session. */
+export const useCompetencyCatalog = () =>
+  useQuery({ queryKey: keys.competencies, queryFn: () => api.get<CompetencyCatalogEntry[]>("/api/competencies"), staleTime: 10 * 60_000 })
+
 export const useExercise = (id: string) =>
   useQuery({ queryKey: keys.exercise(id), queryFn: () => api.get<ExerciseDetail>(`/api/exercises/${id}`) })
 
@@ -86,6 +118,7 @@ export function useSubmit(id: string) {
       qc.setQueryData(keys.exercise(id), data.exercise)
       qc.invalidateQueries({ queryKey: keys.ladder })
       qc.invalidateQueries({ queryKey: keys.history })
+      qc.invalidateQueries({ queryKey: ["exercises"] })
     },
     onError: (e) => toast.error(errorMessage(e, "Submission failed")),
   })
@@ -99,6 +132,7 @@ export function useSkipExercise(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.ladder })
       qc.invalidateQueries({ queryKey: keys.exercise(id) })
+      qc.invalidateQueries({ queryKey: ["exercises"] })
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't skip")),
   })

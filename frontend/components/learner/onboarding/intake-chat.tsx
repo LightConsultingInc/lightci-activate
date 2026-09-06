@@ -269,7 +269,9 @@ export function IntakeChat({
       />
     )
   const iv = q.data
-  finishRef.current = finishFromChat
+  useEffect(() => {
+    finishRef.current = finishFromChat
+  })
 
   if (phase === "placing")
     return (

@@ -1,0 +1,63 @@
+/**
+ * Lesson content model. Lessons are static, versioned content shipped with the app; exercises
+ * (practice) and grades (feedback) stay dynamic and come from the API.
+ */
+
+export type Rung = 0 | 1 | 2 | 3 | 4 | 5
+
+/** A small set of motion scenes the Explainer component knows how to draw. Lessons pick one. */
+export type SceneKind =
+  | "surfaces"         // Claude surfaces as tiles: Chat, Projects, Claude Code, Cowork; highlights which fits a task
+  | "policy-boundary"  // documents flowing toward Claude; some pass, restricted classes bounce off a boundary line
+  | "four-d"           // Delegation → Description → Discernment → Diligence as a loop
+  | "prompt-anatomy"   // a prompt assembling from role, task, inputs, format, constraints
+  | "check-output"     // an output with claims lighting up as verified / unverified
+  | "predict-then-see" // you write a guess, then the result appears next to it and they get compared
+  | "project-context"  // files and instructions moving into a Project; some kept out
+  | "include-exclude"  // a pile of context being pruned to the essential set
+  | "skill-trigger"    // a request arriving, matching (or not) a skill's trigger line
+  | "progressive-disclosure" // a SKILL.md unfolding: short top, references opened only when needed
+  | "canonical-examples"     // two strong examples versus a long list of edge cases
+  | "boundary-declaration"   // may-read / must-never-receive / human-review lists locking into place
+  | "workflow-map"           // steps, decisions and exceptions being laid out as a map
+  | "baseline-measure"       // a before bar and an after bar, hours back appearing between them
+  | "promotion-queue"        // a skill moving draft → review → approved → published
+  | "review-others"          // two rubrics side by side converging (grader agreement)
+
+export interface LessonCheck {
+  question: string
+  options: string[]
+  /** index into options */
+  answer: number
+  explanation: string
+}
+
+export interface Lesson {
+  slug: string
+  rung: Rung
+  title: string
+  /** One sentence, plain language: what you will be able to do after this. */
+  promise: string
+  minutes: number
+  scene: SceneKind
+  /** 120–260 words of teaching in plain language, may use **bold** and short paragraphs (blank-line separated). */
+  body: string
+  keyPoints: [string, string, string]
+  /** A real-work example in the Meridian vocabulary (meeting prep, RMD letters, review decks, IPS...). */
+  example: { title: string; text: string }
+  check: LessonCheck
+  /** Competency codes this lesson supports (see api competency catalog, e.g. "L1.description"). */
+  competencies: string[]
+}
+
+export interface Module {
+  rung: Rung
+  code: string           // "L0".."L5"
+  name: string           // "Orientation", ...
+  tagline: string        // one line in plain words
+  /** What you will be able to do at the end (3 bullets). */
+  outcomes: [string, string, string]
+  /** What practice looks like at this rung, in plain words. */
+  practice: string
+  lessons: Lesson[]
+}
