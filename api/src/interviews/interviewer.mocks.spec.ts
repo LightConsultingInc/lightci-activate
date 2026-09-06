@@ -1,7 +1,9 @@
 import { mockResponder } from '../ai/mock-responders';
 import {
   buildRealtimeInstructions,
+  CLOSING_LINE,
   FINISH_INTERVIEW_TOOL,
+  OPENING_INTRO,
   renderInterviewState,
 } from './interviewer.prompts';
 import {
@@ -158,7 +160,13 @@ describe('realtime instructions and prompt state rendering', () => {
   it('builds single-brain instructions with plan, scribe state, transcript and finish tool guidance', () => {
     const text = buildRealtimeInstructions(base);
     expect(text).toContain('You are the only interviewer');
-    expect(text).toContain('1. Role and responsibilities');
+    expect(text).toContain('1. Role:');
+    expect(text).toContain(CLOSING_LINE);
+    expect(text).not.toMatch(
+      /^\d+\. Sensitivities|Wrap-up|anything I have missed/m,
+    ); // not asked in intake
+    expect(FINISH_INTERVIEW_TOOL.description).toContain('endsCall: true');
+    expect(FINISH_INTERVIEW_TOOL.description).toContain(CLOSING_LINE);
     expect(text).toContain('claude.ai chat, Projects, Claude Code, Cowork');
     expect(text).toContain('RESUMING');
     expect(text).toContain('Person: The Monday pack');
@@ -177,6 +185,7 @@ describe('realtime instructions and prompt state rendering', () => {
       transcript: [base.transcript[0]],
     });
     expect(text).toContain('just started');
+    expect(text).toContain(OPENING_INTRO.intake);
     expect(text).not.toContain('RESUMING');
   });
 

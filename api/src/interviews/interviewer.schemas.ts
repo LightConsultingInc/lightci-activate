@@ -336,13 +336,11 @@ export const INTAKE_KEYS = [
   'weeklyWorkflows',
   'claudeUseToday',
   'selfRatedComfort',
-  'sensitivities',
-] as const;
+] as const; // sensitivities stays on the schema (nullable) but is not asked or counted
 export const CHAMPION_KEYS = [
   'teamPurpose',
   'vocabulary',
   'anchorWorkflows',
-  'sensitivities',
   'systems',
   'priorities',
   'seedWorkflows',

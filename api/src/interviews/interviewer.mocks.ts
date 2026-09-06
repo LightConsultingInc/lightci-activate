@@ -14,9 +14,9 @@ const QUESTIONS: Record<InterviewMode, string[]> = {
     'Which systems or documents do you open to do it?',
     'How do you use Claude today, if at all, on your real work?',
     'On a scale of one to five, how comfortable are you delegating a first draft to Claude?',
-    'Is there anything from your work that must never go into Claude? Data types are enough; no specifics.',
-    'Last one: of the workflows you named, which would you most like to hand off first, and why?',
-    'I think I have what I need. Is there anything I have missed, or shall we finish here?',
+    'People in your role often also do call prep or proposals. Is anything like that part of your week?',
+    'Which step of that one is the slow or annoying part?',
+    "Thanks, that's everything I need. We'll place you on the ladder now; give it a moment.",
   ],
   champion: [
     'Thanks for doing this. In a sentence or two, what does your team exist to do, and who depends on its output?',
@@ -24,9 +24,9 @@ const QUESTIONS: Record<InterviewMode, string[]> = {
     'Which two or three workflows take the most team time each week?',
     'For the biggest one: how often does it run, and how long does one run take per person?',
     'Which systems does the team live in?',
-    'What must never leave the firm, in terms of data types?',
+    'Who on the team does the biggest one, and what do they open first?',
     'What would make this program a success for you by the end of the wave?',
-    'I have a working picture of the team. Anything to add before we finish?',
+    "Thanks, that's everything I need. We'll place you on the ladder now; give it a moment.",
   ],
   workflow: [
     'Let us map this one workflow properly. Think of the last time you ran it: what was the trigger that made you start, and what did you open first?',
@@ -37,7 +37,7 @@ const QUESTIONS: Record<InterviewMode, string[]> = {
     'What goes wrong, and how do you handle it when it does?',
     'Which inputs must never leave the firm?',
     'Where would a human need to review before the output goes out?',
-    'That is a complete map. Anything I have misread, or shall we finish?',
+    "Thanks, that's everything I need. We'll place you on the ladder now; give it a moment.",
   ],
 };
 
@@ -156,10 +156,6 @@ function scribeBody(call: AiCall) {
         5,
         Math.max(1, parseInt(lastUser.match(/[1-5]/)?.[0] ?? '3', 10)),
       );
-    if (turnCount === 7)
-      scribeUpdate.sensitivities = words(lastUser).length
-        ? words(lastUser)
-        : ['client account data'];
   } else if (mode === 'champion') {
     scribeUpdate = { ...nullChampion };
     if (turnCount === 1)
@@ -182,10 +178,6 @@ function scribeBody(call: AiCall) {
         })),
       });
     if (turnCount === 5) scribeUpdate.systems = words(lastUser);
-    if (turnCount === 6)
-      scribeUpdate.sensitivities = words(lastUser).length
-        ? words(lastUser)
-        : ['client account data'];
     if (turnCount === 7) scribeUpdate.priorities = words(lastUser);
   } else {
     scribeUpdate = { ...nullWorkflow };
@@ -367,9 +359,7 @@ registerMockResponder('interviewer.complete', (call) => {
     anchorWorkflows: (scribe.anchorWorkflows as string[] | undefined) ?? [
       'Weekly report',
     ],
-    sensitivities: (scribe.sensitivities as string[] | undefined) ?? [
-      'client account data',
-    ],
+    sensitivities: (scribe.sensitivities as string[] | undefined) ?? [],
     systems: (scribe.systems as string[] | undefined) ?? ['Email', 'CRM'],
   });
   if (mode === 'intake') {
@@ -421,9 +411,7 @@ registerMockResponder('interviewer.complete', (call) => {
         weeklyWorkflows: padded,
         claudeUseToday: text(scribe.claudeUseToday, 'Occasional drafting'),
         selfRatedComfort: comfort,
-        sensitivities: (scribe.sensitivities as string[] | undefined) ?? [
-          'client account data',
-        ],
+        sensitivities: (scribe.sensitivities as string[] | undefined) ?? [],
       },
       contextLayer: layer(
         `${text(scribe.role, 'Analyst')} responsible for ${((scribe.responsibilities as string[] | undefined) ?? ['weekly reporting']).join(', ')}; repeats ${padded.map((w) => w.name).join(', ')} weekly.`,
