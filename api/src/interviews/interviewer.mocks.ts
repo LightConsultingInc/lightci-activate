@@ -263,6 +263,28 @@ registerMockResponder('interviewer.turn', (call) => {
   };
 });
 
+
+/** Compact completion draft (see WorkflowMapOut): flat string lists instead of nested objects. */
+function compactMap(name: string, minutesPerRun: number, runsPerWeek: number, systems: string[]) {
+  const s = wfSchema(name, minutesPerRun, runsPerWeek, systems) as Record<string, any>;
+  return {
+    name,
+    purpose: String(s.purpose ?? `${name} done reliably each week`),
+    trigger: String(s.trigger ?? 'Weekly schedule'),
+    frequency: (s.frequency ?? 'weekly') as 'daily' | 'weekly' | 'monthly' | 'ad_hoc',
+    minutesPerRun,
+    runsPerWeek,
+    inputs: ((s.inputs ?? []) as { name: string; source: string }[]).map((i) => `${i.name} — ${i.source}`),
+    steps: ((s.steps ?? []) as { action: string; actor: string }[]).map((st) => `${st.actor}: ${st.action}`),
+    decisions: ((s.decisions ?? []) as { point: string; rule: string }[]).map((d) => `${d.point} — ${d.rule}`),
+    exceptions: ((s.exceptions ?? []) as { case: string; handling: string }[]).map((e) => `${e.case} — ${e.handling}`),
+    systems,
+    mustNeverLeave: (s.mustNeverLeave ?? []) as string[],
+    outputs: ((s.outputs ?? []) as { name: string; destination: string }[]).map((o) => `${o.name} — ${o.destination}`),
+    humanReview: (s.humanReview ?? []) as string[],
+  };
+}
+
 registerMockResponder('interviewer.complete', (call) => {
   const { mode, scribe } = seed(call);
   const layer = (summary: string) => ({
@@ -377,10 +399,7 @@ registerMockResponder('interviewer.complete', (call) => {
       contextLayer: layer(
         `${text(scribe.role, 'Analyst')} responsible for ${((scribe.responsibilities as string[] | undefined) ?? ['weekly reporting']).join(', ')}; repeats ${padded.map((w) => w.name).join(', ')} weekly.`,
       ),
-      workflowMaps: padded.map((w) => ({
-        name: w.name,
-        schema: wfSchema(w.name, w.minutesPerRun, w.runsPerWeek, w.systems),
-      })),
+      workflowMaps: padded.map((w) => compactMap(w.name, w.minutesPerRun, w.runsPerWeek, w.systems)),
       placement: {
         rung,
         evidence: [
@@ -415,10 +434,7 @@ registerMockResponder('interviewer.complete', (call) => {
     return {
       teamPurpose: text(scribe.teamPurpose, 'Advisory support'),
       contextLayer: layer(text(scribe.teamPurpose, 'Advisory support team')),
-      workflowMaps: seeds.map((w) => ({
-        name: w.name,
-        schema: wfSchema(w.name, w.minutesPerRun, w.runsPerWeek, w.systems),
-      })),
+      workflowMaps: seeds.map((w) => compactMap(w.name, w.minutesPerRun, w.runsPerWeek, w.systems)),
       priorities: (scribe.priorities as string[] | undefined) ?? [
         'Cut weekly reporting time',
       ],

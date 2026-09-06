@@ -43,6 +43,8 @@ import {
   type IntakeCompleteOutput,
   type WorkflowCompleteOutput,
   type WorkflowScribe,
+  compactMapToScribe,
+  type WorkflowMapOutT,
 } from './interviewer.schemas';
 import type {
   InterviewCompleteResponse,
@@ -613,14 +615,13 @@ export class InterviewerService {
     orgId: string,
     owner: Person,
     session: InterviewSession,
-    maps: { name: string; schema: WorkflowScribe | Record<string, unknown> }[],
+    maps: ({ name: string; schema: WorkflowScribe | Record<string, unknown> } | WorkflowMapOutT)[],
     teamId?: string | null,
   ): Promise<string[]> {
     const ids: string[] = [];
     for (const m of maps) {
-      const schema = toWorkflowSchema(
-        stripNulls(m.schema as Record<string, unknown>),
-      );
+      const raw = 'schema' in m ? (m.schema as Record<string, unknown>) : compactMapToScribe(m);
+      const schema = toWorkflowSchema(stripNulls(raw));
       const row = await this.workflows.save(
         this.workflows.create({
           orgId,

@@ -131,10 +131,55 @@ const ContextLayerOut = z.object({
   systems: z.array(z.string()),
 });
 
+/**
+ * Compact workflow draft for completion outputs. The full WorkflowScribeSchema nested inside an
+ * array blew past Anthropic's strict-grammar size limit ("compiled grammar is too large"), so
+ * completion returns flat string lists and `compactMapToScribe` expands them.
+ */
 const WorkflowMapOut = z.object({
   name: z.string(),
-  schema: WorkflowScribeSchema,
+  purpose: z.string(),
+  trigger: z.string(),
+  frequency: z.enum(FREQUENCIES),
+  minutesPerRun: z.number(),
+  runsPerWeek: z.number(),
+  inputs: z.array(z.string()).describe('Input names, optionally "name — source".'),
+  steps: z.array(z.string()).describe('Steps in order; prefix with "claude:" or "system:" when not done by the human.'),
+  decisions: z.array(z.string()).describe('"decision point — rule" strings.'),
+  exceptions: z.array(z.string()).describe('"case — handling" strings.'),
+  systems: z.array(z.string()),
+  mustNeverLeave: z.array(z.string()),
+  outputs: z.array(z.string()).describe('"output — destination" strings.'),
+  humanReview: z.array(z.string()),
 });
+export type WorkflowMapOutT = z.infer<typeof WorkflowMapOut>;
+
+const splitPair = (v: string): [string, string] => {
+  const i = v.search(/\s[—–-]\s|:\s/);
+  return i === -1 ? [v.trim(), ''] : [v.slice(0, i).trim(), v.slice(i).replace(/^\s*[—–:-]\s*/, '').trim()];
+};
+
+/** Expand the compact completion draft into the WorkflowScribe shape used everywhere else. */
+export function compactMapToScribe(m: WorkflowMapOutT): Record<string, unknown> {
+  return {
+    purpose: m.purpose,
+    trigger: m.trigger,
+    frequency: m.frequency,
+    minutesPerRun: m.minutesPerRun,
+    runsPerWeek: m.runsPerWeek,
+    inputs: m.inputs.map((v) => { const [name, source] = splitPair(v); return { name, source: source || 'unspecified', dataClass: null }; }),
+    steps: m.steps.map((v, i) => {
+      const actorMatch = v.match(/^(human|claude|system):\s*/i);
+      return { order: i + 1, action: actorMatch ? v.slice(actorMatch[0].length) : v, actor: (actorMatch?.[1].toLowerCase() as 'human' | 'claude' | 'system') ?? 'human', system: null };
+    }),
+    decisions: m.decisions.map((v) => { const [point, rule] = splitPair(v); return { point, rule: rule || 'as described' }; }),
+    exceptions: m.exceptions.map((v) => { const [c, handling] = splitPair(v); return { case: c, handling: handling || 'as described' }; }),
+    systems: m.systems,
+    mustNeverLeave: m.mustNeverLeave,
+    outputs: m.outputs.map((v) => { const [name, destination] = splitPair(v); return { name, destination: destination || 'unspecified' }; }),
+    humanReview: m.humanReview,
+  };
+}
 
 export const IntakeCompleteSchema = z.object({
   profile: z.object({
