@@ -31,6 +31,17 @@ export class PeopleService {
     return this.people.findOne({ where: { id } });
   }
 
+  /** Attach an org-less person to the Activate org mapped to their WorkOS organization, if it exists yet. */
+  async linkToWorkosOrg(
+    person: Person,
+    workosOrganizationId: string,
+  ): Promise<Person | null> {
+    const org = await this.orgs.findOne({ where: { workosOrganizationId } });
+    if (!org) return null;
+    person.orgId = org.id;
+    return this.people.save(person);
+  }
+
   async touch(person: Person) {
     await this.people.update(person.id, {
       lastSeenAt: new Date(),
