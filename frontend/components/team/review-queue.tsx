@@ -29,7 +29,7 @@ export function ReviewQueue() {
   // A just-graded submission leaves the queue on refetch; pin it so the grade panel stays on screen.
   const [pinned, setPinned] = useState<ReviewItem | null>(null)
   const selected = useMemo(
-    () => items.find((i) => i.submission.id === selectedId) ?? (pinned && pinned.submission.id === selectedId ? pinned : null) ?? items[0] ?? null,
+    () => items.find((i) => i.submission.id === selectedId) ?? (pinned && (!selectedId || pinned.submission.id === selectedId) ? pinned : null) ?? items[0] ?? null,
     [items, selectedId, pinned],
   )
   const promos = q.data?.promotionQueue.length ?? 0

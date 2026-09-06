@@ -56,10 +56,10 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
   return (
     <div className="space-y-6 animate-rise">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="adoption-tiles">
-        <MetricTile testId="tile-active-pct" label="Active on real work" value={fmt.pct(d.active.pctOfSeats)} sub={`of ${seats} seats`} delta={{ value: typeof d.active.trend === "number" ? d.active.trend : null, label: trend.label && typeof d.active.trend !== "number" ? trend.label : `vs ${activeBaseline}` }} trend={trend.direction} source={analyticsSrc} baseline={activeBaseline} spark={daily.map((x) => x.active)} accent />
+        <MetricTile testId="tile-active-pct" label="Active on real work" value={fmt.pct(d.active.pctOfSeats)} sub={`of ${seats} seats`} delta={{ value: typeof d.active.trend === "number" ? d.active.trend : null, label: trend.label && typeof d.active.trend !== "number" ? `${trend.label} · last complete week vs the one before` : `vs ${activeBaseline}` }} trend={trend.direction} source={analyticsSrc} baseline={activeBaseline} spark={daily.map((x) => x.active)} accent />
         <MetricTile testId="tile-wau" label="Weekly active (WAU)" value={weekly != null ? fmt.num(weekly) : null} sub={seatPct(weekly) ? `${seatPct(weekly)} of seats` : undefined} source={analyticsSrc} baseline={activeBaseline} />
         <MetricTile testId="tile-mau" label="Monthly active (MAU)" value={monthly != null ? fmt.num(monthly) : null} sub={seatPct(monthly) ? `${seatPct(monthly)} of seats` : undefined} source={analyticsSrc} baseline={activeBaseline} />
-        <MetricTile testId="tile-sessions" label="Sessions per active person" value={d.depth.sessionsPerActive?.toFixed(1)} sub="per week" source={depthSrc} baseline={depthBaseline} />
+        <MetricTile testId="tile-sessions" label="Sessions per active person" value={d.depth.sessionsPerActive?.toFixed(1)} sub={`over the last ${range}`} source={depthSrc} baseline={depthBaseline} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
@@ -91,7 +91,7 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
             columns={[
               { key: "team", header: "Team", sortValue: (r) => r.teamName, render: (r) => <span className="font-medium">{r.teamName}</span> },
               { key: "activePct", header: "Active", align: "right", sortValue: (r) => r.activePct, render: (r) => <Bar01 value={r.activePct} /> },
-              { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (r) => r.hoursBack, render: (r) => <span className={r.baselineHours == null && r.baseline == null ? "text-muted-foreground" : ""}>{(r.hoursBack ?? 0).toFixed(1)}h</span> },
+              { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (r) => r.hoursBack, render: (r) => (r.hasBaseline === false ? <span className="text-muted-foreground" title="No baseline + measurement pair for this team yet">no baseline</span> : <span>{(r.hoursBack ?? 0).toFixed(1)}h</span>) },
             ]}
           />
         </Panel>

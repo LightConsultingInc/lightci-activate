@@ -54,8 +54,9 @@ function Form({ org }: { org: Org }) {
   const settingsDirty = leaderboards !== Boolean(s.leaderboardsEnabled) || stalledAfter !== (s.stalledAfterDays ?? 10) || method !== (s.baselineMethod ?? "interview_estimate")
   const dirty = policyDirty || boundaryDirty || settingsDirty
   const overlap = useMemo(() => boundary.allowedDataClasses.filter((x) => boundary.forbiddenDataClasses.includes(x)), [boundary])
-  const policyVersion = s.usagePolicyVersion
-  const boundaryVersion = s.boundaryVersion
+  // Versions are bookkeeping the API owns (org-settings.ts); the client never bumps them.
+  const policyVersion = s.policyVersion ?? s.usagePolicyVersion ?? (s.usagePolicy ? 1 : 0)
+  const boundaryVersion = s.boundaryVersion ?? (s.boundary ? 1 : 0)
 
   const onSave = () => {
     if (!note.trim()) {
@@ -73,8 +74,6 @@ function Form({ org }: { org: Org }) {
       leaderboardsEnabled: leaderboards,
       stalledAfterDays: Number(stalledAfter) || 10,
       baselineMethod: method,
-      ...(policyDirty && policyVersion != null ? { usagePolicyVersion: policyVersion + 1 } : {}),
-      ...(boundaryDirty && boundaryVersion != null ? { boundaryVersion: boundaryVersion + 1 } : {}),
     }
     patch.mutate(
       { settings, auditNote: note.trim() },
@@ -98,7 +97,7 @@ function Form({ org }: { org: Org }) {
       data-testid="policy-form"
     >
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <Panel title="Usage policy" description={<span className="inline-flex items-center gap-1"><HistoryIcon className="size-3" /> Version {policyVersion ?? "1"}{org.updatedAt ? ` · last saved ${fmt.date(org.updatedAt)}` : ""}</span>} testId="panel-usage-policy">
+        <Panel title="Usage policy" description={<span className="inline-flex items-center gap-1"><HistoryIcon className="size-3" /> Version {policyVersion}{s.policyUpdatedAt ? ` · changed ${fmt.date(s.policyUpdatedAt)}` : ""}{org.updatedAt ? ` · last saved ${fmt.date(org.updatedAt)}` : ""}</span>} testId="panel-usage-policy">
           <Textarea value={policy} onChange={(e) => setPolicy(e.target.value)} disabled={!canWrite} rows={14} className="min-h-72 text-sm leading-relaxed" placeholder="What Claude is approved for at your firm, what it is not, and who is accountable for outputs." data-testid="policy-text" />
           <p className="mt-2 text-xs text-muted-foreground">{policy.trim().split(/\s+/).filter(Boolean).length} words. Shown to every learner at onboarding and in Governance.</p>
         </Panel>
@@ -137,7 +136,7 @@ function Form({ org }: { org: Org }) {
         </div>
       </div>
 
-      <Panel title="Compliance boundary" description={<span className="inline-flex items-center gap-1"><HistoryIcon className="size-3" /> Version {boundaryVersion ?? "1"} · becomes the declaration schema every skill fills before promotion.</span>} testId="panel-boundary-editor">
+      <Panel title="Compliance boundary" description={<span className="inline-flex items-center gap-1"><HistoryIcon className="size-3" /> Version {boundaryVersion}{s.boundaryUpdatedAt ? ` · changed ${fmt.date(s.boundaryUpdatedAt)}` : ""} · becomes the declaration schema every skill fills before promotion.</span>} testId="panel-boundary-editor">
         <div className="grid gap-4 md:grid-cols-2">
           <ChipListEditor label="Allowed data classes" hint="What a skill may read or receive." value={boundary.allowedDataClasses} onChange={(v) => setBoundary((b) => ({ ...b, allowedDataClasses: v }))} disabled={!canWrite} tone="pass" testId="boundary-allowed" />
           <ChipListEditor label="Forbidden data classes" hint="Never pasted, uploaded or connected. Promotion hard-gates on these." value={boundary.forbiddenDataClasses} onChange={(v) => setBoundary((b) => ({ ...b, forbiddenDataClasses: v }))} disabled={!canWrite} tone="fail" testId="boundary-forbidden" />

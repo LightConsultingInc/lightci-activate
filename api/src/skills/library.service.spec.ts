@@ -330,7 +330,7 @@ describe('LibraryService against the demo marketplace', () => {
 
     // adopt → exercise
     const { adoption, exercise } = await lib.adopt(ORG_ID, marcus, 'advisor-meeting-prep');
-    expect(exercise).toMatchObject({ personId: marcus.id, kind: 'adopt', generatedBy: 'adopt', workSurface: 'skill', mode: 'in_claude', status: 'queued', title: 'Adopt Advisor meeting prep on your own case' });
+    expect(exercise).toMatchObject({ personId: marcus.id, kind: 'adopt', generatedBy: 'adopt', workSurface: 'skill', mode: 'in_app', status: 'queued', title: 'Adopt Advisor meeting prep on your own case' });
     expect(exercise.brief).toContain('Build the one-page pre-meeting brief');
     expect(adoption.exerciseId).toBe(exercise.id);
     const again = await lib.adopt(ORG_ID, marcus, 'advisor-meeting-prep');
@@ -364,6 +364,20 @@ describe('LibraryService against the demo marketplace', () => {
     expect(dep.manifest?.successor).toBe('cash-flow-write-up-marcus');
     await expect(lib.patch(ORG_ID, priya, created.id, { name: 'x' })).rejects.toThrow(/Deprecated skills cannot be edited/);
     await expect(lib.deprecate(ORG_ID, marcus, 'advisor-meeting-prep')).rejects.toThrow(/owner or a champion/);
+  });
+
+  it('writes to the skill directory even when repoPath points at SKILL.md (demo seed shape)', async () => {
+    const skill = repos.skills.rows.find((s) => s.slug === 'annual-review-deck-outline')!;
+    skill.repoPath = 'plugins/fp-meeting-prep/skills/annual-review-deck-outline/SKILL.md';
+    const d = await lib.patch(ORG_ID, daniel, skill.id, { skillMd: skill.skillMd + '\n\n> Seed-shaped repoPath edit.' });
+    const g = simpleGit(dir);
+    const files = (await g.show(['--stat', '--name-only', '--format=', `skill/annual-review-deck-outline`])).trim().split('\n');
+    expect(files).toContain('plugins/fp-meeting-prep/skills/annual-review-deck-outline/SKILL.md');
+    expect(files.some((f) => f.includes('SKILL.md/'))).toBe(false);
+    expect(existsSync(join(dir, 'plugins/fp-meeting-prep/skills/annual-review-deck-outline/SKILL.md/SKILL.md'))).toBe(false);
+    expect((await g.status()).isClean()).toBe(true);
+    expect(d.version).toBe(repos.skills.rows.find((s) => s.id === skill.id)!.currentVersion);
+    expect(d.version).toBeGreaterThan(1);
   });
 
   it('assignments list and upsert with drift', async () => {

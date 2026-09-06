@@ -70,17 +70,22 @@ export function RosterTable({ roster, className }: { roster: RosterRow[]; classN
                   <span className="ml-2 text-xs text-muted-foreground tabular">{r.activeDays30}/30d</span>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <MicroBar value={ratio} color="var(--glow)" showValue={false} width={64} />
-                    <span className="text-sm tabular">{hoursBack.toFixed(1)}h</span>
-                    <span className="text-xs text-muted-foreground tabular">/ {baselineH.toFixed(1)}h</span>
-                  </div>
+                  {r.hasBaseline === false ? (
+                    <span className="text-xs text-muted-foreground italic" data-testid="no-baseline">no baseline</span>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <MicroBar value={ratio} color="var(--glow)" showValue={false} width={64} />
+                      <span className="text-sm tabular">{hoursBack.toFixed(1)}h</span>
+                      <span className="text-xs text-muted-foreground tabular">/ {baselineH.toFixed(1)}h</span>
+                      {r.hasMeasurement === false && <span className="text-xs text-muted-foreground italic">not measured</span>}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
-                  {r.stalled ? <span className="inline-flex items-center gap-1 rounded-full bg-revise-soft px-2 py-0.5 text-xs font-medium text-glow-foreground" data-testid="stalled-flag"><AlertTriangle className="size-3" /> {r.stalledDays}d</span> : <span className="text-xs text-muted-foreground">—</span>}
+                  {r.stalled ? <span className="inline-flex items-center gap-1 rounded-full bg-revise-soft px-2 py-0.5 text-xs font-medium text-glow-foreground" data-testid="stalled-flag" title={r.stalledReason ?? undefined}><AlertTriangle className="size-3" /> {r.stalledDays}d</span> : <span className="text-xs text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className={cn("text-right tabular", r.revisitsOverdue > 0 ? "text-fail" : "text-muted-foreground")}>{r.revisitsOverdue || "—"}</TableCell>
-                <TableCell className="text-right tabular">{fmt.pct(r.masteryAvg)}</TableCell>
+                <TableCell className="text-right tabular">{r.hasMastery === false ? <span className="text-muted-foreground">—</span> : fmt.pct(r.masteryAvg)}</TableCell>
               </TableRow>
             )
           })}

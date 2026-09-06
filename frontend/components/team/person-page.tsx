@@ -91,7 +91,7 @@ function Body({ d }: { d: PersonPageT }) {
                   {d.baselines.length === 0 && <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">No baselines captured. The intake interview estimates minutes per week per workflow (meeting prep, RMD letters…) before anything is measured.</TableCell></TableRow>}
                   {d.baselines.map((b) => {
                     const m = d.measurements.filter((x) => x.baselineId === b.id || (x.task === b.task && !x.baselineId)).sort((a, c) => c.periodEnd.localeCompare(a.periodEnd))[0]
-                    const baseNet = b.minutesPerWeek
+                    const baseNet = b.minutesPerWeek + b.reworkMinutesPerWeek
                     const measNet = m ? m.minutesPerWeek + m.reworkMinutesPerWeek : null
                     const back = measNet != null ? (baseNet - measNet) / 60 : null
                     return (

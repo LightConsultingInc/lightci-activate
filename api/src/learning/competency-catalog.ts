@@ -761,7 +761,7 @@ export const GRADER_RUBRIC_SKILL: readonly RubricCriterion[] = [
   },
 ];
 
-/** Promotion gates per rung, from docs/mastery-model.md §3 and §6. `minJudgement` applies from L1. */
+/** Promotion gates per rung, from docs/mastery-model.md §3 and §6. `minJudgement` is retired (always 0, ignored by gates) since practice v2, 2026-09-06. */
 export interface RungGate {
   masteryThreshold: number;
   minContexts: number;
@@ -782,36 +782,36 @@ export const RUNG_GATES: Record<Rung, RungGate> = {
   1: {
     masteryThreshold: 0.8,
     minContexts: 2,
-    minJudgement: 0.6,
+    minJudgement: 0,
     retainedRungs: [],
     note: 'Mastery >= 0.80 on the L1 competencies across >= 2 distinct contexts.',
   },
   2: {
     masteryThreshold: 0.8,
     minContexts: 3,
-    minJudgement: 0.6,
+    minJudgement: 0,
     retainedRungs: [1],
     note: 'Mastery >= 0.80 on the L2 competencies, >= 3 contexts, L1 retained.',
   },
   3: {
     masteryThreshold: 0.85,
     minContexts: 3,
-    minJudgement: 0.6,
+    minJudgement: 0,
     retainedRungs: [1, 2],
-    note: 'Mastery >= 0.85 on the L3 competencies, >= 3 contexts, judgement >= 0.60.',
+    note: 'Mastery >= 0.85 on the L3 competencies, >= 3 contexts, L1–L2 retained.',
   },
   4: {
     masteryThreshold: 0.85,
     minContexts: 4,
-    minJudgement: 0.6,
+    minJudgement: 0,
     retainedRungs: [1, 2, 3],
     note: 'Mastery >= 0.85 on the L4 competencies, >= 4 contexts, L1–L3 all retained.',
   },
   5: {
     masteryThreshold: 0.9,
     minContexts: 4,
-    minJudgement: 0.75,
+    minJudgement: 0,
     retainedRungs: [1, 2, 3, 4],
-    note: 'Mastery >= 0.90 across all competencies, sustained through >= 2 revisit cycles, judgement >= 0.75, grades others with grader agreement.',
+    note: 'Mastery >= 0.90 across all competencies, sustained through >= 2 revisit cycles, grades others with grader agreement.',
   },
 };

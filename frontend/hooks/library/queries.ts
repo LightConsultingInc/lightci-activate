@@ -17,12 +17,16 @@ export const keys = {
   person: (id: string) => ["person", id] as const,
 }
 
+/** UI sort labels → API `sort` values (docs/api-contract.md: usage | grade | updated | name). Unknown values fall back to usage server-side. */
+const API_SORT: Record<string, string> = { most_used: "usage", newest: "updated", grade: "grade" }
+
 export function libraryQueryString(f: LibraryFilters) {
   const p = new URLSearchParams()
-  for (const k of ["team", "family", "rung", "status", "q", "sort"] as const) {
+  for (const k of ["team", "family", "rung", "status", "q"] as const) {
     const v = f[k]
     if (v) p.set(k, v)
   }
+  if (f.sort && API_SORT[f.sort] && API_SORT[f.sort] !== "usage") p.set("sort", API_SORT[f.sort])
   const s = p.toString()
   return s ? `?${s}` : ""
 }
@@ -33,7 +37,7 @@ export function useLibrary(filters: LibraryFilters) {
 
 /** Unfiltered top six, used as the "Skills nearby" fallback when a search comes up empty. */
 export function useNearbySkills(enabled: boolean) {
-  return useQuery({ queryKey: keys.library({ sort: "most_used" }), queryFn: () => api.get<LibraryResponse>("/api/library?sort=most_used"), enabled, select: (d) => d.skills.slice(0, 6) })
+  return useQuery({ queryKey: keys.library({ sort: "most_used" }), queryFn: () => api.get<LibraryResponse>("/api/library"), enabled, select: (d) => d.skills.slice(0, 6) })
 }
 
 export function useSkill(slug: string, initial?: SkillDetail) {

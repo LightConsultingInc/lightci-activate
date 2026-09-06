@@ -99,8 +99,12 @@ export class MissionControlController {
     summary:
       'Person page: ladder, journey timeline, baselines, measurements, usage series, coach notes, escalations.',
   })
-  person(@OrgId() orgId: string, @Param('id') id: string) {
-    return this.mc.person(orgId, id);
+  person(
+    @OrgId() orgId: string,
+    @CurrentUser() user: Person,
+    @Param('id') id: string,
+  ) {
+    return this.mc.person(orgId, id, user);
   }
 
   @Get('journey')

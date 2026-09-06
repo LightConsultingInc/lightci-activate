@@ -38,17 +38,21 @@ export type Adoption = {
   depth: { sessionsPerActive: number; surfaces: { name: string; users: number }[]; connectors: number; skillsActivated: number } & Provenance
   funnel: ({ step: string; count: number; medianDays: number | null } & Provenance)[]
   inactiveSeats: (PersonRef & { daysInactive: number })[]
-  byTeam: ({ teamId: string; teamName: string; activePct: number; hoursBack: number; baselineHours?: number | null } & Provenance)[]
+  byTeam: ({ teamId: string; teamName: string; activePct: number; hoursBack: number; hasBaseline?: boolean; baselineHours?: number | null } & Provenance)[]
 } & Provenance
 
 export type ActivationComponents = { rung: number; hoursBack: number; skillsPublished: number; influence: number; gradeQuality: number; activeDays: number }
 export type McPerson = PersonRef & {
   activationScore: { composite: number; components: ActivationComponents }
   hoursBackPerWeek: number
+  /** False when no baseline+measurement pair exists; hoursBackPerWeek is then 0, not measured. */
+  hasBaseline?: boolean
   baselineMinutesPerWeek?: number | null
   skillsPublished: number
   adoptedByOthers: number
   gradeQuality: number
+  /** False when never graded; gradeQuality is then 0, not measured. */
+  hasGrades?: boolean
   activeDays30: number
   rising: boolean
   stalled: boolean
@@ -79,9 +83,21 @@ export type GroupRow = {
   programStartedOn?: string | null
 }
 export type Groups = { groups: GroupRow[] } & Provenance
+/** Server-normalised per-person / per-week values (contract deviation for /mc/groups/compare). */
+export type GroupNormalised = {
+  activePct: number
+  rungMixPct: number[]
+  hoursBackPerPerson: number
+  skillsPublishedPerPerson: number
+  skillsAdoptedPerPerson: number
+  promotionsPerPersonPerWeek: number
+  skillsPublishedPerWeek: number | null
+  reworkRate: number
+  championQueueAgeDays: number
+}
 export type GroupsCompare = {
-  a: GroupRow
-  b: GroupRow
+  a: GroupRow & { programWeeks?: number | null; normalised?: GroupNormalised }
+  b: GroupRow & { programWeeks?: number | null; normalised?: GroupNormalised }
   /** Optional server-normalised metrics; when absent the view normalises per person. */
   metrics?: { key: string; label: string; a: number; b: number; unit?: string; higherIsBetter?: boolean }[]
   normalisedFor?: string[]
@@ -119,7 +135,8 @@ export type McSkills = {
 
 export type ComplianceBoundary = { allowedDataClasses: string[]; forbiddenDataClasses: string[]; readOnlySystems: string[]; humanReviewPoints: string[] }
 export type Assignment = { plugin: string; team: { id: string; name: string } | string; teamId?: string; intendedMode: AssignmentMode; observedMode: AssignmentMode | null; drift: boolean }
-export type AssignmentMode = "hidden" | "available" | "auto_installed"
+/** API vocabulary is `auto`; `auto_installed` is kept for older payloads. */
+export type AssignmentMode = "hidden" | "available" | "auto" | "auto_installed"
 export type GovEvent = { at: string; type: string; actor: string | PersonRef | null; detail: string }
 export type Governance = {
   policy: { text: string; version: number; updatedAt: string }
@@ -129,12 +146,12 @@ export type Governance = {
   drift: Assignment[]
   events: GovEvent[]
   /** Assumed: the API tells us whether the Compliance API is wired; else we fall back to org settings. */
-  complianceFeed?: { configured: boolean; events?: GovEvent[]; source?: "compliance_api" | "audit_log" }
+  complianceFeed?: { configured: boolean; events?: GovEvent[]; source?: "compliance_api" | "audit_log"; detail?: string }
   eventsSource?: "compliance_api" | "audit_log"
   exportUrl: string | null
 }
 
-export type WorkflowScore = { composite: number; readiness?: number; exposure?: number | string; hoursAtStake?: number; frequency?: number; complexity?: number } | number | null
+export type WorkflowScore = { composite: number; readiness?: number; exposure?: number | string; hoursAtStake?: number; /** Scorer's hours/week at stake (the API field name). */ hours?: number; value?: number; frequency?: number; complexity?: number } | number | null
 export type WorkflowSummary = {
   id: string
   name: string
@@ -150,6 +167,8 @@ export type WorkflowSummary = {
   baselineMinutesPerWeek: number | null
   measuredMinutesPerWeek: number | null
   hoursBackPerWeek: number | null
+  hasBaseline?: boolean
+  hasMeasurement?: boolean
   updatedAt: string
   exposure?: string
 }
@@ -168,7 +187,7 @@ export type CostInput = {
   championHoursPerMonth: number
   updatedAt?: string
 }
-export type BaselineRef = { id: string; workflow?: string; task?: string; method?: string; minutesPerWeek?: number }
+export type BaselineRef = { id: string | null; kind?: "baseline" | "measurement" | "cost_input"; detail?: string; workflow?: string; task?: string; method?: string; minutesPerWeek?: number }
 export type ReturnRow = {
   teamId?: string
   teamName?: string
@@ -179,6 +198,8 @@ export type ReturnRow = {
   valueUsd: number
   costUsd?: number
   roi?: number | null
+  /** Baseline, measurement and cost-input rows the figure derives from (API field). */
+  baselineRefs?: BaselineRef[]
   baselines?: BaselineRef[]
   baselineIds?: string[]
 }
@@ -186,8 +207,8 @@ export type Cost = {
   inputs: CostInput
   seats: { total: number; active: number; inactive: number; costTotal: number; costInactive: number; costPerActive: number | null; byTeam: { teamId: string; teamName: string; seats: number; active: number; cost: number; costInactive?: number }[] }
   premium: { seats: number; unused: number; cost: number; costUnused?: number }
-  program: { lightciFees: number; championHoursCost: number; learnerExerciseHoursCost: number }
-  return: { hoursBackPerMonth: number; valueUsd: number; roi: number | null; perTeam: ReturnRow[]; perSkill: ReturnRow[]; baselines?: BaselineRef[]; baselineIds?: string[]; baselineCoveragePct?: number }
+  program: { lightciFees: number; championHoursCost: number; learnerExerciseHoursCost: number; learnerExerciseMinutes?: number; total?: number }
+  return: { hoursBackPerMonth: number; valueUsd: number; roi: number | null; hasCost?: boolean; hasBaseline?: boolean; perTeam: ReturnRow[]; perSkill: ReturnRow[]; baselineRefs?: BaselineRef[]; baselines?: BaselineRef[]; baselineIds?: string[]; baselineCoveragePct?: number }
   waste: { kind: string; count: number; costUsd: number }[]
 } & Provenance
 
@@ -222,9 +243,14 @@ export type IntegrationSummary = {
 
 export type OrgSettings = {
   usagePolicy?: string
+  /** Bumped by PATCH /org when the policy text changes (see org-settings.ts). */
+  policyVersion?: number
+  policyUpdatedAt?: string | null
+  /** @deprecated older payloads; prefer policyVersion */
   usagePolicyVersion?: number
   boundary?: ComplianceBoundary
   boundaryVersion?: number
+  boundaryUpdatedAt?: string | null
   leaderboardsEnabled?: boolean
   stalledAfterDays?: number
   baselineMethod?: "time_diary" | "interview_estimate"
@@ -264,6 +290,8 @@ export type Team = {
   purpose: string | null
   programStartedOn: string | null
   memberCount?: number
+  /** GET /teams returns the member count as `members`. */
+  members?: number
 }
 export type Person = {
   id: string
@@ -297,7 +325,8 @@ export type Escalation = {
   kind: "escalation" | "approval" | "stalled" | "access_request"
   subjectType: "person" | "exercise" | "skill" | "workflow" | "promotion_request" | "team"
   subjectId: string | null
-  subject?: { id: string; name: string; type?: string; href?: string } | null
+  /** /escalations returns a person summary; /lead/queue returns `{ id, name, type, slug? }` (older builds: a plain label string). */
+  subject?: string | { id: string; name: string; type?: string; slug?: string | null; href?: string } | null
   reason: string
   assigneePersonId: string | null
   assignee?: PersonRef | null

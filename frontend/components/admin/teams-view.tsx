@@ -60,7 +60,7 @@ function Inner() {
                   m.importGroups.mutate(undefined, {
                     onSuccess: (r) => {
                       setImportErr(null)
-                      toast.success(`Imported ${r?.imported ?? "your"} groups from Claude`)
+                      toast.success(`Imported ${r?.groups ?? 0} groups from Claude`, { description: `${r?.created ?? 0} teams created, ${r?.linked ?? 0} linked to an existing team.` })
                     },
                     onError: (e) => {
                       if (e instanceof ApiError && e.status === 501) setImportErr(e.detail || "Admin API key not configured.")
@@ -72,7 +72,7 @@ function Inner() {
                 <DownloadCloudIcon data-icon="inline-start" /> {m.importGroups.isPending ? "Importing…" : "Import groups from Claude"}
               </Button>
               <NewTeamDialog onCreate={(b) => m.create.mutateAsync(b)} />
-              <InviteDialog teams={teams.data ?? []} onInvite={(b) => m.invite.mutateAsync(b)} />
+              <InviteDialog teams={teams.data ?? []} onInvite={(b) => m.invite.mutateAsync(b) as Promise<InviteResult>} />
             </>
           )
         }
@@ -98,7 +98,7 @@ function Inner() {
                   { key: "name", header: "Team", sortValue: (t) => t.name, render: (t) => (
                     <div>
                       <div className="font-medium">{t.name}</div>
-                      <div className="text-xs text-muted-foreground">{t.slug}{t.programStartedOn ? ` · since ${fmt.dateShort(t.programStartedOn)}` : ""}{t.memberCount != null ? ` · ${t.memberCount} people` : ""}</div>
+                      <div className="text-xs text-muted-foreground">{t.slug}{t.programStartedOn ? ` · since ${fmt.dateShort(t.programStartedOn)}` : ""}{(t.memberCount ?? t.members) != null ? ` · ${t.memberCount ?? t.members} people` : ""}</div>
                     </div>
                   ) },
                   { key: "champion", header: "Champion", sortValue: (t) => t.champion?.name ?? "", render: (t) => <ChampionSelect team={t} people={(people.data ?? []).filter((p) => p.teamId === t.id || p.roles.includes("champion"))} disabled={!canWrite} onChange={(id) => m.patch.mutateAsync({ id: t.id, championPersonId: id }).then(() => toast.success("Champion updated")).catch((e) => toast.error("Couldn't update champion", { description: err(e) }))} /> },
@@ -274,7 +274,9 @@ function NewTeamDialog({ onCreate }: { onCreate: (b: { name: string; pluginName?
   )
 }
 
-function InviteDialog({ teams, onInvite }: { teams: Team[]; onInvite: (b: { email: string; teamId?: string }) => Promise<unknown> }) {
+type InviteResult = { ok: boolean; personId: string; invitation?: "sent" | "failed" | "skipped"; detail?: string }
+
+function InviteDialog({ teams, onInvite }: { teams: Team[]; onInvite: (b: { email: string; teamId?: string }) => Promise<InviteResult> }) {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState("")
   const [teamId, setTeamId] = useState<string>(NONE)
@@ -288,7 +290,13 @@ function InviteDialog({ teams, onInvite }: { teams: Team[]; onInvite: (b: { emai
           <DialogTitle>Invite by email</DialogTitle>
           <DialogDescription>They sign in with your firm&apos;s SSO. If they already exist in Claude, the identity joins on email.</DialogDescription>
         </DialogHeader>
-        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); onInvite({ email: email.trim(), teamId: teamId === NONE ? undefined : teamId }).then(() => { toast.success(`Invited ${email}`); setOpen(false); setEmail("") }).catch((err) => toast.error("Couldn't send the invite", { description: err instanceof ApiError ? err.detail : String(err) })) }} data-testid="invite-form">
+        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); onInvite({ email: email.trim(), teamId: teamId === NONE ? undefined : teamId }).then((r) => {
+            // The person row is created either way; the WorkOS email can still fail (unknown domain, SSO not linked). Say so.
+            if (r?.invitation === "failed") toast.warning(`${email} added as invited, but the invitation email was not sent`, { description: r.detail || "WorkOS rejected the invitation. Ask them to sign in with SSO; the row is already waiting." })
+            else if (r?.invitation === "skipped") toast.info(`${email} added as invited`, { description: "Email invitations are off in this environment; they can sign in with SSO." })
+            else toast.success(`Invited ${email}`)
+            setOpen(false); setEmail("")
+          }).catch((err) => toast.error("Couldn't send the invite", { description: err instanceof ApiError ? err.detail : String(err) })) }} data-testid="invite-form">
           <div className="grid gap-1"><Label htmlFor="inv-email" className="text-xs">Work email</Label><Input id="inv-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@meridianwp.com" data-testid="invite-email" /></div>
           <div className="grid gap-1">
             <Label className="text-xs">Team</Label>

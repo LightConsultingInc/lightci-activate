@@ -52,9 +52,17 @@ function Body({ d }: { d: Cost }) {
   const [inputs, setInputs] = useState<CostInput>(d.inputs)
   const dirty = INPUT_FIELDS.some((f) => Number(inputs[f.key]) !== Number(d.inputs[f.key]))
   const programCost = (d.program?.lightciFees ?? 0) + (d.program?.championHoursCost ?? 0) + (d.program?.learnerExerciseHoursCost ?? 0)
-  const totalCost = (d.seats?.costTotal ?? 0) + (d.premium?.cost ?? 0) + programCost
+  // ROI denominator per the contract: fees + champion hours + learner exercise hours + seats + premium.
+  const totalCost = d.program?.total ?? (d.seats?.costTotal ?? 0) + (d.premium?.cost ?? 0) + programCost
   const inputsBaseline = `client inputs${d.inputs.updatedAt ? ` (updated ${fmt.date(d.inputs.updatedAt)})` : ""}`
-  const returnBaseline = d.return.baselineIds?.length || d.return.baselines?.length ? `${(d.return.baselines?.length ?? d.return.baselineIds?.length) ?? 0} baseline records${d.return.baselineCoveragePct != null ? ` · ${fmt.pct(d.return.baselineCoveragePct)} coverage` : ""}` : d.baseline ?? null
+  const baselineRows = (d.return.baselineRefs ?? d.return.baselines ?? []).filter((r) => (r.kind ?? "baseline") === "baseline")
+  const measurementRows = (d.return.baselineRefs ?? []).filter((r) => r.kind === "measurement")
+  const baselineCount = baselineRows.length || (d.return.baselineIds?.length ?? 0)
+  const returnBaseline = baselineCount
+    ? `${baselineCount} baseline record${baselineCount === 1 ? "" : "s"}${measurementRows.length ? ` · ${measurementRows.length} measurement${measurementRows.length === 1 ? "" : "s"}` : ""}${d.return.baselineCoveragePct != null ? ` · ${fmt.pct(d.return.baselineCoveragePct)} coverage` : ""}`
+    : d.baseline ?? null
+  const hasReturn = d.return.hasBaseline ?? baselineCount > 0
+  const hasCost = d.return.hasCost ?? totalCost > 0
 
   const onSave = () => {
     const body = Object.fromEntries(INPUT_FIELDS.map((f) => [f.key, Number(inputs[f.key]) || 0])) as unknown as CostInput
@@ -67,10 +75,10 @@ function Body({ d }: { d: Cost }) {
   return (
     <div className="space-y-6 animate-rise">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="cost-tiles">
-        <MetricTile testId="tile-return" label="Return, this month" value={fmt.money(d.return.valueUsd)} sub={`${Math.round(d.return.hoursBackPerMonth)}h back × ${fmt.money(d.inputs.loadedHourlyRate)}/h`} source="Activate measurements (net of rework)" baseline={returnBaseline} accent />
-        <MetricTile testId="tile-cost" label="Total cost, this month" value={fmt.money(totalCost)} sub="seats + premium + program" source="Client inputs + Analytics API seat counts" baseline={inputsBaseline} />
-        <MetricTile testId="tile-roi" label="ROI" value={d.return.roi == null ? null : `${(d.return.roi * 100).toFixed(0)}%`} sub={d.return.roi == null ? "needs baselines" : "(return − cost) ÷ cost"} source="Derived" baseline={returnBaseline} delta={{ value: null }} />
-        <MetricTile testId="tile-cost-per-active" label="Cost per active person" value={d.seats.costPerActive == null ? null : fmt.money(d.seats.costPerActive)} sub={`${d.seats.active} of ${d.seats.total} seats active`} source="Analytics API + client seat price" baseline={inputsBaseline} />
+        <MetricTile testId="tile-return" label="Return, this month" value={hasReturn ? fmt.money(d.return.valueUsd) : null} sub={hasReturn ? `${Math.round(d.return.hoursBackPerMonth)}h back × ${fmt.money(d.inputs.loadedHourlyRate)}/h` : "no baseline + measurement pair yet"} source="Activate baselines + measurements (net of rework) × client loaded hourly rate" baseline={returnBaseline} accent />
+        <MetricTile testId="tile-cost" label="Total cost, this month" value={fmt.money(totalCost)} sub="seats + premium + program" source="Client inputs × seat counts (org seats, premium seats, people)" baseline={inputsBaseline} />
+        <MetricTile testId="tile-roi" label="ROI" value={d.return.roi == null || !hasReturn || !hasCost ? null : `${(d.return.roi * 100).toFixed(0)}%`} sub={!hasReturn ? "needs baselines" : !hasCost ? "needs cost inputs" : "(return − cost) ÷ cost"} source="Derived: return tile ÷ total cost tile" baseline={hasReturn && hasCost ? `${returnBaseline} · ${inputsBaseline}` : returnBaseline} delta={{ value: null }} />
+        <MetricTile testId="tile-cost-per-active" label="Cost per active person" value={d.seats.costPerActive == null || !d.seats.active ? null : fmt.money(d.seats.costPerActive)} sub={`${d.seats.active} of ${d.seats.total} seats active (30d)`} source="Usage snapshots (active on real work, 30d) + client seat price" baseline={inputsBaseline} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
@@ -182,23 +190,25 @@ function CostBars({ d, programCost }: { d: Cost; programCost: number }) {
 }
 
 function BaselineLink({ row }: { row: ReturnRow }) {
-  const refs: BaselineRef[] = row.baselines ?? (row.baselineIds ?? []).map((id) => ({ id }))
-  if (!refs.length) return <span className="text-xs italic text-muted-foreground">no baseline</span>
+  const all: BaselineRef[] = row.baselineRefs ?? row.baselines ?? (row.baselineIds ?? []).map((id) => ({ id }))
+  const refs = all.filter((r) => r.kind !== "cost_input")
+  const baselines = refs.filter((r) => (r.kind ?? "baseline") === "baseline")
+  if (!baselines.length) return <span className="text-xs italic text-muted-foreground">no baseline</span>
   return (
     <UiTooltip>
       <TooltipTrigger render={<button type="button" className="inline-flex items-center gap-1 text-xs text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground" data-testid="baseline-link" />}>
-        <LinkIcon className="size-3" /> {refs.length} baseline{refs.length > 1 ? "s" : ""}
+        <LinkIcon className="size-3" /> {baselines.length} baseline{baselines.length > 1 ? "s" : ""}
       </TooltipTrigger>
       <TooltipContent className="block max-w-sm">
-        <p className="mb-1 font-medium">Baseline records</p>
+        <p className="mb-1 font-medium">Baseline and measurement records</p>
         <ul className="space-y-0.5">
-          {refs.slice(0, 8).map((b) => (
-            <li key={b.id} className="flex gap-2">
-              <span className="font-mono text-[10px] text-background/60">{b.id.slice(0, 8)}</span>
-              <span>{b.workflow ?? b.task ?? "workflow"}{b.minutesPerWeek != null ? ` · ${b.minutesPerWeek} min/wk` : ""}{b.method ? ` · ${b.method.replace(/_/g, " ")}` : ""}</span>
+          {refs.slice(0, 12).map((b, i) => (
+            <li key={`${b.id ?? "ref"}-${i}`} className="flex gap-2">
+              <span className="font-mono text-[10px] text-background/60">{(b.id ?? "").slice(0, 8)}</span>
+              <span>{b.kind && b.kind !== "baseline" ? `${b.kind}: ` : ""}{b.detail ?? `${b.workflow ?? b.task ?? "workflow"}${b.minutesPerWeek != null ? ` · ${b.minutesPerWeek} min/wk` : ""}${b.method ? ` · ${b.method.replace(/_/g, " ")}` : ""}`}</span>
             </li>
           ))}
-          {refs.length > 8 && <li className="text-background/60">+{refs.length - 8} more</li>}
+          {refs.length > 12 && <li className="text-background/60">+{refs.length - 12} more</li>}
         </ul>
       </TooltipContent>
     </UiTooltip>

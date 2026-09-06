@@ -29,17 +29,60 @@ export type Competency = {
 }
 
 export type WorkSurface = "orientation" | "prompt" | "project" | "skill" | "workflow" | "review"
+/** @deprecated The practice model has no "do it in Claude" path; kept only so older summaries still type-check. */
 export type ExerciseMode = "in_app" | "in_claude"
-export type ExerciseStatus = "queued" | "active" | "submitted" | "graded" | "passed" | "revise" | "skipped"
+export type ExerciseStatus = "queued" | "active" | "submitted" | "graded" | "passed" | "revise" | "try_again" | "skipped"
+
+// ─────────────────────────── Practice (v2) ───────────────────────────
+/** The input a practice item asks for. Mirrors docs/practice-model.md; `orientation` items are `prompt`. */
+export type PracticeKind = "prompt" | "project" | "skill" | "workflow" | "review"
+
+export type PromptPrefill = { prompt: string; material?: string }
+export type ProjectPrefill = { instructions: string; files: { name: string; content: string }[]; testTask: string }
+export type SkillPrefill = { skillMd: string; sampleRequests: string[] }
+export type WorkflowPrefill = { schema: Partial<WorkflowSchema> }
+export type ReviewPrefill = { submissionId: string }
+/** Only the keys for the item's `kind` are present; typed loosely so a reader can pick what it needs. */
+export type PracticePrefill = Partial<PromptPrefill & ProjectPrefill & SkillPrefill & WorkflowPrefill & ReviewPrefill>
+
+/** `ExerciseDetail.starter.practice`: the ask, the kind of input, and what to pre-fill it with. */
+export type PracticeSpec = {
+  ask: string
+  kind: PracticeKind
+  workflowName: string | null
+  prefill: PracticePrefill
+}
+
+/** POST /exercises/:id/run body, by kind. Review items do not run. */
+export type RunBody =
+  | { kind: "prompt"; prompt: string; material?: string }
+  | { kind: "project"; instructions: string; files: { name: string; content: string }[]; testTask: string }
+  | { kind: "skill"; skillMd: string; sampleRequests: string[] }
+  | { kind: "workflow"; schema: Partial<WorkflowSchema> }
+
+/** One sample request run with the skill in context (L3). */
+export type SkillRunResult = { request: string; fired: boolean; output: string }
+
+/** What POST /exercises/:id/run hands back, by kind. */
+export type RunResult = { output?: string; results?: SkillRunResult[]; skillDraft?: string; model?: string; runId?: string }
+
+/** Coach's three lines. */
+export type Feedback = { worked: string; change: string; tryNext: string }
+export type PracticeDecision = "pass" | "try_again"
 
 export type ExerciseSummary = {
   id: string
   title: string
   rung: number
   kind: "artifact" | "revisit" | "diagnostic" | "adopt" | "review"
+  /** @deprecated ignored by the practice screen. */
   mode: ExerciseMode
   workSurface: WorkSurface
   status: ExerciseStatus
+  /** The one-sentence ask, when the API sends it on the summary; cards fall back to `title`. */
+  ask?: string | null
+  /** The learner's workflow this item is framed on; cards fall back to `contextTag`. */
+  workflowName?: string | null
   brief: string
   rationale: string
   competencyCodes: string[]
@@ -84,7 +127,19 @@ export type Artifact = {
   type: "prompt_run" | "project" | "skill" | "workflow" | "text" | "review"
   content: string
   output?: string
+  /** prompt: the pasted material, if any. */
+  material?: string
   files?: { name: string; content: string }[]
+  /** project: the pre-filled task the Project was run against. */
+  testTask?: string
+  /** skill: the three sample requests and what happened when each ran. */
+  sampleRequests?: string[]
+  results?: SkillRunResult[]
+  /** workflow: the skill drafted from the map. */
+  skillDraft?: string
+  /** review: the learner's 0–10 score and the teammate's submission. */
+  score10?: number
+  submissionId?: string
   rationale?: string
   sampleCases?: SampleCase[]
   boundary?: Record<string, string[]>
@@ -100,6 +155,10 @@ export type SubmissionView = {
   coldAttempt: boolean
   submittedAt: string
   grade: GradeView | null
+  /** Practice v2: the three lines and the score out of 10, when the API stores them on the attempt. */
+  feedback?: Feedback | null
+  score10?: number | null
+  decision?: PracticeDecision | null
 }
 
 export type SkillCard = {
@@ -198,12 +257,15 @@ export type ExerciseDetail = ExerciseSummary & {
   hints: string[]
   hintsRevealed: number
   hintsTotal: number
-  workedExample: string | null
-  starter: Record<string, unknown> & { draftExpectation?: { expectationText: string; expectationConfidence: number } }
+  workedExample?: string | null
+  /** `practice` is the v2 shape; older starters carry loose keys (starterPrompt, instructions, schema…) keyed off `workSurface`. */
+  starter: Record<string, unknown> & { practice?: PracticeSpec }
+  /** L5 review items: the teammate's artifact the learner is asked to grade. */
+  review?: { artifact: Artifact; person: PersonRef | null; exerciseTitle: string } | null
   submissions: SubmissionView[]
   skill?: SkillCard
   workflow?: WorkflowSummary
-  coachIntro: string
+  coachIntro?: string
 }
 
 export type LadderView = {
@@ -269,12 +331,16 @@ export type MySkills = {
 
 export type HistoryItem = { exercise: ExerciseSummary; submission: SubmissionView }
 
+/** POST /exercises/:id/submit. Review items add `agreement`: the learner's score next to the grader's. */
 export type SubmitResult = {
-  submission: SubmissionView
-  grade: GradeView
+  feedback: Feedback
+  score10: number
+  decision: PracticeDecision
   exercise: ExerciseDetail
   nextUp: ExerciseSummary | null
   promotion?: { newRung: number }
+  agreement?: { yours: number; grader: number }
+  submission?: SubmissionView
 }
 
 export type RevisitAnswer = { score: number; feedback: string; nextDueAt: string; intervalStep: number }

@@ -797,11 +797,13 @@ export class LibraryService {
     const workflow = skill.workflowMapId
       ? await this.workflowSummary(orgId, skill.workflowMapId, [card])
       : null;
+    const orgBoundary = await this.orgBoundary(orgId);
 
     return {
       ...card,
       skillMd: skill.skillMd,
       boundary: skill.boundary,
+      orgBoundary,
       sampleCases: skill.sampleCases,
       manifest: skill.manifest,
       workflow,
@@ -1008,8 +1010,11 @@ export class LibraryService {
     version: number,
   ): Promise<Record<string, string>> {
     const manifest = await this.manifestFor(skill);
-    const dir =
-      skill.repoPath ?? `plugins/${skill.plugin}/skills/${skill.slug}`;
+    // repoPath is the skill *directory* when written by sync/create, but the demo seed stores the
+    // SKILL.md file path; normalise so we never write `<dir>/SKILL.md/SKILL.md`.
+    const dir = (
+      skill.repoPath ?? `plugins/${skill.plugin}/skills/${skill.slug}`
+    ).replace(/\/SKILL\.md$/i, '');
     return {
       [`${dir}/SKILL.md`]: this.composeSkillMd(skill, manifest.owner, version),
       [`${dir}/activate.yaml`]: stringifyYaml(manifest, { lineWidth: 0 }),
@@ -1287,10 +1292,10 @@ export class LibraryService {
               ? ['L2.selection']
               : ['L1.delegation', 'L1.discernment'],
         title: `Adopt ${skill.name} on your own case`,
-        brief: `Pick one real case from this week where the skill's trigger applies — "${skill.triggerLine}". Before running it, write what you expect the output to get right and where it will be weak. Run ${skill.name} on your case, then critique the result against the skill's Output format and Boundaries: did anything in your input fall outside "may read"? Did the output need the human-review step it declares?`,
+        brief: `Use ${skill.name} on one real case from this week where its trigger applies: "${skill.triggerLine}".`,
         rationale: `${skill.name} is published for ${skill.plugin.replace(/-/g, ' ')} and matches work you already do. Adopting a teammate's skill is the fastest route through this rung: you learn what a good trigger and boundary look like by using one on real work before writing your own.`,
         kind: 'adopt',
-        mode: 'in_claude',
+        mode: 'in_app',
         workSurface: 'skill',
         contextTag: skill.workflowFamily ?? skill.slug,
         skillId: skill.id,

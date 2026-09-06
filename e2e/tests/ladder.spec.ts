@@ -177,17 +177,9 @@ test.describe("module page", () => {
     if (await cards.count()) {
       const first = cards.first()
       await expect(first.getByTestId("practice-title")).not.toBeEmpty()
-      await expect(first.getByTestId("mode-badge")).toBeVisible()
-      await expect(first).toContainText(/~\d+ min/)
+      await expect(first).toContainText(/~?\d+ min/)
       await expect(first.getByTestId("practice-start")).toHaveAttribute("href", /\/exercise\/[0-9a-f-]{36}/)
-      await expect(first.getByTestId("practice-start")).toHaveText(/Start|Continue|Review|Do it here/)
-      // In-Claude practice leads with the Claude pack and keeps "Do it here" as the fallback.
-      const inClaude = tab.locator("[data-testid=practice-card][data-mode=in_claude]:not([data-status=passed])")
-      if (await inClaude.count()) {
-        await expect(inClaude.first().getByTestId("practice-in-claude")).toHaveText(/Do it in Claude/)
-        await expect(inClaude.first().getByTestId("practice-in-claude")).toHaveAttribute("href", /\?claude=1$/)
-        await expect(inClaude.first().getByTestId("practice-start")).toHaveText("Do it here")
-      }
+      await expect(first.getByTestId("practice-start")).toHaveText(/Start|Continue|Try again|Review/)
     } else {
       await expect(tab).toContainText("No practice here yet")
     }

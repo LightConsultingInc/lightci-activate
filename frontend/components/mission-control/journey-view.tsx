@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { RungBadge, rungMeta } from "@/components/brand/rung"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useJourney } from "@/hooks/mc/use-mc"
@@ -58,7 +58,7 @@ function Body({ d, teamId }: { d: Journey; teamId: string | null }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Cohorts by onboarding week" description="Where each intake cohort sits now." footer={<SourceLine source={source} baseline="cohort's placement week" />} testId="panel-cohorts">
           {d.cohorts?.length ? (
-            <Heatmap rows={[...d.cohorts].sort((a, b) => a.cohortWeek.localeCompare(b.cohortWeek)).map((c) => ({ id: c.cohortWeek, label: /^\d{4}-\d{2}-\d{2}$/.test(c.cohortWeek) ? `Week of ${format(new Date(c.cohortWeek), "MMM d")}` : "Not yet onboarded", counts: c.counts }))} mode={mode} />
+            <Heatmap rows={[...d.cohorts].sort((a, b) => a.cohortWeek.localeCompare(b.cohortWeek)).map((c) => ({ id: c.cohortWeek, label: /^\d{4}-\d{2}-\d{2}$/.test(c.cohortWeek) ? `Week of ${format(parseISO(c.cohortWeek), "MMM d")}` : "Not yet onboarded", counts: c.counts }))} mode={mode} />
           ) : (
             <p className="text-sm text-muted-foreground">No cohorts yet.</p>
           )}

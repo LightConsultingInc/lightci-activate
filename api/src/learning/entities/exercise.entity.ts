@@ -28,14 +28,15 @@ export class Exercise {
   @Column('text') rationale: string; // why Coach chose this ("you run Monday prep every week...")
   @Column('text', { default: 'artifact' }) kind:
     'artifact' | 'revisit' | 'diagnostic' | 'adopt' | 'review';
-  @Column('text', { default: 'in_app' }) mode: 'in_app' | 'in_claude';
+  /** Always 'in_app' since practice v2. Legacy rows may still hold 'in_claude'; the mapper coerces. */
+  @Column('text', { default: 'in_app' }) mode: 'in_app';
   @Column('text') workSurface: WorkSurface;
   @Column('text', { nullable: true }) contextTag: string | null; // distinct context for diversity (e.g. "meeting-prep")
   @Column('uuid', { nullable: true }) workflowMapId: string | null;
   @Column('uuid', { nullable: true }) skillId: string | null;
   @Column('jsonb', { default: [] }) hints: string[]; // progressive hints, revealed one at a time
   @Column('text', { nullable: true }) workedExample: string | null; // only after a cold attempt
-  @Column('jsonb', { default: {} }) starter: Record<string, unknown>; // pre-filled surface state
+  @Column('jsonb', { default: {} }) starter: Record<string, unknown>; // pre-filled surface state; `practice` = the v2 Practice object, `lastRun` = last Run result
   @Column('text', { default: 'queued' }) status: ExerciseStatus;
   @Column('int', { default: 20 }) estimatedMinutes: number;
   @Column('timestamptz', { nullable: true }) scheduledFor: Date | null;

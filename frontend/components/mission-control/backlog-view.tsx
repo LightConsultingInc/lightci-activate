@@ -65,10 +65,13 @@ function Body({ d, nextWave, setNextWave }: { d: Backlog; nextWave: boolean; set
   const items = (d.items ?? []).filter((w) => !nextWave || w.nextWave)
   const source = d.source ?? "Interviewer workflow maps + Scorer"
   const baseline = d.baseline ?? "baseline minutes/week per workflow (Interviewer estimate or time diary)"
+  // Scorer's hours/week when scored; otherwise the captured baseline. A workflow with no baseline
+  // row (hasBaseline false, baseline 0) shows "no baseline" rather than a false 0.0h.
   const hoursAtStake = (w: WorkflowSummary) => {
     const s = scoreField(w.score, "hoursAtStake")
     if (typeof s === "number") return s
-    return w.baselineMinutesPerWeek != null ? w.baselineMinutesPerWeek / 60 : null
+    if (w.hasBaseline === false) return null
+    return w.baselineMinutesPerWeek != null && w.baselineMinutesPerWeek > 0 ? w.baselineMinutesPerWeek / 60 : null
   }
   return (
     <div className="space-y-6 animate-rise">

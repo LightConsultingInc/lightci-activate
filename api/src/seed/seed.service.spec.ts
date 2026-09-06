@@ -210,7 +210,7 @@ describe('mastery-math', () => {
         retention: 0.79,
         judgement: 0.68,
       }),
-    ).toBeCloseTo(0.824, 2);
+    ).toBeCloseTo(0.862, 2); // judgement retired 2026-09-06: 0.6 / 0.2 / 0.2
   });
 
   it('advances on pass and resets to the two-day interval on fail', () => {
@@ -249,6 +249,21 @@ describe('buildSeedPlan', () => {
     expect(again.people).toEqual(plan.people);
     expect(again.usage.slice(0, 50)).toEqual(plan.usage.slice(0, 50));
     expect(again.mastery.length).toBe(plan.mastery.length);
+  });
+
+  it('gives every seeded exercise an in_app starter.practice whose kind matches its surface (practice v2)', () => {
+    const kindFor: Record<string, string> = { orientation: 'prompt', prompt: 'prompt', project: 'project', skill: 'skill', workflow: 'workflow', review: 'review' };
+    expect(plan.exercises.length).toBeGreaterThan(20);
+    for (const e of plan.exercises) {
+      expect(e.mode).toBe('in_app');
+      const practice = (e.starter as { practice?: { ask: string; kind: string; workflowName: string; prefill: Record<string, unknown> } }).practice;
+      expect(practice).toBeDefined();
+      expect(practice!.kind).toBe(kindFor[e.workSurface as string]);
+      expect(practice!.ask.length).toBeGreaterThan(0);
+      expect(practice!.prefill).toBeDefined();
+    }
+    const review = plan.exercises.find((e) => e.workSurface === 'review' && (e.starter as { submissionId?: string }).submissionId);
+    expect((review!.starter as { practice: { prefill: { submissionId: string } } }).practice.prefill.submissionId).toBe((review!.starter as { submissionId: string }).submissionId);
   });
 
   it('seeds the org, teams, people and the five WorkOS users', () => {

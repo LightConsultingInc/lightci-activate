@@ -23,8 +23,14 @@ export interface MemoryEvent {
     exerciseTitle?: string;
     score?: number;
     decision?: 'pass' | 'revise';
+    /** Rubric labels scored below 0.75 (practice v2); previously the missed self-check items. */
+    missed?: string[];
     missedSelfCheck?: string[];
     teachingMoment?: string | null;
+    /** Practice v2: the "try next" line, the score out of 10 and the input kind. */
+    tryNext?: string | null;
+    score10?: number;
+    practiceKind?: string;
     skipReason?: string;
     skillName?: string;
     lessonSlug?: string;

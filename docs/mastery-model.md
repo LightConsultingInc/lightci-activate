@@ -71,6 +71,8 @@ Priya clears the L2 ≥ 0.80 threshold but her judgement score (0.68) is flagged
 
 ## 6. Recommended formulas (implemented in `mastery.service.ts`)
 
+> **Update 2026-09-06 (practice model v2, `docs/practice-model.md`).** The judgement component is retired: practice no longer asks for a prediction or a self-check, so there is no Brier calibration or critique-quality signal to weight. `Mastery = 0.60·S_artifact + 0.20·Consistency + 0.20·Retention`, and the promotion gate is `Mastery ≥ threshold(rung)` AND `contexts ≥ min_required(rung)` (plus retention of earlier rungs). `RUNG_GATES.minJudgement` is 0 and ignored; `LadderView.judgement` and `components.judgement` are still reported from legacy grades for display only. The worked example above therefore composes to 0.86 under the new weights. §4 remains as the research rationale for the retired component.
+
 **Recency-weighted artifact score** (half-life h = 14 days): `wᵢ = 0.5^(Δtᵢ / h)`; `S_artifact = Σ(wᵢ · scoreᵢ) / Σ(wᵢ)`
 
 **Consistency across contexts** (k distinct contexts): `Consistency = max(0, 1 − stdev(s) / mean(s))`, with a diversity factor `min(1, k / k_required)`.

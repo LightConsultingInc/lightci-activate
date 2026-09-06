@@ -55,15 +55,19 @@ export class EscalationsController {
   ) {
     const states =
       state === 'all' ? undefined : state ? [state] : ['open', 'in_progress'];
+    // A lead with no client selected has no org scope: return every org's rows (leads see everything)
+    // rather than letting TypeORM reject a null in the where clause with a 500.
+    const scope = orgId ? { orgId } : {};
     const rows = await this.escalations.find({
       where: states
-        ? { orgId, state: In(states as Escalation['state'][]) }
-        : { orgId },
+        ? { ...scope, state: In(states as Escalation['state'][]) }
+        : scope,
       order: { createdAt: 'DESC' },
     });
-    const scoped = hasAnyRole(user, ['sponsor', 'admin'])
-      ? rows
-      : await this.filterToTeam(orgId, user, rows);
+    const scoped =
+      hasAnyRole(user, ['sponsor', 'admin']) || !orgId
+        ? rows
+        : await this.filterToTeam(orgId, user, rows);
     const personIds = new Set<string>();
     for (const e of scoped) {
       if (e.assigneePersonId) personIds.add(e.assigneePersonId);
@@ -129,7 +133,7 @@ export class EscalationsController {
     await this.escalations.save(e);
     await this.audit.save(
       this.audit.create({
-        orgId,
+        orgId: e.orgId, // not the request scope: an unscoped lead has none
         actorPersonId: user.id,
         action: 'escalation.resolved',
         subjectType: 'escalation',
@@ -150,9 +154,11 @@ export class EscalationsController {
   ) {
     const e = await this.load(orgId, id);
     const assignee = await this.people.findOne({ where: { id: dto.personId } });
+    // Compare against the escalation's own org: the request scope is null for an unscoped lead
+    // and may be a different client when a lead works the cross-client queue.
     if (
       !assignee ||
-      (assignee.orgId !== orgId && !assignee.roles.includes('lead'))
+      (assignee.orgId !== e.orgId && !assignee.roles.includes('lead'))
     )
       throw new ForbiddenException('Assignee must belong to this org');
     e.assigneePersonId = assignee.id;
@@ -160,7 +166,7 @@ export class EscalationsController {
     await this.escalations.save(e);
     await this.audit.save(
       this.audit.create({
-        orgId,
+        orgId: e.orgId,
         actorPersonId: user.id,
         action: 'escalation.assigned',
         subjectType: 'escalation',

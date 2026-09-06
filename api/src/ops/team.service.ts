@@ -109,7 +109,10 @@ export class TeamService {
     const reviewQueue = f.submissions
       .filter((s) => memberIds.has(s.personId))
       .map((s) => ({ s, e: f.exercises.find((e) => e.id === s.exerciseId) }))
-      .filter(({ s, e }) => e && this.awaitingChampion(f, s, e))
+      .filter(
+        ({ s, e }) =>
+          e && this.awaitingChampion(f, s, e, team.championPersonId),
+      )
       .map(({ s, e }) => ({
         submission: submissionView(s, f),
         exercise: exerciseSummary(e!),
@@ -164,8 +167,22 @@ export class TeamService {
     };
   }
 
-  private awaitingChampion(f: OrgFacts, s: Submission, e: Exercise): boolean {
-    if (e.status !== 'submitted' && e.status !== 'graded') return false;
+  /**
+   * A submission waits on the champion when it is the latest attempt, nobody has champion-graded
+   * it, and either the Grader has not produced a decision yet (`submitted`/`graded`) or the
+   * exercise is L3+ (the Grader's `passed`/`revise` is only a draft there; the champion's read
+   * counts). The champion's own submissions are their L5 work and never sit in their own queue.
+   */
+  private awaitingChampion(
+    f: OrgFacts,
+    s: Submission,
+    e: Exercise,
+    championId: string | null,
+  ): boolean {
+    if (championId && s.personId === championId) return false;
+    const graderOnly = e.status === 'submitted' || e.status === 'graded';
+    const drafted = e.status === 'passed' || e.status === 'revise';
+    if (!graderOnly && !(drafted && e.rung >= 3)) return false;
     const championGraded = f.grades.some(
       (g) => g.submissionId === s.id && g.gradedByPersonId,
     );
@@ -175,7 +192,7 @@ export class TeamService {
       .filter((x) => x.exerciseId === e.id)
       .sort((a, b) => b.attempt - a.attempt)[0];
     if (latest && latest.id !== s.id) return false;
-    return e.status === 'submitted' || e.rung >= 3;
+    return graderOnly || e.rung >= 3;
   }
 
   rosterEntry(f: OrgFacts, p: Person): RosterEntry {

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository, type FindOptionsWhere } from 'typeorm';
 import { AiService } from '../ai/ai.service';
@@ -9,7 +9,7 @@ import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
 import { Team } from '../orgs/entities/team.entity';
 import { WorkflowMap } from '../workflows/entities/workflow-map.entity';
-import { NextExerciseSchema, type NextExerciseOutput } from './ai-schemas';
+import { NextExerciseSchema, SkillRunSchema, type NextExerciseOutput } from './ai-schemas';
 import {
   COMPETENCY_BY_CODE,
   COMPETENCY_CATALOG,
@@ -19,23 +19,27 @@ import { CoachNote } from './entities/coach-note.entity';
 import { Exercise, type WorkSurface } from './entities/exercise.entity';
 import { Grade } from './entities/grade.entity';
 import { Submission } from './entities/submission.entity';
-import type { CompetencyView } from './learning.types';
+import type {
+  CompetencyView,
+  Practice,
+  PracticeKind,
+  RunBody,
+  RunResult,
+} from './learning.types';
+import { PRACTICE_KIND_FOR_SURFACE, practiceOf, skillTemplate } from './mappers';
 import { MasteryService } from './mastery.service';
-import { MemoryService, type PersonMemory } from './memory.service';
-import { COACH_RUN_SYSTEM, COACH_SYSTEM, boundaryText } from './prompts';
+import { MemoryService } from './memory.service';
+import {
+  COACH_RUN_SYSTEM,
+  COACH_SKILL_RUN_SYSTEM,
+  COACH_SYSTEM,
+  COACH_WORKFLOW_DRAFT_SYSTEM,
+  boundaryText,
+} from './prompts';
 import { buildSituation } from './situation';
 import './learning.mocks';
 
 export type SkipReason = 'no_time' | 'blocked' | 'tool_issue' | 'not_relevant';
-
-export interface RunInput {
-  prompt: string;
-  context?: string;
-  project?: {
-    instructions?: string;
-    files?: { name: string; content: string }[];
-  };
-}
 
 const SURFACE_FOR_RUNG: Record<number, WorkSurface> = {
   0: 'orientation',
@@ -47,9 +51,9 @@ const SURFACE_FOR_RUNG: Record<number, WorkSurface> = {
 };
 
 /**
- * Coach role: chooses and generates the next exercise from the learner's own context, runs Claude
- * inside the work surface, reveals hints one at a time, builds the "open in Claude" pack, and
- * handles skips with notes and escalation. Teaching moments are attached by the Grader at grading time.
+ * Coach role (practice v2, docs/practice-model.md): chooses and generates the next practice item from
+ * the learner's own context with a pre-filled input area, runs Claude per kind when the learner presses
+ * Run, reveals hints one at a time, and handles skips with notes and escalation. Everything is in_app.
  */
 @Injectable()
 export class CoachService {
@@ -129,8 +133,8 @@ export class CoachService {
   /**
    * Generate the next exercise (task coach.next-exercise). Inputs: the learner's ContextLayer (and the
    * team's and company's), their WorkflowMaps, the weakest unlocked competency, the contexts already
-   * used (for diversity) and the last exercise (spacing). Mode defaults to in_claude for L1–L2 learners
-   * with no in-app history.
+   * used (for diversity) and the last exercise (spacing). The result carries `starter.practice`
+   * (ask, kind, workflowName, prefill) so the UI renders one input area with a starting point.
    */
   async generateNextExercise(
     person: Person,
@@ -155,7 +159,7 @@ export class CoachService {
     );
     const surface =
       SURFACE_FOR_RUNG[Math.min(5, Math.max(0, rung))] ?? 'prompt';
-    const [layers, workflows, org, recent, inAppHistory] = await Promise.all([
+    const [layers, workflows, org, recent] = await Promise.all([
       this.layersFor(person, orgId),
       this.workflows.find({
         where: orgId
@@ -173,7 +177,6 @@ export class CoachService {
         order: { createdAt: 'DESC' },
         take: 12,
       }),
-      this.submissions.count({ where: { personId: person.id } }),
     ]);
     const usedContexts = [
       ...new Set(
@@ -270,7 +273,7 @@ export class CoachService {
               '# Firm compliance boundary',
               boundaryText(org?.settings?.boundary),
               '',
-              `Produce one exercise for the ${surface} surface${rung === 3 ? ' with a complete workedExample (unlocked after the first submission)' : ' (workedExample null)'}. Exactly three hints.`,
+              `Produce one practice item for the ${surface} surface${rung === 3 ? ' with a complete workedExample (shown after the first submission)' : ' (workedExample null)'}. Exactly three hints. The brief is the ask: one sentence. Fill only the prefill fields for this surface.`,
             ]
               .filter((line) => line !== '')
               .join('\n'),
@@ -290,20 +293,35 @@ export class CoachService {
       NextExerciseSchema,
     );
 
-    const exercise = this.exercises.create(
-      this.toExercise(
-        out,
-        person,
-        rung,
-        surface,
-        allowedCodes,
-        target.code,
-        workflows.map((w) => w.id),
-        inAppHistory,
-        opts,
-      ),
+    const draft = this.toExercise(
+      out,
+      person,
+      rung,
+      surface,
+      allowedCodes,
+      target.code,
+      workflows.map((w) => w.id),
+      opts,
     );
-    exercise.mode = modeForPreferences(memory, exercise.mode);
+    const workflow =
+      workflows.find((w) => w.id === draft.workflowMapId) ?? workflows[0] ?? null;
+    draft.starter = {
+      ...(draft.starter ?? {}),
+      practice: await this.practiceFor(out, draft, workflow, person),
+    };
+    // Review practice needs a teammate's submission; when there is none, fall back to the workflow form.
+    const practice = draft.starter.practice as Practice;
+    if (practice.kind === 'review' && !practice.prefill.submissionId) {
+      draft.workSurface = 'workflow';
+      draft.kind = 'artifact';
+      draft.starter.practice = await this.practiceFor(
+        { ...out, workSurface: 'workflow' },
+        draft,
+        workflow,
+        person,
+      );
+    }
+    const exercise = this.exercises.create(draft);
     const saved = await this.exercises.save(exercise);
     this.logger.log(
       `Coach generated "${saved.title}" (${saved.competencyCodes.join(',')}) for ${person.id}`,
@@ -313,7 +331,7 @@ export class CoachService {
 
   /**
    * Rung 0 practice is one real task: a starter prompt already filled with the learner's role and their
-   * most frequent workflow's inputs and outputs, done in Claude, no policy quiz and no reading surface.
+   * most frequent workflow's inputs and outputs, run in the app; no policy quiz and no reading surface.
    */
   async generateFirstRealTask(person: Person, orgId: string | null): Promise<Exercise> {
     const [layers, maps] = await Promise.all([
@@ -327,7 +345,7 @@ export class CoachService {
     const inputs = wf?.inputs?.length ? wf.inputs.join(', ') : 'the notes I paste below';
     const outputs = wf?.outputs?.length ? wf.outputs.join(', ') : 'a finished draft I can use as it is';
     const systems = wf?.systems?.length ? ` We normally work in ${wf.systems.join(' and ')}.` : '';
-    const brief = [
+    const starterPrompt = [
       `I am a ${role}. Help me with ${task}.${systems}`,
       `Inputs I will give you: ${inputs}.`,
       `What I need back: ${outputs}, in the shape we use for ${task}.`,
@@ -336,6 +354,13 @@ export class CoachService {
       '[Paste your inputs here. No client names or account details.]',
     ].join('\n');
     const cadence = wf?.runsPerWeek ? `${wf.runsPerWeek} time${wf.runsPerWeek === 1 ? '' : 's'} a week` : 'more than anything else';
+    const brief = `Try one real thing: write what you'd ask Claude for ${task}, then press Run.`;
+    const practice: Practice = {
+      ask: brief,
+      kind: 'prompt',
+      workflowName: wf?.name ?? task,
+      prefill: { prompt: starterPrompt },
+    };
     const exercise = this.exercises.create({
       personId: person.id,
       rung: 0,
@@ -344,7 +369,7 @@ export class CoachService {
       brief,
       rationale: `You do ${task} ${cadence}. Finishing one real run of it with Claude, start to end, is the quickest way to see what this is for; nothing to read first.`,
       kind: 'artifact',
-      mode: 'in_claude',
+      mode: 'in_app',
       workSurface: 'prompt',
       contextTag: slug(task) || 'first-task',
       workflowMapId: wf?.workflowMapId ?? null,
@@ -355,7 +380,7 @@ export class CoachService {
         'Try asking for the shape you actually use (headings, length, tone) instead of accepting the default.',
       ],
       workedExample: null,
-      starter: { starterPrompt: brief, workflowName: wf?.name ?? null },
+      starter: { practice, starterPrompt, workflowName: wf?.name ?? null },
       status: 'queued',
       estimatedMinutes: 15,
       scheduledFor: new Date(),
@@ -375,13 +400,12 @@ export class CoachService {
     allowedCodes: string[],
     targetCode: string,
     workflowIds: string[],
-    inAppHistory: number,
     opts: {
       kind?: Exercise['kind'];
       workflowMapId?: string | null;
       skillId?: string | null;
     },
-  ): Partial<Exercise> {
+  ): Partial<Exercise> & { starter: Record<string, unknown> } {
     const codes = out.competencyCodes
       .filter((c) => allowedCodes.includes(c) || COMPETENCY_BY_CODE.has(c))
       .slice(0, 2);
@@ -395,8 +419,6 @@ export class CoachService {
           'Try listing goal, reader, format, limits and what to leave out before you run it.',
         ][hints.length],
       );
-    const mode: Exercise['mode'] =
-      rung <= 2 && inAppHistory === 0 ? 'in_claude' : 'in_app';
     const workflowMapId =
       opts.workflowMapId ??
       (out.workflowMapId && workflowIds.includes(out.workflowMapId)
@@ -407,10 +429,10 @@ export class CoachService {
       rung,
       competencyCodes: codes,
       title: out.title.replace(/\s+/g, ' ').trim().slice(0, 60),
-      brief: out.brief,
+      brief: firstSentence(out.brief) || out.brief,
       rationale: out.rationale,
       kind: opts.kind ?? out.kind ?? 'artifact',
-      mode,
+      mode: 'in_app',
       workSurface: out.workSurface ?? surface,
       contextTag: slug(out.contextTag) || null,
       workflowMapId,
@@ -418,7 +440,7 @@ export class CoachService {
       hints,
       workedExample:
         rung === 3 || out.workSurface === 'skill' ? out.workedExample : null,
-      starter: out.starterNotes ? { notes: out.starterNotes } : {},
+      starter: {},
       status: 'queued',
       estimatedMinutes: Math.min(
         60,
@@ -428,6 +450,84 @@ export class CoachService {
       generatedBy: opts.kind === 'adopt' ? 'adopt' : 'coach',
       hintsRevealed: 0,
     };
+  }
+
+  /** Build the v2 Practice object for a generated exercise from Coach's prefill fields, per kind. */
+  private async practiceFor(
+    out: NextExerciseOutput,
+    draft: { brief?: string; title?: string; workSurface?: WorkSurface },
+    workflow: WorkflowMap | null,
+    person: Person,
+  ): Promise<Practice> {
+    const surface: WorkSurface = draft.workSurface ?? out.workSurface ?? 'prompt';
+    const kind: PracticeKind = PRACTICE_KIND_FOR_SURFACE[surface] ?? 'prompt';
+    const workflowName = (out.workflowName ?? '').trim() || workflow?.name || 'your weekly task';
+    const ask = draft.brief ?? out.brief;
+    const title = draft.title ?? out.title;
+    const base = { ask, workflowName };
+    const legacy = (ws: WorkSurface) => practiceOf({ brief: ask, title, workSurface: ws, starter: { workflowName } }).prefill;
+    switch (kind) {
+      case 'prompt':
+        return {
+          ...base,
+          kind,
+          prefill: {
+            prompt: out.prefillPrompt?.trim() || (legacy('prompt') as { prompt: string }).prompt,
+            ...(out.prefillMaterial?.trim() ? { material: out.prefillMaterial.trim() } : {}),
+          },
+        };
+      case 'project': {
+        const fb = legacy('project') as { instructions: string; files: { name: string; content: string }[]; testTask: string };
+        return {
+          ...base,
+          kind,
+          prefill: {
+            instructions: out.prefillInstructions?.trim() || fb.instructions,
+            files: (out.prefillFiles ?? []).filter((f) => f.name?.trim()).slice(0, 2),
+            testTask: out.prefillTestTask?.trim() || fb.testTask,
+          },
+        };
+      }
+      case 'skill': {
+        const reqs = (out.prefillSampleRequests ?? []).map((r) => r.trim()).filter(Boolean);
+        const defaults = legacy('skill') as { sampleRequests: [string, string, string] };
+        const three = [...reqs, ...defaults.sampleRequests].slice(0, 3) as [string, string, string];
+        return {
+          ...base,
+          kind,
+          prefill: { skillMd: out.prefillSkillMd?.trim() || skillTemplate(workflowName), sampleRequests: three },
+        };
+      }
+      case 'workflow':
+        return {
+          ...base,
+          kind,
+          prefill: { schema: workflow?.schema ?? { purpose: workflowName } },
+        };
+      case 'review': {
+        const submissionId = await this.teammateSubmissionForReview(person);
+        return { ...base, kind, prefill: { submissionId: submissionId ?? '' } };
+      }
+    }
+  }
+
+  /** A teammate's latest submission (graded preferred, pending otherwise) for the review kind; null when none. */
+  private async teammateSubmissionForReview(person: Person): Promise<string | null> {
+    const candidates = await this.exercises.find({
+      where: { status: In(['passed', 'revise', 'submitted', 'graded']) },
+      order: { createdAt: 'DESC' },
+      take: 40,
+    });
+    const others = candidates.filter((e) => e.personId !== person.id && e.workSurface !== 'review');
+    if (others.length === 0) return null;
+    const subs = await this.submissions.find({
+      where: { exerciseId: In(others.map((e) => e.id)) },
+      order: { submittedAt: 'DESC' },
+    });
+    if (subs.length === 0) return null;
+    const graded = await this.grades.find({ where: { submissionId: In(subs.map((s) => s.id)) } });
+    const gradedIds = new Set(graded.map((g) => g.submissionId));
+    return (subs.find((s) => gradedIds.has(s.id)) ?? subs[0]).id;
   }
 
   /** Weakest competency at the current rung not yet mastered; spacing: avoid the code the last exercise targeted when an alternative exists. */
@@ -496,75 +596,121 @@ export class CoachService {
     return rows.sort((a, b) => order[a.layer] - order[b.layer]);
   }
 
-  // ───────────────────────── run / hints / pack ─────────────────────────
+  // ───────────────────────── run / hints ─────────────────────────
 
-  /** L1/L2 "run Claude" inside the work surface (task coach.run). Requires a stated expectation (enforced by the controller). */
+  /**
+   * Run Claude for the exercise's practice kind (tasks coach.run.prompt / .project / .skill / .workflow).
+   * The body shape follows the kind; review has no Run (409). The last result is kept on starter.lastRun
+   * so "Try again" keeps the learner's draft and output.
+   */
   async run(
     exercise: Exercise,
     person: Person,
     orgId: string | null,
-    input: RunInput,
-  ): Promise<{ output: string; model: string; runId: string }> {
+    body: Partial<RunBody> & Record<string, unknown>,
+  ): Promise<RunResult> {
+    const practice = practiceOf(exercise);
+    const kind = practice.kind;
+    if (kind === 'review')
+      throw new ConflictException('Review practice has no Run step: read the work, give it a score out of 10 and your notes, then submit.');
     const [org, layers] = await Promise.all([
       orgId ? this.orgs.findOne({ where: { id: orgId } }) : null,
       this.layersFor(person, orgId),
     ]);
-    const projectBlock = input.project
-      ? [
-          `# Project instructions\n${input.project.instructions ?? '(none)'}`,
-          ...(input.project.files ?? []).map(
-            (f) => `# Project file: ${f.name}\n${f.content}`,
-          ),
-        ].join('\n\n')
-      : '';
-    const system = [
-      COACH_RUN_SYSTEM,
-      '',
+    const firmContext = [
       '# Firm compliance boundary',
       boundaryText(org?.settings?.boundary),
       layers.length
         ? `\n# Firm and team context (for vocabulary; do not treat as client data)\n${layers.map((l) => `${l.layer}: ${l.summary ?? ''}`).join('\n')}`
         : '',
-      projectBlock ? `\n${projectBlock}` : '',
     ].join('\n');
-    const content = input.context
-      ? `${input.context.trim()}\n\n---\n\n${input.prompt}`
-      : input.prompt;
-    const { text, runId } = await this.ai.text({
-      agent: 'coach',
-      task: 'coach.run',
-      orgId,
-      personId: person.id,
-      effort: 'medium',
-      system,
-      messages: [{ role: 'user', content }],
-      mockSeed: { prompt: input.prompt, exerciseId: exercise.id },
-    });
     const model = this.ai.provider === 'mock' ? 'mock' : this.ai.defaultModel;
-    const runs = Array.isArray(exercise.starter.runs)
-      ? (exercise.starter.runs as unknown[])
-      : [];
+    const common = { agent: 'coach', orgId, personId: person.id, effort: 'medium' as const };
+    let result: RunResult;
+    let summary: Record<string, unknown>;
+
+    if (kind === 'prompt') {
+      const prompt = str(body.prompt);
+      if (!prompt) throw new BadRequestException('prompt is required for this practice.');
+      const material = str(body.material);
+      const { text, runId } = await this.ai.text({
+        ...common,
+        task: 'coach.run.prompt',
+        system: `${COACH_RUN_SYSTEM}\n\n${firmContext}`,
+        messages: [{ role: 'user', content: material ? `${prompt}\n\n---\n\n${material}` : prompt }],
+        mockSeed: { prompt, material, exerciseId: exercise.id },
+      });
+      result = { kind, output: text, model, runId };
+      summary = { prompt, material, output: text };
+    } else if (kind === 'project') {
+      const instructions = str(body.instructions);
+      const testTask = str(body.testTask);
+      const files = Array.isArray(body.files)
+        ? (body.files as unknown[]).filter((f): f is { name: string; content: string } => !!f && typeof f === 'object' && typeof (f as { name?: unknown }).name === 'string')
+        : [];
+      if (!instructions) throw new BadRequestException('instructions are required for this practice.');
+      if (!testTask) throw new BadRequestException('testTask is required for this practice.');
+      const projectBlock = [
+        `# Project instructions\n${instructions}`,
+        ...files.map((f) => `# Project file: ${f.name}\n${f.content ?? ''}`),
+      ].join('\n\n');
+      const { text, runId } = await this.ai.text({
+        ...common,
+        task: 'coach.run.project',
+        system: `${COACH_RUN_SYSTEM}\n\n${firmContext}\n\n${projectBlock}`,
+        messages: [{ role: 'user', content: testTask }],
+        mockSeed: { instructions, files: files.map((f) => f.name), testTask, exerciseId: exercise.id },
+      });
+      result = { kind, output: text, model, runId };
+      summary = { instructions, files, testTask, output: text };
+    } else if (kind === 'skill') {
+      const skillMd = str(body.skillMd);
+      const requests = Array.isArray(body.sampleRequests)
+        ? (body.sampleRequests as unknown[]).map((r) => str(r)).filter(Boolean).slice(0, 5)
+        : [];
+      if (!skillMd) throw new BadRequestException('skillMd is required for this practice.');
+      if (requests.length === 0) throw new BadRequestException('At least one sample request is required.');
+      const results: { request: string; fired: boolean; output: string }[] = [];
+      for (const request of requests) {
+        const out = await this.ai.structured(
+          {
+            ...common,
+            task: 'coach.run.skill',
+            system: `${COACH_SKILL_RUN_SYSTEM}\n\n${firmContext}`,
+            messages: [
+              { role: 'user', content: `# SKILL.md\n${skillMd}\n\n# Request from a teammate\n${request}` },
+            ],
+            mockSeed: { skillMd, request, exerciseId: exercise.id },
+          },
+          SkillRunSchema,
+        );
+        results.push({ request, fired: out.fired, output: out.output });
+      }
+      result = { kind, results, model, runId: `skill-run-${Date.now()}` };
+      summary = { skillMd, results };
+    } else {
+      const schema = body.schema && typeof body.schema === 'object' ? (body.schema as Record<string, unknown>) : null;
+      if (!schema || Object.keys(schema).length === 0) throw new BadRequestException('schema (the workflow map) is required for this practice.');
+      const { text, runId } = await this.ai.text({
+        ...common,
+        task: 'coach.run.workflow',
+        system: `${COACH_WORKFLOW_DRAFT_SYSTEM}\n\n${firmContext}`,
+        messages: [{ role: 'user', content: `# Workflow map (${practice.workflowName})\n${JSON.stringify(schema, null, 2)}` }],
+        mockSeed: { schema, workflowName: practice.workflowName, exerciseId: exercise.id },
+      });
+      result = { kind, skillDraft: text, model, runId };
+      summary = { schema, skillDraft: text };
+    }
+
+    const runs = Array.isArray(exercise.starter.runs) ? (exercise.starter.runs as unknown[]) : [];
     exercise.starter = {
       ...exercise.starter,
-      lastRun: {
-        prompt: input.prompt,
-        output: text,
-        runId,
-        model,
-        at: new Date().toISOString(),
-      },
-      runs: [
-        ...runs.slice(-4),
-        {
-          runId,
-          at: new Date().toISOString(),
-          promptChars: input.prompt.length,
-        },
-      ],
+      lastRun: { kind, ...summary, runId: result.runId, model, at: new Date().toISOString() },
+      runs: [...runs.slice(-4), { runId: result.runId, kind, at: new Date().toISOString() }],
     };
     if (exercise.status === 'queued') exercise.status = 'active';
     await this.exercises.save(exercise);
-    return { output: text, model, runId };
+    return result;
   }
 
   /** Reveal the next hint (one at a time). */
@@ -583,72 +729,14 @@ export class CoachService {
     return { hint, hintsRevealed: exercise.hintsRevealed, hintsTotal: total };
   }
 
-  /** The copy-ready pack for in_claude mode. */
-  async openInClaudePack(
-    exercise: Exercise,
-    person: Person,
-    orgId: string | null,
-  ): Promise<{ prompt: string; contextBundle: string }> {
-    const [org, layers, workflow] = await Promise.all([
-      orgId ? this.orgs.findOne({ where: { id: orgId } }) : null,
-      this.layersFor(person, orgId),
-      exercise.workflowMapId
-        ? this.workflows.findOne({ where: { id: exercise.workflowMapId } })
-        : null,
-    ]);
-    const comps = exercise.competencyCodes
-      .map((c) => COMPETENCY_BY_CODE.get(c))
-      .filter((c): c is NonNullable<typeof c> => Boolean(c));
-    const prompt = [
-      `I am doing a LightCI Activate exercise (L${exercise.rung}, "${exercise.title}").`,
-      '',
-      exercise.brief,
-      '',
-      'Before you produce anything, ask me for a one-line guess of what I think will come back, and wait for it. After your output, ask me to run through a short self-check (does it only use facts I gave it, is it for the right reader, is it the right shape) before we refine anything. Give me nudges before answers if I get stuck.',
-      'Use placeholders for any client-specific detail; do not invent client data.',
-    ].join('\n');
-    const contextBundle = [
-      `# Exercise context for Claude`,
-      `Skills this builds: ${comps.map((c) => `${c.name} — ${c.description}`).join('\n')}`,
-      '',
-      `# Firm boundary`,
-      boundaryText(org?.settings?.boundary),
-      '',
-      ...(layers.length
-        ? [
-            `# Context`,
-            ...layers.map(
-              (l) =>
-                `${l.layer}: ${l.summary ?? ''}${l.vocabulary.length ? `\nVocabulary: ${l.vocabulary.map((v) => `${v.term} = ${v.meaning}`).join('; ')}` : ''}`,
-            ),
-            '',
-          ]
-        : []),
-      ...(workflow
-        ? [
-            `# Workflow: ${workflow.name}`,
-            JSON.stringify(workflow.schema, null, 2),
-            '',
-          ]
-        : []),
-      '# When you are done',
-      'Paste what you built back into Activate with your one-line guess and your self-check; the result covers both.',
-    ].join('\n');
-    if (exercise.status === 'queued') {
-      exercise.status = 'active';
-      await this.exercises.save(exercise);
-    }
-    return { prompt, contextBundle };
-  }
-
   /** Where the Coach greets the learner on an exercise. */
   coachIntro(exercise: Exercise, submissionsCount: number): string {
     const comp = exercise.competencyCodes
       .map((c) => COMPETENCY_BY_CODE.get(c)?.name ?? c)
       .join(' and ');
     if (submissionsCount === 0)
-      return `This one sharpens ${comp.toLowerCase()}. ${exercise.rationale} Build it, jot a one-line guess of what will come back, tick the self-check, then check it in for your result. Hints are there if you stall; take one at a time. ${exercise.workedExample ? 'A full example opens after your first result.' : ''}`.trim();
-    return `Round ${submissionsCount + 1} on ${comp.toLowerCase()}. Re-read the one thing to do differently from your last result and change exactly that; say what you changed in your guess.`;
+      return `This one sharpens ${comp.toLowerCase()}. ${exercise.rationale} Fill in the box, press Run to see what Claude makes, then submit for your score. Hints are there if you stall; take one at a time.`.trim();
+    return `Round ${submissionsCount + 1} on ${comp.toLowerCase()}. Your draft is still here. Change the one thing from "what to change", run it again, and submit.`;
   }
 
   // ───────────────────────── skips & escalation ─────────────────────────
@@ -721,19 +809,21 @@ export class CoachService {
     await this.memory.record(person.id, orgId, {
       kind: 'exercise_skipped',
       note: `Skipped "${exercise.title}" (${reason})${note ? `: ${note.slice(0, 120)}` : ''}${escalated ? '; escalated to champion' : ''}.`,
-      data: { exerciseTitle: exercise.title, skipReason: reason, mode: exercise.mode, workSurface: exercise.workSurface },
+      data: { exerciseTitle: exercise.title, skipReason: reason, workSurface: exercise.workSurface },
     });
     const nextUp = await this.ensureNextUp(person, orgId);
     return { escalated, nextUp };
   }
 }
 
-/** Honour stated working preferences: typing-only / in-app → in_app; "in Claude" → in_claude. */
-export function modeForPreferences(memory: Pick<PersonMemory, 'preferences'>, fallback: Exercise['mode']): Exercise['mode'] {
-  const prefs = memory.preferences.join(' | ').toLowerCase();
-  if (/typing[- ]only|prefers? (to )?typ(e|ing)|in[- ]app|no claude|stay(s)? in (the )?app/.test(prefs)) return 'in_app';
-  if (/prefers? (working |doing it )?in claude|open in claude/.test(prefs)) return 'in_claude';
-  return fallback;
+function str(x: unknown): string {
+  return typeof x === 'string' ? x.trim() : '';
+}
+
+function firstSentence(text: string): string {
+  const t = (text ?? '').trim();
+  const m = /^(.+?[.!?])(\s|$)/.exec(t);
+  return (m ? m[1] : t).trim();
 }
 
 function slug(s: string | null | undefined): string {

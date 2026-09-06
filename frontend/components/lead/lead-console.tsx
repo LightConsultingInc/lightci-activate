@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { toast } from "sonner"
 import { AlertTriangleIcon, GitPullRequestIcon, PauseCircleIcon, WavesIcon, ArrowUpRightIcon, UserCheckIcon } from "lucide-react"
@@ -11,10 +12,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { PageHeader } from "@/components/shell/page-header"
-import { useLeadMutations, useLeadQueue, usePeople } from "@/hooks/mc/use-mc"
-import type { Escalation, LeadQueue, PromotionView, StalledItem, WaveStatus } from "@/hooks/mc/types"
+import { useLeadMutations, useLeadQueue } from "@/hooks/mc/use-mc"
+import type { Escalation, LeadQueue, Person, PromotionView, StalledItem, WaveStatus } from "@/hooks/mc/types"
 import { fmt } from "@/lib/format"
-import { ApiError } from "@/lib/api"
+import { ApiError, apiFetch } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { QueryState } from "@/components/mission-control/states"
 import { RoleGate } from "@/components/mission-control/role-gate"
@@ -51,13 +52,23 @@ function Inner() {
 
 const AGENT_LABEL: Record<Escalation["sourceAgent"], string> = { coach: "Coach", builder: "Builder", interviewer: "Interviewer", promoter: "Promoter", grader: "Grader", system: "System" }
 
+/** `/lead/queue` sends `{ id, name, slug? }`; older builds sent a plain label. */
+function subjectOf(e: Escalation): { name: string | null; slug: string | null; href: string | null } {
+  const s = e.subject
+  if (!s) return { name: null, slug: null, href: null }
+  if (typeof s === "string") return { name: s, slug: null, href: null }
+  return { name: s.name ?? null, slug: s.slug ?? null, href: s.href ?? null }
+}
+
 function subjectHref(e: Escalation) {
-  if (e.subject?.href) return e.subject.href
+  const s = subjectOf(e)
+  if (s.href) return s.href
   if (!e.subjectId) return null
   switch (e.subjectType) {
     case "person": return `/people/${e.subjectId}`
     case "exercise": return `/exercise/${e.subjectId}`
-    case "skill": return `/library/${e.subject?.name ?? e.subjectId}`
+    // Library routes are by slug; without one, land on the library rather than a 404.
+    case "skill": return s.slug ? `/library/${s.slug}` : "/library"
     case "workflow": return `/workflows?id=${e.subjectId}`
     case "promotion_request": return `/promotions/${e.subjectId}`
     case "team": return `/mission-control/groups?team=${e.subjectId}`
@@ -70,7 +81,7 @@ function Columns({ d, onEscalation }: { d: LeadQueue; onEscalation: (e: Escalati
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 animate-rise" data-testid="lead-columns">
       <QueueColumn title="Escalations" description="Coach couldn't unblock; Builder low confidence; Interviewer schema incomplete." count={esc.length} icon={<AlertTriangleIcon className="size-4 text-fail" />} tone="fail" testId="lead-col-escalations" empty="Nothing escalated. The agents are coping.">
         {esc.map((e) => (
-          <QueueCard key={e.id} org={e.org?.name ?? "Client"} title={e.reason} meta={`${AGENT_LABEL[e.sourceAgent]} · ${e.subject?.name ?? e.subjectType.replace(/_/g, " ")} · ${fmt.ago(e.createdAt)}`} right={<SlaTimer dueAt={e.slaDueAt} />} onClick={() => onEscalation(e)} testId="lead-escalation-card">
+          <QueueCard key={e.id} org={e.org?.name ?? "Client"} title={e.reason} meta={`${AGENT_LABEL[e.sourceAgent]} · ${subjectOf(e).name ?? e.subjectType.replace(/_/g, " ")} · ${fmt.ago(e.createdAt)}`} right={<SlaTimer dueAt={e.slaDueAt} />} onClick={() => onEscalation(e)} testId="lead-escalation-card">
             {e.assignee && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><UserCheckIcon className="size-3" /> {e.assignee.name}</p>}
           </QueueCard>
         ))}
@@ -155,7 +166,13 @@ function WaveCard({ w }: { w: WaveStatus }) {
 
 function EscalationDrawer({ e, onClose }: { e: Escalation | null; onClose: () => void }) {
   const { resolve, assign } = useLeadMutations()
-  const people = usePeople()
+  // Assignees must belong to the escalation's org, not whichever client the lead happens to be scoped to
+  // (and an unscoped lead has no org at all), so fetch people for that org explicitly.
+  const people = useQuery({
+    queryKey: ["lead", "people", e?.orgId ?? null],
+    enabled: Boolean(e?.orgId),
+    queryFn: () => apiFetch<Person[]>("/api/people", { headers: { "X-Activate-Org": e!.orgId } }),
+  })
   const [resolution, setResolution] = useState("")
   const [assignee, setAssignee] = useState<string>("")
   const href = e ? subjectHref(e) : null
@@ -169,7 +186,7 @@ function EscalationDrawer({ e, onClose }: { e: Escalation | null; onClose: () =>
               <p className="eyebrow">{e.org?.name ?? "Client"} · {AGENT_LABEL[e.sourceAgent]}</p>
               <SheetTitle>{e.reason}</SheetTitle>
               <SheetDescription>
-                {e.subjectType.replace(/_/g, " ")}{e.subject?.name ? `: ${e.subject.name}` : ""} · raised {fmt.ago(e.createdAt)} · <SlaTimer dueAt={e.slaDueAt} />
+                {e.subjectType.replace(/_/g, " ")}{subjectOf(e).name ? `: ${subjectOf(e).name}` : ""} · raised {fmt.ago(e.createdAt)} · <SlaTimer dueAt={e.slaDueAt} />
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-5 px-4">

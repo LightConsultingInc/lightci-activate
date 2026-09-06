@@ -65,9 +65,14 @@ function Inner() {
 
 function Body({ d, teamId }: { d: McSkills; teamId: string | null }) {
   const inTeam = (s: SkillCard) => !teamId || s.team?.id === teamId
+  // `health` carries every non-deprecated card with its flags. Older payloads sent only the
+  // flagged ones; `byTeam.skills` still counts the whole library, so size the library from both.
   const health = (d.health ?? []).filter(inTeam)
   const counts = (Object.keys(HEALTH_LABEL) as SkillHealthFlag[]).map((k) => ({ key: k, n: health.filter((s) => s.health?.includes(k)).length }))
-  const healthy = health.filter((s) => !s.health?.length).length
+  const flagged = health.filter((s) => s.health?.length).length
+  const libraryFromTeams = (d.byTeam ?? []).filter((t) => !teamId || t.teamId === teamId).reduce((a, t) => a + (t.skills ?? 0), 0)
+  const librarySize = Math.max(health.length, libraryFromTeams)
+  const healthy = Math.max(0, librarySize - flagged)
   const source = d.source ?? "Marketplace repo + Analytics API activations"
   const baseline = d.baseline ?? "prior 30 days"
 
@@ -89,7 +94,7 @@ function Body({ d, teamId }: { d: McSkills; teamId: string | null }) {
   return (
     <div className="space-y-6 animate-rise">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="skills-tiles">
-        <MetricTile testId="tile-skills-total" label="Skills in library" value={health.length} sub={`${healthy} healthy`} source={source} baseline={baseline} accent />
+        <MetricTile testId="tile-skills-total" label="Skills in library" value={librarySize} sub={`${healthy} healthy · ${flagged} flagged`} source={source} baseline="n/a (count, excludes deprecated)" accent />
         {counts.filter((c) => c.n > 0).slice(0, 3).map((c) => (
           <MetricTile key={c.key} testId={`tile-flag-${c.key}`} label={HEALTH_LABEL[c.key].label} value={c.n} sub={HEALTH_LABEL[c.key].hint} source={source} baseline={baseline} delta={{ value: null, goodWhenUp: false }} />
         ))}

@@ -1,0 +1,65 @@
+{
+  "id": "3ba3498c-9b47-4c91-90a7-8f2bf43000a7",
+  "score": 0.872,
+  "decision": "pass",
+  "rubric": [
+    {
+      "note": "The description names the planner's own words (\"run\", \"prepare\" or \"write up\" a beneficiary review/check for a named household) and names three non-uses, including the account-number/SSN/scanned-form case; a model picking among many skills would land here for the right requests.",
+      "label": "Trigger clarity",
+      "score": 0.95,
+      "criterion": "skill.trigger_clarity"
+    },
+    {
+      "note": "One job — checklist plus advisor gap summary — with adjacent work excluded by skill name (`annual-review-deck-outline`, `advisor-meeting-prep`) and by task (wills, trust drafting, trust funding), rather than absorbed.",
+      "label": "Scope",
+      "score": 0.95,
+      "criterion": "skill.scope"
+    },
+    {
+      "note": "The body is short and every section is needed each run, but the ten checks — the substance of the output — are referenced only as \"Checklist template (`Beneficiary Review 2026`, internal)\" with no link or path, so the skill cannot actually load them; that reference should point at a file the skill reads on demand.",
+      "label": "Progressive disclosure",
+      "score": 0.75,
+      "criterion": "skill.progressive_disclosure"
+    },
+    {
+      "note": "mayRead, mustNeverReceive and humanReview use the firm's classes, Salesforce is treated as read-only summary export only, and step 5 plus Example 2 enforce the refusal; humanReview correctly lists only before_client_meeting since the Boundaries section states nothing is sent or entered into Salesforce.",
+      "label": "Boundary declaration",
+      "score": 0.95,
+      "criterion": "skill.boundary_declaration"
+    },
+    {
+      "note": "Two representative examples and no edge-case list, but Example 1's \"Output\" describes the result in prose (\"A ten-line checklist with `GAP` on...\") instead of showing it in the Output format block, so the intended artifact is never shown once end to end.",
+      "label": "Canonical examples",
+      "score": 0.7,
+      "criterion": "skill.canonical_examples"
+    },
+    {
+      "note": "Mostly behaviour-changing lines, but the opening paragraph (\"Every annual review includes a beneficiary check, and every planner writes the same gap summary in a slightly different way\") is background rationale that does not change what Claude does.",
+      "label": "Tight context",
+      "score": 0.85,
+      "criterion": "skill.tight_context"
+    },
+    {
+      "note": "All four cases resolve as the expected column says; the ambiguous Schwab-forms case is directly covered by step 5 and Example 2, which decline the forms and ask for per-account notes.",
+      "label": "Sample-case behaviour",
+      "score": 0.95,
+      "criterion": "skill.sample_cases"
+    }
+  ],
+  "feedback": "What holds up: the trigger line and the boundaries. The description speaks in planner vocabulary and names the three places this skill must not go, and the refusal path is not just declared but wired into the steps — step 5 stops on an account number or attached form, and Example 2 shows the exact wording. The declared mayRead/mustNeverReceive/humanReview set matches the firm's classes, and limiting human review to before_client_meeting is right because the skill never sends or writes to Salesforce.\n\nThe most important gap is the checklist template. Steps 1 and the output block both depend on \"the template's ten checks\", but the template appears only as a name in the Inputs list — no path, no linked file, nothing the skill can load. As written, a run has to invent ten checks, which contradicts the whole point of the house format. Look at Inputs item 2 and at the `Checklist` section of the output block together and decide where those ten lines actually come from.\n\nSecond, Example 1's output is a description of an output rather than an output. Compare it against your own Output format block: the reader never sees a single formatted checklist line, so the format is asserted twice and demonstrated zero times.\n\nYour guess of what would come back is broadly borne out — this passes — but the two soft spots you did not flag are the missing template link and the summarised example, and both sit in the parts of the skill you were most confident about. Where you left the boundary and out-of-scope items alone, you were right to; those are the strongest parts of this draft.\n\nSample cases: 4/4 behave as expected.",
+  "teachingMoment": "Any file your steps depend on — here the `Beneficiary Review 2026` ten checks — needs a real link in the body, not a name in a list, so the skill can load it on demand instead of improvising it.",
+  "critiqueQuality": null,
+  "expectationAccuracy": null,
+  "securityFindings": [
+    {
+      "finding": "No prompt-injection phrasing, hidden instructions, encoded blobs or exfiltration targets (URLs, webhooks, send actions) appear in SKILL.md, the sample cases or the boundary declaration. The only external string is the owner address in metadata, which is a contact field, not an action.",
+      "severity": "low"
+    },
+    {
+      "finding": "Forbidden classes (client_pii_documents, account_numbers, ssn, statements_raw) appear only inside refusal instructions in step 5, the Boundaries section and sample case 4 — named to be declined, never requested, produced or inferred. Safe to publish on this dimension.",
+      "severity": "low"
+    }
+  ],
+  "gradedAt": "2026-09-06T20:58:44.670Z",
+  "gradedBy": "grader"
+}

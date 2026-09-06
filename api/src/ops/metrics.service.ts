@@ -375,7 +375,11 @@ export function cohorts(
     .map(([cohortWeek, counts]) => ({ cohortWeek, counts }));
 }
 
-/** Rungs gained per person in the trailing `days`. */
+/**
+ * Rungs gained per person in the trailing `days`. A person's first (diagnostic) placement is
+ * their starting point, not a gain: when nobody had placed them by `since`, the base is the
+ * rung of that first placement, so a newcomer placed straight at L4 last week is not "rising".
+ */
 export function rungGains(
   placements: readonly PlacementLite[],
   personIds: readonly string[],
@@ -384,11 +388,18 @@ export function rungGains(
 ): Map<string, number> {
   const since = new Date(now.getTime() - days * DAY_MS);
   const out = new Map<string, number>();
-  for (const id of personIds)
-    out.set(
-      id,
-      Math.max(0, rungAt(placements, id, now) - rungAt(placements, id, since)),
+  for (const id of personIds) {
+    const mine = placements.filter((p) => p.personId === id && p.placedAt <= now);
+    const hadPlacementAtSince = mine.some((p) => p.placedAt <= since);
+    const first = mine.reduce<PlacementLite | null>(
+      (best, p) => (!best || p.placedAt < best.placedAt ? p : best),
+      null,
     );
+    const base = hadPlacementAtSince
+      ? rungAt(placements, id, since)
+      : (first?.rung ?? 0);
+    out.set(id, Math.max(0, rungAt(placements, id, now) - base));
+  }
   return out;
 }
 
@@ -439,6 +450,21 @@ export const STALL_REASONS: Record<string, string> = {
 };
 
 export const STALL_SLA_DAYS = 3;
+
+/**
+ * People who are on the ladder: anyone with the learner role, or with no sponsor/admin/lead
+ * role at all. Sponsors, admins and LightCI leads who are not also learners hold a seat but
+ * are not ranked, cohorted or flagged as stuck.
+ */
+export function isLearner(p: Pick<Person, 'roles'>): boolean {
+  const roles = p.roles ?? ['learner'];
+  if (roles.includes('learner')) return true;
+  return !roles.some((r) => r === 'sponsor' || r === 'admin' || r === 'lead');
+}
+
+export function learners(f: Pick<OrgFacts, 'people'>): Person[] {
+  return f.people.filter(isLearner);
+}
 
 export function stallEligible(input: Pick<StalledInput, 'rung' | 'status' | 'roles'>): boolean {
   if (input.status === 'inactive') return false;

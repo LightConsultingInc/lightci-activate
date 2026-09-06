@@ -1,34 +1,44 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Clock, Sparkles, Tag } from "lucide-react"
+import { ArrowRight, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState, ErrorState } from "@/components/shell/empty-state"
 import { Paper } from "@/components/brand/grain"
-import { Chip, ModeBadge } from "../chips"
+import { Chip } from "../chips"
 import { useExercises } from "@/hooks/learner/queries"
 import type { Module } from "@/content/lessons/types"
 import type { ExerciseSummary } from "@/hooks/learner/types"
 
-const ORDER: Record<string, number> = { active: 0, revise: 1, queued: 2, passed: 3 }
+const ORDER: Record<string, number> = { active: 0, revise: 1, try_again: 1, queued: 2, passed: 3 }
 
-function actionFor(e: ExerciseSummary) {
-  if (e.status === "passed") return { label: "Review", tone: "outline" as const }
-  if (e.status === "active" || e.status === "revise") return { label: "Continue", tone: "default" as const }
-  return { label: "Start", tone: "default" as const }
-}
-
-function statusWords(e: ExerciseSummary) {
+/** One action per card. */
+export function practiceAction(e: ExerciseSummary): { label: string; variant: "default" | "outline" } {
   switch (e.status) {
-    case "passed": return { text: "Passed", tone: "pass" as const }
-    case "revise": return { text: "Revise and resubmit", tone: "revise" as const }
-    case "active": return { text: "In progress", tone: "glow" as const }
-    default: return { text: "Ready to start", tone: "neutral" as const }
+    case "passed": return { label: "Review feedback", variant: "outline" }
+    case "revise":
+    case "try_again": return { label: "Try again", variant: "default" }
+    case "active": return { label: "Continue", variant: "default" }
+    default: return { label: "Start", variant: "default" }
   }
 }
 
-/** The module's exercises, on the learner's own work. */
+export function practiceStatus(e: ExerciseSummary): { text: string; tone: "pass" | "revise" | "glow" | "neutral" } {
+  switch (e.status) {
+    case "passed": return { text: "Passed", tone: "pass" }
+    case "revise":
+    case "try_again": return { text: "Try again", tone: "revise" }
+    case "active": return { text: "In progress", tone: "glow" }
+    default: return { text: "Ready", tone: "neutral" }
+  }
+}
+
+/** The one-line ask on a summary, falling back to the title. */
+export const askOf = (e: ExerciseSummary) => e.ask?.trim() || e.title
+export const workflowOf = (e: ExerciseSummary) => e.workflowName?.trim() || e.contextTag || null
+
+/** The module's practice, each on one of the learner's own workflows. */
 export function PracticeTab({ module }: { module: Module }) {
   const q = useExercises("queued,active,passed,revise")
   if (q.isPending) return <div className="space-y-3" data-testid="practice-loading"><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
@@ -46,36 +56,23 @@ export function PracticeTab({ module }: { module: Module }) {
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {mine.map((e) => {
-            const a = actionFor(e)
-            const s = statusWords(e)
+            const a = practiceAction(e)
+            const s = practiceStatus(e)
+            const wf = workflowOf(e)
             return (
-              <li key={e.id} className="flex flex-col gap-3 rounded-xl border bg-card p-4" data-testid="practice-card" data-status={e.status} data-mode={e.mode}>
+              <li key={e.id} className="flex flex-col gap-3 rounded-xl border bg-card p-4" data-testid="practice-card" data-status={e.status}>
                 <div className="flex flex-wrap items-center gap-2">
                   <Chip tone={s.tone}>{s.text}</Chip>
-                  <ModeBadge mode={e.mode} />
                   <Chip><Clock className="size-3" /> ~{e.estimatedMinutes} min</Chip>
-                  {e.contextTag && <Chip><Tag className="size-3" /> {e.contextTag}</Chip>}
                 </div>
                 <div>
-                  <h3 className="font-display text-lg font-medium leading-snug" data-testid="practice-title">{e.title}</h3>
-                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{e.brief}</p>
+                  {wf && <p className="eyebrow mb-1" data-testid="practice-workflow">{wf}</p>}
+                  <h3 className="font-display text-lg font-medium leading-snug" data-testid="practice-title">{askOf(e)}</h3>
                 </div>
-                <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
-                  {e.mode === "in_claude" && e.status !== "passed" ? (
-                    <>
-                      {/* The Open-in-Claude pack opens first; working in the app is the secondary path. */}
-                      <Button render={<Link href={`/exercise/${e.id}?claude=1`} />} data-testid="practice-in-claude">
-                        <Sparkles data-icon="inline-start" className="text-glow" /> Do it in Claude
-                      </Button>
-                      <Button variant="outline" render={<Link href={`/exercise/${e.id}`} />} data-testid="practice-start">
-                        Do it here
-                      </Button>
-                    </>
-                  ) : (
-                    <Button variant={a.tone} render={<Link href={`/exercise/${e.id}`} />} data-testid="practice-start">
-                      {a.label} <ArrowRight data-icon="inline-end" />
-                    </Button>
-                  )}
+                <div className="mt-auto pt-1">
+                  <Button variant={a.variant} render={<Link href={`/exercise/${e.id}`} />} data-testid="practice-start">
+                    {a.label} <ArrowRight data-icon="inline-end" />
+                  </Button>
                 </div>
               </li>
             )

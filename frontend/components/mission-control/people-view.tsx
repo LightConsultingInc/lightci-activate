@@ -64,10 +64,10 @@ function Body({ d, teamId }: { d: McPeople; teamId: string | null }) {
           columns={[
             { key: "person", header: "Person", sortValue: (p) => p.name, render: (p) => <PersonCell person={p} sub={p.teamName ?? p.title ?? undefined} /> },
             { key: "rung", header: "Rung", sortValue: (p) => p.rung, render: (p) => <RungBadge rung={p.rung} showName={false} /> },
-            { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (p) => p.hoursBackPerWeek, render: (p) => <span className={p.baselineMinutesPerWeek === null ? "text-muted-foreground" : ""}>{(p.hoursBackPerWeek ?? 0).toFixed(1)}h</span> },
+            { key: "hoursBack", header: "Hours back / wk", align: "right", sortValue: (p) => p.hoursBackPerWeek, render: (p) => (p.hasBaseline === false || p.baselineMinutesPerWeek === null ? <span className="text-muted-foreground" title="No baseline + measurement pair yet">0.0h</span> : <span>{(p.hoursBackPerWeek ?? 0).toFixed(1)}h</span>) },
             { key: "skillsPublished", header: "Skills published", align: "right", sortValue: (p) => p.skillsPublished, render: (p) => p.skillsPublished },
             { key: "influence", header: "Influence", align: "right", sortValue: (p) => p.adoptedByOthers, render: (p) => <span title="Skills adopted by others">{p.adoptedByOthers}</span> },
-            { key: "gradeQuality", header: "Grade quality", align: "right", sortValue: (p) => p.gradeQuality, render: (p) => fmt.pct(p.gradeQuality) },
+            { key: "gradeQuality", header: "Grade quality", align: "right", sortValue: (p) => p.gradeQuality, render: (p) => (p.hasGrades === false ? <span className="text-muted-foreground" title="Never graded">—</span> : fmt.pct(p.gradeQuality)) },
             { key: "activeDays", header: "Active days / 30", align: "right", sortValue: (p) => p.activeDays30, render: (p) => p.activeDays30 },
             { key: "score", header: "Activation score (components)", sortValue: (p) => p.activationScore?.composite, render: (p) => (p.activationScore ? <ScoreBar composite={p.activationScore.composite} components={p.activationScore.components} /> : <span className="text-xs text-muted-foreground">—</span>) },
             {

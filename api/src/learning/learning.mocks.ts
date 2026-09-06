@@ -3,12 +3,12 @@
  * derives sensible, schema-valid output from `call.mockSeed`, which the services always populate.
  * Registered on import; the module and the services import this file for its side effect.
  *
- * Learner-facing wording follows Build → Check → Result: no "expectation", "critique", "cold attempt",
- * "worked example", "competency" or rung codes in anything the learner reads.
+ * Learner-facing wording follows practice v2 (docs/practice-model.md): three lines, a score, pass /
+ * try again. No "expectation", "critique", "competency", "mastery" or rung codes in anything the learner reads.
  */
 import type { AiCall } from '../ai/ai.service';
 import { registerMockResponder } from '../ai/mock-responders';
-import type { NextExerciseOutput, RevisitGradeOutput, SkillGradeOutput, SubmissionGradeOutput } from './ai-schemas';
+import type { NextExerciseOutput, RevisitGradeOutput, SkillGradeOutput, SkillRunOutput, SubmissionGradeOutput } from './ai-schemas';
 
 type Criterion = { criterion: string; label: string };
 
@@ -24,69 +24,48 @@ export function mockArtifactScore(artifactText: string): number {
   return /expected/i.test(artifactText) && artifactText.length > 200 ? MOCK_GOOD_SCORE : MOCK_WEAK_SCORE;
 }
 
-/** Plain self-check wording per rubric label. */
-export function selfCheckItem(label: string): string {
-  const l = label.trim();
-  return /^(only|uses|names|states|keeps|stays|has|is|covers|matches)\b/i.test(l) ? l : `${l.charAt(0).toLowerCase()}${l.slice(1)} is right`;
-}
-
-/** Rung 0: encouraging, two short paragraphs; pass when there is a usable piece of work (> 120 chars). */
-function mockFirstTaskGrade(criteria: Criterion[], artifact: string, selfCheckText: string, ticks: Record<string, boolean>): SubmissionGradeOutput {
+/** Rung 0: encouraging; pass when there is a usable piece of work (> 120 chars) with no invented figures. */
+function mockFirstTaskGrade(criteria: Criterion[], artifact: string): SubmissionGradeOutput {
   const usable = artifact.trim().length > 120;
   const invented = /\$\d|\b\d{6,}\b/.test(artifact) && !/\[/.test(artifact);
   const scores: Record<string, number> = { 'first.finished': usable ? 0.9 : 0.5, 'first.own_facts': invented ? 0.4 : 0.9 };
   const rubric = criteria.map((c) => ({ criterion: c.criterion, score: scores[c.criterion] ?? (usable ? 0.85 : 0.5), note: c.criterion.endsWith('own_facts') ? (invented ? 'A figure appears that you did not supply.' : 'Everything in it came from what you gave Claude.') : usable ? 'This is a finished piece you could use.' : 'This is a fragment; the task is not finished yet.' }));
   return {
     rubric,
-    feedback: usable
-      ? `You have a finished piece of real work you could use today${invented ? ', though one figure crept in that you never supplied; swap it for a placeholder' : ''}. That is the whole point of this first task.\n\nNext run, tell Claude who reads this and what they will do with it; the shape will tighten up straight away.`
-      : `You have made a start, but this is not yet something you could use as it is. Finish the run: paste the real inputs (with placeholders for anything sensitive) and ask for the whole thing.\n\nNext run, say what shape you need back so Claude does not stop at an outline.`,
-    critiqueQuality: selfCheckText.length > 40 ? 0.7 : 0.5,
-    selfCheckAgreement: criteria.map((c) => ({ criterion: c.criterion, item: selfCheckItem(c.label), learner: ticks[c.criterion] ?? true, grader: (scores[c.criterion] ?? 0.85) >= 0.75 })),
-    teachingMoment: usable ? 'Next time, name the reader and what they need to do with it in the first line of your prompt.' : 'Next time, ask for the finished thing in the shape you use, not an outline.',
+    worked: usable ? 'You have a finished piece of real work you could use today.' : 'You made a start on real work rather than a demo.',
+    change: usable ? (invented ? 'One figure crept in that you never supplied; swap it for a placeholder.' : 'Nothing major; the draft is usable as it is.') : 'Finish the run: paste the real inputs (placeholders for anything sensitive) and ask for the whole thing.',
+    tryNext: usable ? 'Next run, tell Claude who reads this and what they will do with it.' : 'Next run, say what shape you need back so Claude does not stop at an outline.',
     securityFindings: [],
-    strengths: [usable ? 'Finished a real piece of work with Claude' : 'Started on real work rather than a demo'],
   };
 }
 
 registerMockResponder('grader.submission', (call): SubmissionGradeOutput => {
-  const s = seed<{ criteria?: Criterion[]; artifactText?: string; critiqueText?: string; expectationText?: string; isSkill?: boolean; firstTask?: boolean; selfCheck?: Record<string, boolean> }>(call);
+  const s = seed<{ criteria?: Criterion[]; artifactText?: string; kind?: string; workflowName?: string; isSkill?: boolean; firstTask?: boolean }>(call);
   const criteria = s.criteria ?? [{ criterion: 'quality', label: 'Quality' }];
   const artifact = s.artifactText ?? '';
-  if (s.firstTask) return mockFirstTaskGrade(criteria, artifact, s.critiqueText ?? '', s.selfCheck ?? {});
+  if (s.firstTask) return mockFirstTaskGrade(criteria, artifact);
   const base = mockArtifactScore(artifact);
   const strong = base >= MOCK_GOOD_SCORE;
-  const selfCheckText = (s.critiqueText ?? '').trim();
-  const ticks = s.selfCheck ?? {};
-  const critiqueQuality = selfCheckText.length > 80 ? 0.72 : 0.4;
   const rubric = criteria.map((c, i) => ({
     criterion: c.criterion,
     score: Math.max(0, Math.min(1, base + (i % 2 === 0 ? 0.03 : -0.03))),
-    note: `${c.label}: ${strong ? 'the draft says who it is for and what good looks like, and it is long enough to judge' : 'the draft is thin here; it does not say what a good result looks like'} (mock grader).`,
+    note: `${c.label}: ${strong ? 'the work says who it is for and what good looks like, and there is enough of it to judge' : 'the work is thin here; it does not say what a good result looks like'} (mock grader).`,
   }));
-  const selfCheckAgreement = criteria.map((c, i) => {
-    const grader = rubric[i].score >= 0.75;
-    const learner = ticks[c.criterion] ?? true;
-    return { criterion: c.criterion, item: selfCheckItem(c.label), learner, grader };
-  });
   const weakest = criteria[criteria.length - 1] ?? criteria[0];
-  const weakestItem = selfCheckItem(weakest.label);
-  const disagreement = selfCheckAgreement.find((a) => a.learner !== a.grader);
+  const wf = (s.workflowName ?? 'this task').toLowerCase();
+  const kindLine: Record<string, string> = {
+    prompt: 'the prompt',
+    project: 'the Project instructions',
+    skill: 'the skill\'s trigger line',
+    workflow: 'the map\'s steps',
+  };
+  const where = kindLine[s.kind ?? 'prompt'] ?? 'the work';
   return {
     rubric,
-    feedback: [
-      `What held up: ${strong ? 'the draft is for a named reader, says what good looks like, and there is enough of it to judge' : 'you had a go and wrote down a guess, which is the habit this exercise is about'}.`,
-      `The main gap is ${weakest.label.toLowerCase()}. Before you fix anything, re-read the brief and ask what a colleague would need to see to trust this; that is where the draft is most exposed.`,
-      disagreement
-        ? `You ${disagreement.learner ? 'ticked' : 'left unticked'} '${disagreement.item}'; ${disagreement.grader ? 'the draft actually holds up there' : 'the draft does not hold up there'}${strong ? '' : ' — it introduced a detail you never gave it'}.`
-        : `Your self-check matched what I found${selfCheckText ? ` (${selfCheckText.slice(0, 120)})` : ''}.`,
-      `Your guess was "${(s.expectationText ?? '').slice(0, 140)}". ${strong ? 'What came back was close to that.' : 'What came back was thinner than that; the prompt gave Claude less to work with than you assumed.'}`,
-    ].join('\n\n'),
-    critiqueQuality,
-    selfCheckAgreement,
-    teachingMoment: `Next time, write the sentence that says what "good" looks like for ${weakestItem} into the prompt itself. Claude matches the standard you set; when it is implicit, the draft goes generic.`,
+    worked: strong ? `${where.charAt(0).toUpperCase()}${where.slice(1)} names the reader and what good looks like, so what came back is usable.` : `You had a go at ${wf} on your own work, which is the habit that matters.`,
+    change: strong ? `Tighten ${weakest.label.toLowerCase()}: a colleague would still ask one question before trusting it.` : `${weakest.label} is the gap: ${where} does not say what a good result looks like, so what came back went generic.`,
+    tryNext: `Next run of ${wf}, write the one sentence that says what "good" looks like into ${where} itself.`,
     securityFindings: s.isSkill && /ignore (all )?previous instructions/i.test(artifact) ? [{ severity: 'high', finding: 'Prompt-injection pattern: "ignore previous instructions".' }] : [],
-    strengths: [strong ? 'Guess written before the run' : 'Had a go without the example'],
   };
 });
 
@@ -145,9 +124,27 @@ registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
   const code = s.weakestCode ?? s.allowedCodes?.[0] ?? 'L1.description';
   const task = (wf?.name ?? contextTag.replace(/-/g, ' ')).toLowerCase();
   const skillName = (s.weakestName ?? 'writing a clear brief').toLowerCase();
+  const wfName = wf?.name ?? contextTag.replace(/-/g, ' ');
+  const asks: Record<string, string> = {
+    orientation: `Try one real thing: write what you'd ask Claude for ${task}.`,
+    prompt: `For your ${task}, write the prompt you'd give Claude.`,
+    project: `Set up a Project for your ${task}.`,
+    skill: `Write the skill for your ${task}.`,
+    workflow: `Map your ${task}.`,
+    review: 'Review this piece of a teammate\'s work.',
+  };
+  const isPrompt = surface === 'prompt' || surface === 'orientation';
   return {
     title: `${MOCK_TITLES[surface] ?? 'Do'} ${task} for one case`.slice(0, 60),
-    brief: `Take your ${task} as you would do it this week. Say who it is for and what a good version looks like, then ${MOCK_BRIEF_TAIL[surface] ?? MOCK_BRIEF_TAIL.prompt}. Use placeholders for anything client-specific.`,
+    brief: asks[surface] ?? asks.prompt,
+    workflowName: wfName,
+    prefillPrompt: isPrompt ? `Help me with ${task}. Who reads it: [reader]. What I need back: [shape, length, tone]. Use only the facts below; put [placeholders] where something is missing.\n\n[Paste your inputs here. No client names or account details.]` : null,
+    prefillMaterial: null,
+    prefillInstructions: surface === 'project' ? `You help me with ${task}. Always: [the rules that hold every run]. Output: [shape, length, tone]. Never: [what to leave out]. Ask one question if the inputs are unclear.` : null,
+    prefillFiles: surface === 'project' ? [{ name: 'template.md', content: '# [Title]\n\n[Section 1]\n[Section 2]\n[Next steps]' }] : [],
+    prefillTestTask: surface === 'project' ? `Do this week's ${task} from the notes below.\n\n[paste the notes; placeholders for anything client-specific]` : null,
+    prefillSkillMd: surface === 'skill' ? `---\nname: ${contextTag}\ndescription: Use when a teammate asks for ${task} from [inputs]. Not for [adjacent task].\n---\n## When to use\n[the situation in the team's words]\n\n## Inputs\n- [input]\n\n## Steps\n1. [step]\n2. Hand to [who] for review.\n\n## Output format\n[shape]\n\n## Boundaries\nmay_read: [allowed]\nmust_never_receive: [restricted]\nhuman_review: [point]\n\n## Examples\n1. [routine]\n2. [declined]` : null,
+    prefillSampleRequests: surface === 'skill' ? [`Can you do the ${task} for this week?`, 'Write a birthday note for a colleague.', `Summarise these notes from the ${task} meeting.`] : [],
     rationale: `This comes from your ${task}, which you do every week. It is next because ${skillName} is the part that will save you the most rework right now, and you have not tried it on a ${contextTag.replace(/-/g, ' ')} task yet.`,
     competencyCodes: [code],
     contextTag,
@@ -161,15 +158,84 @@ registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
     ],
     workedExample: surface === 'skill' ? '---\nname: meeting-prep\ndescription: Use when preparing the agenda and pre-read for a recurring internal meeting from last week\'s notes. Not for client-facing documents.\n---\n## Steps\n1. Read the previous notes...\n## Boundary\nmay_read: internal notes; must_never_receive: client records; human_review: before sending.' : null,
     workflowMapId: wf?.id ?? null,
-    starterNotes: null,
   };
 });
 
-registerMockResponder('coach.run#text', (call) => {
-  const s = seed<{ prompt?: string }>(call);
+// ───────────────────────── Run, per practice kind ─────────────────────────
+
+registerMockResponder('coach.run.prompt#text', (call) => {
+  const s = seed<{ prompt?: string; material?: string }>(call);
   const prompt = (s.prompt ?? '').trim();
+  const material = (s.material ?? '').trim();
   return {
-    text: `Here is a first draft for: "${prompt.slice(0, 160)}". Figures and names are placeholders because none were given.\n\n1. Purpose: [the goal in one line]\n2. Reader: [who this is for]\n3. Draft:\n   - Opening line with the outcome.\n   - Two supporting points with placeholders such as [client name] and [figure].\n   - A closing line with the next action.`,
+    text: `Here is a first draft for: "${prompt.slice(0, 160)}".${material ? ` I used the ${material.split(/\s+/).length}-word material you pasted.` : ' Figures and names are placeholders because none were given.'}\n\n1. Purpose: [the goal in one line]\n2. Reader: [who this is for]\n3. Draft:\n   - Opening line with the outcome.\n   - Two supporting points with placeholders such as [client name] and [figure].\n   - A closing line with the next action.`,
+  };
+});
+
+registerMockResponder('coach.run.project#text', (call) => {
+  const s = seed<{ instructions?: string; files?: string[]; testTask?: string }>(call);
+  const task = (s.testTask ?? '').trim();
+  const files = s.files ?? [];
+  const rules = (s.instructions ?? '').split(/[.\n]/).map((x) => x.trim()).filter(Boolean).slice(0, 2);
+  return {
+    text: `Following the Project instructions${rules.length ? ` (${rules.join('; ')})` : ''}${files.length ? ` and ${files.length} file${files.length === 1 ? '' : 's'} (${files.join(', ')})` : ''}, here is the result for: "${task.slice(0, 140)}".\n\n## Summary\n[one-paragraph answer in the shape the instructions ask for]\n\n## Details\n- [point drawn from ${files[0] ?? 'the instructions'}]\n- [point with a [placeholder] where the inputs were missing]\n\n## Next steps\n- [action for the reader]`,
+  };
+});
+
+registerMockResponder('coach.run.skill', (call): SkillRunOutput => {
+  const s = seed<{ skillMd?: string; request?: string }>(call);
+  const md = s.skillMd ?? '';
+  const request = (s.request ?? '').trim();
+  const desc = (/description:\s*(.+)/i.exec(md)?.[1] ?? '') + ' ' + (/## When to use\s*([\s\S]*?)(\n## |$)/i.exec(md)?.[1] ?? '');
+  const words = (t: string) => new Set(t.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 3 && !/^(when|this|that|from|with|your|their|not|for|the|and|use|skill|asks|need|needs|teammate|someone)$/.test(w)));
+  const overlap = [...words(request)].filter((w) => words(desc).has(w));
+  const vague = /\[/.test(desc) && overlap.length === 0;
+  const fired = overlap.length > 0 && !vague;
+  return {
+    fired,
+    reason: fired ? `The request mentions ${overlap.slice(0, 2).join(' and ')}, which the trigger line names.` : overlap.length === 0 ? 'The request does not match the situation the trigger line names.' : 'The trigger line is still a template; nothing in it matches this request.',
+    output: fired
+      ? `(skill fired) Following the skill's steps for: "${request.slice(0, 120)}".\n\n[Output in the skill's format, with [placeholders] for anything client-specific.]\nHanded to the named reviewer before anything leaves.`
+      : `(skill did not fire) Plain answer for: "${request.slice(0, 120)}".\n\n[A generic draft; nothing from the skill was applied.]`,
+  };
+});
+
+registerMockResponder('coach.run.workflow#text', (call) => {
+  const s = seed<{ schema?: Record<string, unknown>; workflowName?: string }>(call);
+  const schema = s.schema ?? {};
+  const name = (s.workflowName ?? (typeof schema.purpose === 'string' ? schema.purpose : 'workflow')) as string;
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'workflow';
+  const inputs = Array.isArray(schema.inputs) ? (schema.inputs as { name?: string; source?: string }[]) : [];
+  const steps = Array.isArray(schema.steps) ? (schema.steps as { action?: string; actor?: string }[]) : [];
+  const review = Array.isArray(schema.humanReview) ? (schema.humanReview as string[]) : [];
+  const never = Array.isArray(schema.mustNeverLeave) ? (schema.mustNeverLeave as string[]) : [];
+  return {
+    text: [
+      '---',
+      `name: ${slug}`,
+      `description: Use when a teammate needs ${name.toLowerCase()} from ${inputs.map((i) => i.name).filter(Boolean).join(', ') || '[inputs: open question]'}. Not for adjacent tasks the map does not cover.`,
+      '---',
+      '## When to use',
+      typeof schema.trigger === 'string' && schema.trigger ? schema.trigger : '[open question: what triggers this run?]',
+      '',
+      '## Inputs',
+      ...(inputs.length ? inputs.map((i) => `- ${i.name ?? '[input]'}${i.source ? ` (from ${i.source})` : ''}`) : ['- [open question: which inputs?]']),
+      '',
+      '## Steps',
+      ...(steps.length ? steps.map((st, i) => `${i + 1}. ${st.action ?? '[step]'}${st.actor ? ` (${st.actor})` : ''}`) : ['1. [open question: the steps]']),
+      '',
+      '## Output format',
+      Array.isArray(schema.outputs) && (schema.outputs as { name?: string }[]).length ? (schema.outputs as { name?: string }[]).map((o) => o.name).filter(Boolean).join(', ') : '[open question: what comes out?]',
+      '',
+      '## Boundaries',
+      `may_read: ${inputs.map((i) => i.source).filter(Boolean).join(', ') || '[open question]'}`,
+      `must_never_receive: ${never.join(', ') || '[firm forbidden classes]'}`,
+      `human_review: ${review.join(', ') || '[at least one review point before anything leaves]'}`,
+      '',
+      '## Examples',
+      `1. Routine: a teammate asks for ${name.toLowerCase()} with all inputs present; the skill follows the steps and hands to review.`,
+      '2. Declined: the request includes a restricted input; the skill asks for the summary export instead.',
+    ].join('\n'),
   };
 });
 

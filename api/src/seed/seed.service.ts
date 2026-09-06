@@ -26,6 +26,7 @@ import { MasterySnapshot } from '../learning/entities/mastery-snapshot.entity';
 import { Placement } from '../learning/entities/placement.entity';
 import { Revisit } from '../learning/entities/revisit.entity';
 import { Submission } from '../learning/entities/submission.entity';
+import { practiceOf } from '../learning/mappers';
 import {
   brier,
   computeMastery,
@@ -804,6 +805,15 @@ export function buildSeedPlan(
       }
       delete starter.reviewSubmissionKey;
     }
+    // Practice v2: every seeded exercise carries starter.practice for its rung/surface (docs/practice-model.md).
+    const workflowName =
+      (e.workflowKey && DEMO_WORKFLOWS.find((w) => w.key === e.workflowKey)?.name) ||
+      (typeof starter.workflowName === 'string' ? starter.workflowName : null);
+    if (!starter.practice)
+      starter.practice = practiceOf(
+        { brief: e.brief, title: e.title, workSurface: e.workSurface, starter },
+        workflowName,
+      );
     plan.exercises.push({
       id: eid,
       personId: pid(e.personKey),
@@ -1368,7 +1378,7 @@ export function generateFillerExercises(rng: Rng): DemoExercise[] {
           brief: fill(t.brief),
           rationale: fill(t.rationale),
           kind: belowFirstPlacement ? 'diagnostic' : 'artifact',
-          mode: r >= 3 ? 'in_app' : 'in_claude',
+          mode: 'in_app',
           workSurface: t.workSurface,
           contextTag,
           hints: t.hints,
@@ -1524,7 +1534,7 @@ export function generateFillerExercises(rng: Rng): DemoExercise[] {
             brief: fill(next.brief),
             rationale: fill(next.rationale),
             kind: 'artifact',
-            mode: r + 1 >= 3 ? 'in_app' : 'in_claude',
+            mode: 'in_app',
             workSurface: next.workSurface,
             contextTag: p.contexts[0] ?? 'general',
             hints: next.hints,

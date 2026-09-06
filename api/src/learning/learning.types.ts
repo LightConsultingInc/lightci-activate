@@ -6,7 +6,7 @@
 import type { Artifact } from './entities/submission.entity';
 import type { Exercise } from './entities/exercise.entity';
 import type { RubricScore } from './entities/grade.entity';
-import type { WorkflowScore } from '../workflows/entities/workflow-map.entity';
+import type { WorkflowSchema, WorkflowScore } from '../workflows/entities/workflow-map.entity';
 
 export interface PersonRef {
   id: string;
@@ -78,12 +78,80 @@ export interface StreakView {
   last14: { day: string; active: boolean }[];
 }
 
+/**
+ * Practice model v2 (docs/practice-model.md): one ask, one input area matching the kind, Run, feedback.
+ * Carried on `exercise.starter.practice`; legacy rows are adapted at read time (mappers.practiceOf).
+ */
+export type PracticeKind = 'prompt' | 'project' | 'skill' | 'workflow' | 'review';
+
+export interface PromptPrefill {
+  prompt: string;
+  material?: string;
+}
+export interface ProjectPrefill {
+  instructions: string;
+  files: { name: string; content: string }[];
+  testTask: string;
+}
+export interface SkillPrefill {
+  skillMd: string;
+  sampleRequests: [string, string, string];
+}
+export interface WorkflowPrefill {
+  schema: Partial<WorkflowSchema>;
+}
+export interface ReviewPrefill {
+  /** A teammate's graded or pending submission the learner reviews. */
+  submissionId: string;
+}
+
+interface PracticeBase {
+  /** One sentence: what to do, framed on the learner's own workflow. Same text as ExerciseSummary.brief. */
+  ask: string;
+  workflowName: string;
+}
+export type Practice =
+  | (PracticeBase & { kind: 'prompt'; prefill: PromptPrefill })
+  | (PracticeBase & { kind: 'project'; prefill: ProjectPrefill })
+  | (PracticeBase & { kind: 'skill'; prefill: SkillPrefill })
+  | (PracticeBase & { kind: 'workflow'; prefill: WorkflowPrefill })
+  | (PracticeBase & { kind: 'review'; prefill: ReviewPrefill });
+
+/** The three lines the learner reads after a grade. */
+export interface PracticeFeedback {
+  worked: string;
+  change: string;
+  tryNext: string;
+}
+export type PracticeDecision = 'pass' | 'try_again';
+
+/** Per-kind bodies for POST /exercises/:id/run. */
+export type RunBody =
+  | PromptPrefill
+  | ProjectPrefill
+  | { skillMd: string; sampleRequests: string[] }
+  | WorkflowPrefill;
+
+/** Per-kind responses for POST /exercises/:id/run. */
+export type RunResult =
+  | { kind: 'prompt' | 'project'; output: string; model: string; runId: string }
+  | {
+      kind: 'skill';
+      results: { request: string; fired: boolean; output: string }[];
+      model: string;
+      runId: string;
+    }
+  | { kind: 'workflow'; skillDraft: string; model: string; runId: string };
+
 export interface ExerciseSummary {
   id: string;
   title: string;
   rung: number;
   kind: Exercise['kind'];
-  mode: Exercise['mode'];
+  /** Always 'in_app' since practice v2; the in_claude mode is retired. */
+  mode: 'in_app';
+  /** Which input area the UI renders; mirrors starter.practice.kind. */
+  practiceKind: PracticeKind;
   workSurface: Exercise['workSurface'];
   status: Exercise['status'];
   brief: string;
@@ -117,8 +185,10 @@ export interface GradeView {
   critiqueQuality: number | null;
   expectationAccuracy: number | null;
   securityFindings: { severity: 'low' | 'medium' | 'high'; finding: string }[];
-  /** Per rubric item: what the learner ticked in their self-check vs what the Grader would tick. Present for submission grades. */
+  /** Legacy (pre-v2) grades only: self-check ticks vs the Grader's. */
   selfCheckAgreement?: { item: string; learner: boolean; grader: boolean }[];
+  /** What the learner sees: three lines, a score out of 10 and pass / try again. Derived from feedback + teachingMoment. */
+  learner: { feedback: PracticeFeedback; score10: number; decision: PracticeDecision };
   gradedAt: string;
   gradedBy: 'grader' | PersonRef;
 }
@@ -184,6 +254,7 @@ export interface WorkflowSummary {
 }
 
 export interface ExerciseDetail extends ExerciseSummary {
+  practice: Practice;
   hints: string[];
   hintsRevealed: number;
   hintsTotal: number;
@@ -218,7 +289,14 @@ export interface LadderView {
 }
 
 export interface SubmitResponse {
+  /** Learner-facing result (docs/practice-model.md). */
+  feedback: PracticeFeedback;
+  score10: number;
+  decision: PracticeDecision;
+  /** Review kind only: the learner's score vs the Grader's on the teammate's work (both out of 10). */
+  agreement?: { learner: number; grader: number; note: string };
   submission: SubmissionView;
+  /** Full rubric grade (admins / champions). */
   grade: GradeView;
   exercise: ExerciseDetail;
   nextUp: ExerciseSummary | null;

@@ -216,6 +216,12 @@ export type RosterRow = PersonRef & {
   revisitsOverdue: number
   activeDays30: number
   masteryAvg: number
+  /** Contract deviation: unmeasured numbers come back as 0 with a has* flag. */
+  hasBaseline?: boolean
+  hasMeasurement?: boolean
+  hasMastery?: boolean
+  stalledReason?: string | null
+  slaDueAt?: string | null
 }
 
 export type ReviewItem = { submission: SubmissionView; exercise: ExerciseSummary; person: PersonRef }

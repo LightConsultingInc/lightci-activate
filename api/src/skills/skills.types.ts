@@ -15,6 +15,7 @@ import type {
   PromotionDecision,
 } from './entities/promotion-request.entity';
 import type { WorkflowSummary } from '../workflows/workflows.types';
+import type { ComplianceBoundary } from '../orgs/entities/org.entity';
 
 export type { PersonRef, GradeView };
 
@@ -109,6 +110,8 @@ export interface PromotionDetail extends PromotionView {
 export interface SkillDetail extends SkillCard {
   skillMd: string;
   boundary: BoundaryDeclaration;
+  /** The org's compliance boundary, so the Boundary tab can show conflicts without a second call. */
+  orgBoundary: ComplianceBoundary;
   sampleCases: SampleCase[];
   manifest: ActivateManifest | null;
   workflow: WorkflowSummary | null;

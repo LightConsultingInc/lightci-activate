@@ -18,7 +18,8 @@ import { DriftBadge, MODE_LABEL, driftHint } from "@/components/mission-control/
 import { AdminHeader } from "./admin-header"
 import { SetupChecklist } from "./setup-checklist"
 
-const MODES: AssignmentMode[] = ["hidden", "available", "auto_installed"]
+// Matches the API vocabulary (skill-assignment.entity.ts): hidden | available | auto.
+const MODES: AssignmentMode[] = ["hidden", "available", "auto"]
 
 export function MarketplaceView() {
   return (

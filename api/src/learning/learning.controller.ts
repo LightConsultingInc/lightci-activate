@@ -5,6 +5,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  GoneException,
   NotFoundException,
   Param,
   Post,
@@ -13,6 +14,7 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
+  IsArray,
   IsBoolean,
   IsIn,
   IsNotEmpty,
@@ -20,8 +22,6 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  Max,
-  Min,
 } from 'class-validator';
 import { In, Repository } from 'typeorm';
 import { CurrentUser, OrgId } from '../common/decorators';
@@ -46,42 +46,46 @@ import type {
   MasteryResponse,
   MySkillsResponse,
   RevisitSummary,
+  RunResult,
   SubmissionView,
   SubmitResponse,
 } from './learning.types';
 import {
   gradeOfRecord,
+  practiceOf,
   toExerciseSummary,
   toGradeView,
   toSubmissionView,
 } from './mappers';
 import { MasteryService } from './mastery.service';
 import { MemoryService } from './memory.service';
-import type { RubricScoreWithSelfCheck } from './mappers';
 import { PersonRefService } from './person-ref.service';
 import { RevisitService } from './revisit.service';
 
 // ───────────────────────── DTOs ─────────────────────────
 
-class ExpectDto {
-  @IsString() @IsNotEmpty() expectationText: string;
-  @IsNumber() @Min(0) @Max(1) expectationConfidence: number;
-}
-
+/** Body varies by practice kind; the service validates the fields the kind needs. */
 class RunDto {
-  @IsString() @IsNotEmpty() prompt: string;
-  @IsOptional() @IsString() context?: string;
-  @IsOptional() @IsObject() project?: {
-    instructions?: string;
-    files?: { name: string; content: string }[];
-  };
+  // prompt
+  @IsOptional() @IsString() prompt?: string;
+  @IsOptional() @IsString() material?: string;
+  // project
+  @IsOptional() @IsString() instructions?: string;
+  @IsOptional() @IsArray() files?: { name: string; content: string }[];
+  @IsOptional() @IsString() testTask?: string;
+  // skill
+  @IsOptional() @IsString() skillMd?: string;
+  @IsOptional() @IsArray() sampleRequests?: string[];
+  // workflow
+  @IsOptional() @IsObject() schema?: Record<string, unknown>;
 }
 
 class SubmitDto {
-  @IsString() expectationText: string;
-  @IsNumber() @Min(0) @Max(1) expectationConfidence: number;
   @IsObject() artifact: Artifact;
-  @IsString() critiqueText: string;
+  // Legacy (pre-v2) fields: accepted and ignored.
+  @IsOptional() @IsString() expectationText?: string;
+  @IsOptional() @IsNumber() expectationConfidence?: number;
+  @IsOptional() @IsString() critiqueText?: string;
   @IsOptional() @IsBoolean() coldAttempt?: boolean;
 }
 
@@ -269,59 +273,30 @@ export class LearningController {
   }
 
   @Post('exercises/:id/expect')
-  @ApiOperation({
-    summary: 'Store the learner\'s one-line guess of what will come back (required before /run).',
-  })
-  async expect(
-    @CurrentUser() user: Person,
-    @OrgId() orgId: string,
-    @Param('id') id: string,
-    @Body() dto: ExpectDto,
-  ): Promise<{ ok: true }> {
-    const exercise = await this.loadExercise(id, user, orgId, 'edit');
-    exercise.starter = {
-      ...exercise.starter,
-      draftExpectation: {
-        expectationText: dto.expectationText.trim(),
-        expectationConfidence: dto.expectationConfidence,
-        at: new Date().toISOString(),
-      },
-    };
-    if (exercise.status === 'queued') exercise.status = 'active';
-    await this.exercises.save(exercise);
-    return { ok: true };
+  @ApiOperation({ summary: 'Retired (410). Practice v2 has no prediction step.' })
+  expect(): never {
+    throw new GoneException('Retired: practice no longer asks for a guess before Run; call POST /exercises/:id/run directly.');
   }
 
   @Post('exercises/:id/run')
   @ApiOperation({
     summary:
-      'Run Claude inside the work surface (Coach task coach.run). 409 until the one-line guess is stored.',
+      'Run Claude for the practice kind: prompt {prompt, material?} → {output}; project {instructions, files, testTask} → {output}; skill {skillMd, sampleRequests} → {results[]}; workflow {schema} → {skillDraft}. Review: 409.',
   })
   async run(
     @CurrentUser() user: Person,
     @OrgId() orgId: string,
     @Param('id') id: string,
     @Body() dto: RunDto,
-  ) {
+  ): Promise<RunResult> {
     const exercise = await this.loadExercise(id, user, orgId, 'edit');
-    const draft = exercise.starter?.draftExpectation as
-      { expectationText?: string } | undefined;
-    if (!draft?.expectationText?.trim()) {
-      throw new ConflictException(
-        'Add your one-line guess first: call POST /exercises/:id/expect with what you think will come back and how likely you think it is to pass (0..1). Guessing before you run is part of how this exercise is scored.',
-      );
-    }
-    return this.coach.run(exercise, user, orgId, {
-      prompt: dto.prompt,
-      context: dto.context,
-      project: dto.project,
-    });
+    return this.coach.run(exercise, user, orgId, dto as Record<string, unknown>);
   }
 
   @Post('exercises/:id/submit')
   @ApiOperation({
     summary:
-      'Check in the work with the one-line guess and the self-check; grades, updates mastery, schedules revisits, may promote and queue the next exercise.',
+      'Submit the work { artifact }; grades it (three lines, score out of 10, pass / try again), updates mastery, schedules revisits, may promote and queue the next exercise. Review kind adds agreement with the Grader.',
   })
   async submit(
     @CurrentUser() user: Person,
@@ -330,25 +305,25 @@ export class LearningController {
     @Body() dto: SubmitDto,
   ): Promise<SubmitResponse> {
     const exercise = await this.loadExercise(id, user, orgId, 'edit');
-    if (!dto.expectationText?.trim())
-      throw new BadRequestException(
-        'expectationText is required: add your one-line guess of what would come back before you check it in.',
-      );
-    if (!dto.critiqueText?.trim())
-      throw new BadRequestException(
-        'critiqueText is required: complete the self-check (the items you tick or leave unticked, plus any note) before you check it in.',
-      );
-    if (
-      !dto.artifact ||
-      typeof dto.artifact !== 'object' ||
-      typeof dto.artifact.content !== 'string' ||
-      !dto.artifact.content.trim()
-    )
-      throw new BadRequestException('artifact.content is required.');
-    if (!ARTIFACT_TYPES.includes(dto.artifact.type))
+    const practice = practiceOf(exercise);
+    const artifact = dto.artifact;
+    if (!artifact || typeof artifact !== 'object')
+      throw new BadRequestException('artifact is required.');
+    if (!ARTIFACT_TYPES.includes(artifact.type))
       throw new BadRequestException(
         `artifact.type must be one of ${ARTIFACT_TYPES.join(', ')}.`,
       );
+    if (practice.kind === 'review') {
+      if (artifact.type !== 'review')
+        throw new BadRequestException("artifact.type must be 'review' for this practice.");
+      if (typeof artifact.score10 !== 'number' || !Number.isFinite(artifact.score10))
+        throw new BadRequestException('artifact.score10 (0–10) is required for a review.');
+      if (typeof artifact.notes !== 'string' || !artifact.notes.trim())
+        throw new BadRequestException('artifact.notes is required: a few lines the author can act on.');
+      if (typeof artifact.content !== 'string' || !artifact.content.trim()) artifact.content = artifact.notes.trim();
+    } else if (typeof artifact.content !== 'string' || !artifact.content.trim()) {
+      throw new BadRequestException('artifact.content is required.');
+    }
     if (exercise.status === 'passed')
       throw new ConflictException(
         'This one has already passed. Your next exercise is waiting for you.',
@@ -357,44 +332,43 @@ export class LearningController {
     const prior = await this.submissions.count({
       where: { exerciseId: exercise.id },
     });
-    const workedExampleShown = prior > 0 && Boolean(exercise.workedExample);
     const submission = await this.submissions.save(
       this.submissions.create({
         exerciseId: exercise.id,
         personId: user.id,
         attempt: prior + 1,
-        expectationText: dto.expectationText.trim(),
-        expectationConfidence: dto.expectationConfidence,
-        artifact: dto.artifact,
-        critiqueText: dto.critiqueText.trim(),
-        coldAttempt: workedExampleShown
-          ? false
-          : (dto.coldAttempt ?? prior === 0),
+        expectationText: '',
+        expectationConfidence: 0.5,
+        artifact,
+        critiqueText: null,
+        coldAttempt: prior === 0,
       }),
     );
 
-    const grade = await this.grader.gradeSubmission(
-      exercise,
-      submission,
-      user,
-      orgId,
-    );
+    let agreement: SubmitResponse['agreement'];
+    let grade: Grade;
+    if (practice.kind === 'review') {
+      const r = await this.grader.gradeReview(exercise, submission, user, orgId);
+      grade = r.grade;
+      agreement = r.agreement;
+    } else {
+      grade = await this.grader.gradeSubmission(exercise, submission, user, orgId);
+    }
     exercise.status = grade.decision === 'pass' ? 'passed' : 'revise';
     exercise.completedAt = grade.decision === 'pass' ? new Date() : null;
-    const { draftExpectation: _drop, ...rest } = exercise.starter ?? {};
-    void _drop;
-    exercise.starter = rest;
     await this.exercises.save(exercise);
 
     await this.mastery.snapshot(user.id);
     await this.revisits.scheduleAfterGrade(exercise, grade);
     await this.revisits.injectDecayRevisits(user.id);
     const promotion = await this.mastery.promoteIfEligible(user.id);
-    const missed = (grade.rubric as RubricScoreWithSelfCheck[]).filter((r) => r.score < 0.75 || (r.selfCheck && r.selfCheck.learner && !r.selfCheck.grader)).map((r) => r.selfCheck?.item ?? r.label);
+    const gradeView = toGradeView(grade);
+    const { feedback, score10, decision } = gradeView.learner;
+    const weak = grade.rubric.filter((r) => r.score < 0.75).map((r) => r.label);
     await this.memory.record(user.id, orgId, {
       kind: 'submission_graded',
-      note: `Graded "${exercise.title}" (${exercise.workSurface}, ${exercise.mode}): ${grade.score} ${grade.decision}${missed.length ? `; missed: ${missed.join(', ')}` : ''}${grade.teachingMoment ? `; next time: ${grade.teachingMoment.slice(0, 140)}` : ''}${promotion ? `; promoted to L${promotion.newRung}` : ''}.`,
-      data: { exerciseTitle: exercise.title, score: grade.score, decision: grade.decision, missedSelfCheck: missed, teachingMoment: grade.teachingMoment, mode: exercise.mode, workSurface: exercise.workSurface },
+      note: `Graded "${exercise.title}" (${practice.kind}): ${score10}/10 ${decision}${weak.length ? `; missed: ${weak.join(', ')}` : ''}${feedback.tryNext ? `; next time: ${feedback.tryNext.slice(0, 140)}` : ''}${promotion ? `; promoted to L${promotion.newRung}` : ''}.`,
+      data: { exerciseTitle: exercise.title, score: grade.score, score10, decision: grade.decision, missed: weak, tryNext: feedback.tryNext, practiceKind: practice.kind, workSurface: exercise.workSurface },
     });
 
     let nextUp = await this.coach.nextUp(user.id);
@@ -407,8 +381,11 @@ export class LearningController {
     }
     if (grade.decision === 'revise') nextUp = exercise; // the learner's current task is still this one
 
-    const gradeView = toGradeView(grade);
     return {
+      feedback,
+      score10,
+      decision,
+      ...(agreement ? { agreement } : {}),
       submission: toSubmissionView(submission, gradeView),
       grade: gradeView,
       exercise: await this.detail(exercise),
@@ -442,13 +419,9 @@ export class LearningController {
   }
 
   @Post('exercises/:id/open-in-claude')
-  async openInClaude(
-    @CurrentUser() user: Person,
-    @OrgId() orgId: string,
-    @Param('id') id: string,
-  ): Promise<{ prompt: string; contextBundle: string }> {
-    const exercise = await this.loadExercise(id, user, orgId, 'edit');
-    return this.coach.openInClaudePack(exercise, user, orgId);
+  @ApiOperation({ summary: 'Retired (410). Every practice item runs in the app.' })
+  openInClaude(): never {
+    throw new GoneException('Retired: practice runs in the app now; use POST /exercises/:id/run.');
   }
 
   // ───────────────────────── revisits ─────────────────────────
@@ -605,17 +578,17 @@ export class LearningController {
         ? this.workflows.findOne({ where: { id: exercise.workflowMapId } })
         : null,
     ]);
-    const { draftExpectation, ...starterRest } = exercise.starter ?? {};
+    const { draftExpectation: _legacyDraft, ...starterRest } = exercise.starter ?? {};
+    void _legacyDraft;
+    const practice = practiceOf(exercise, workflow?.name ?? null);
     return {
       ...toExerciseSummary(exercise),
+      practice,
       hints: exercise.hints.slice(0, exercise.hintsRevealed),
       hintsRevealed: exercise.hintsRevealed,
       hintsTotal: exercise.hints.length,
       workedExample: submissions.length > 0 ? exercise.workedExample : null,
-      starter: {
-        ...starterRest,
-        ...(draftExpectation ? { draftExpectation } : {}),
-      },
+      starter: { ...starterRest, practice },
       submissions: submissions.map((s) =>
         toSubmissionView(s, gradeViews.get(s.id) ?? null),
       ),

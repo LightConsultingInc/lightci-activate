@@ -6,7 +6,7 @@ import type { Lesson } from "@/content/lessons/types"
 import { api, ApiError } from "@/lib/api"
 import type {
   Artifact, Baseline, CompetencyCatalogEntry, ExerciseDetail, LessonPersonalised, PersonMemory, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
-  Measurement, MySkills, RealtimeSession, RevisitAnswer, SkillDetail, SubmitResult, VoiceTranscriptTurn, WorkflowDetail, WorkflowSchema, WorkflowSummary,
+  Measurement, MySkills, RealtimeSession, RevisitAnswer, RunBody, RunResult, SkillDetail, SubmitResult, VoiceTranscriptTurn, WorkflowDetail, WorkflowSchema, WorkflowSummary,
 } from "./types"
 
 export const keys = {
@@ -116,13 +116,6 @@ export function useStartExercise(id: string) {
   })
 }
 
-export function useExpect(id: string) {
-  return useMutation({
-    mutationFn: (body: { expectationText: string; expectationConfidence: number }) => api.post<{ ok: boolean }>(`/api/exercises/${id}/expect`, body),
-    onError: (e) => toast.error(errorMessage(e, "Couldn't save your expectation")),
-  })
-}
-
 export function useHint(id: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -136,19 +129,19 @@ export function useHint(id: string) {
   })
 }
 
-export function useRunClaude(id: string) {
+/** Run the learner's input: the prompt, the Project's test task, the skill's sample requests, or draft a skill from the map. */
+export function useRunPractice(id: string) {
   return useMutation({
-    mutationFn: (body: { prompt: string; context?: string; project?: { instructions: string; files: { name: string; content: string }[] } }) =>
-      api.post<{ output: string; model: string; runId: string }>(`/api/exercises/${id}/run`, body),
+    mutationFn: (body: RunBody) => api.post<RunResult>(`/api/exercises/${id}/run`, body),
     onError: (e) => toast.error(errorMessage(e, "Claude couldn't run that")),
   })
 }
 
+/** Send the artifact for feedback: three lines, a score out of 10, pass or try again. */
 export function useSubmit(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { expectationText: string; expectationConfidence: number; artifact: Artifact; critiqueText: string; coldAttempt: boolean }) =>
-      api.post<SubmitResult>(`/api/exercises/${id}/submit`, body),
+    mutationFn: (body: { artifact: Artifact }) => api.post<SubmitResult>(`/api/exercises/${id}/submit`, body),
     onSuccess: (data) => {
       qc.setQueryData(keys.exercise(id), data.exercise)
       qc.invalidateQueries({ queryKey: keys.ladder })
@@ -170,13 +163,6 @@ export function useSkipExercise(id: string) {
       qc.invalidateQueries({ queryKey: ["exercises"] })
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't skip")),
-  })
-}
-
-export function useOpenInClaude(id: string) {
-  return useMutation({
-    mutationFn: () => api.post<{ prompt: string; contextBundle: string }>(`/api/exercises/${id}/open-in-claude`),
-    onError: (e) => toast.error(errorMessage(e, "Couldn't prepare the pack")),
   })
 }
 

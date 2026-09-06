@@ -83,14 +83,16 @@ describe('mastery math (docs/mastery-model.md worked example: Priya, Context eng
     expect(retentionDecay(0.88, 24)).toBeCloseTo(0.88 * Math.exp(-0.24), 3);
   });
 
-  it('composite with the documented components is ≈ 0.83', () => {
+  it('composite with the documented components is ≈ 0.86 (judgement retired 2026-09-06: 0.6 / 0.2 / 0.2)', () => {
     const composite = compositeMastery({
       artifact: 0.87,
       consistency: 0.91,
       retention: 0.79,
       judgement: 0.68,
     });
-    expect(Math.abs(composite - 0.83)).toBeLessThan(0.01);
+    expect(composite).toBeCloseTo(0.862, 3);
+    expect(compositeMastery({ artifact: 0.87, consistency: 0.91, retention: 0.79 })).toBe(composite);
+    expect(compositeMastery({ artifact: 0.87, consistency: 0.91, retention: 0.79, judgement: 0 })).toBe(composite);
   });
 });
 
@@ -116,10 +118,9 @@ describe('MasteryService.computeOne from Grade/Submission/Exercise/Revisit rows'
     expect(view.components.consistency).toBeCloseTo(0.91, 2);
     expect(view.components.contexts).toBe(4);
     expect(view.components.retention).toBeCloseTo(0.88 * Math.exp(-0.24), 2);
-    expect(view.components.judgement).toBeGreaterThan(0.6);
-    expect(view.components.judgement).toBeLessThan(0.85);
     expect(view.mastery).toBeGreaterThanOrEqual(0.8);
-    expect(view.mastery).toBeLessThanOrEqual(0.88);
+    expect(view.mastery).toBeLessThanOrEqual(0.9);
+    expect(view.mastery).toBeCloseTo(0.6 * view.components.artifact + 0.2 * view.components.consistency + 0.2 * view.components.retention, 2);
     expect(view.status).toBe('mastered');
   });
 
@@ -141,7 +142,7 @@ describe('MasteryService.computeOne from Grade/Submission/Exercise/Revisit rows'
   });
 });
 
-describe('judgement summary', () => {
+describe('judgement summary (legacy display only; never gating)', () => {
   it('penalises overconfidence and reports the overconfident rate', () => {
     const rows = [
       artifact('L1.description', 0.6, 3, 'a', 0.95, 0.3, 'revise'),
@@ -194,7 +195,7 @@ describe('promotion gate logic (RUNG_GATES)', () => {
     overconfidentRate: 0,
   };
 
-  it('L1 → L2 requires every L1 competency ≥ 0.80 across ≥ 2 contexts and judgement ≥ 0.60', () => {
+  it('L1 → L2 requires every L1 competency ≥ 0.80 across ≥ 2 contexts (judgement ignored)', () => {
     const ok = svc().gateCheck(
       1,
       [comp('L1.a', 1, 0.85, 2), comp('L1.b', 1, 0.81, 3)],
@@ -209,7 +210,7 @@ describe('promotion gate logic (RUNG_GATES)', () => {
     expect(ok.gate).toEqual({
       masteryThreshold: 0.8,
       minContexts: 2,
-      minJudgement: 0.6,
+      minJudgement: 0,
     });
     const short = svc().gateCheck(
       1,
@@ -233,23 +234,12 @@ describe('promotion gate logic (RUNG_GATES)', () => {
     expect(r.met.retention).toBe(false);
   });
 
-  it('L3 needs judgement ≥ 0.60 and L5 ≥ 0.75', () => {
-    const low = { ...judgement, score: 0.55 };
-    expect(
-      svc().gateCheck(3, [comp('L3.a', 3, 0.9, 3)], low).met.judgement,
-    ).toBe(false);
-    expect(
-      svc().gateCheck(3, [comp('L3.a', 3, 0.9, 3)], judgement).met.judgement,
-    ).toBe(true);
-    expect(
-      svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], judgement).met.judgement,
-    ).toBe(false);
-    expect(
-      svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], {
-        ...judgement,
-        score: 0.8,
-      }).met.judgement,
-    ).toBe(true);
+  it('judgement never gates (retired 2026-09-06): L3 and L5 are met regardless of the judgement score', () => {
+    const low = { ...judgement, score: 0 };
+    expect(svc().gateCheck(3, [comp('L3.a', 3, 0.9, 3)], low).met.judgement).toBe(true);
+    expect(svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], low).met.judgement).toBe(true);
+    expect(svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], low).toNextRung).toBe(1);
+    expect(RUNG_GATES[5].minJudgement).toBe(0);
   });
 
   it('L0 is completion-only', () => {

@@ -3,6 +3,7 @@ import {
   NextExerciseSchema,
   RevisitGradeSchema,
   SkillGradeSchema,
+  SkillRunSchema,
   SubmissionGradeSchema,
 } from './ai-schemas';
 import { mockArtifactScore } from './learning.mocks';
@@ -34,6 +35,10 @@ describe('learning mock responders', () => {
     expect(out.hints).toHaveLength(3);
     expect(out.workflowMapId).toBe('wf1');
     expect(out.workedExample).toBeNull();
+    expect(out.brief).toBe("For your monday pack, write the prompt you'd give Claude.");
+    expect(out.workflowName).toBe('Monday pack');
+    expect(out.prefillPrompt).toContain('[');
+    expect(out.prefillSkillMd).toBeNull();
     const skill = mockResponder<any>(
       call('coach.next-exercise', {
         rung: 3,
@@ -43,6 +48,8 @@ describe('learning mock responders', () => {
       NextExerciseSchema,
     );
     expect(skill.workedExample).toContain('description:');
+    expect(skill.prefillSkillMd).toContain('description:');
+    expect(skill.prefillSampleRequests).toHaveLength(3);
   });
 
   it('grader.submission follows the documented heuristic (0.86 vs 0.62)', () => {
@@ -53,13 +60,16 @@ describe('learning mock responders', () => {
       call('grader.submission', {
         criteria: [{ criterion: 'a.b', label: 'B' }],
         artifactText: 'short',
-        critiqueText: '',
-        expectationText: 'e',
+        kind: 'prompt',
+        workflowName: 'Monday pack',
       }),
       SubmissionGradeSchema,
     );
     expect(out.rubric[0].criterion).toBe('a.b');
-    expect(out.critiqueQuality).toBe(0.4);
+    expect(out.worked).toBeTruthy();
+    expect(out.change).toContain('B');
+    expect(out.tryNext).toContain('monday pack');
+    expect(out).not.toHaveProperty('critiqueQuality');
   });
 
   it('grader.skill and grader.revisit are schema-valid', () => {
@@ -80,11 +90,17 @@ describe('learning mock responders', () => {
     expect(rev.score).toBe(0.85);
   });
 
-  it('coach.run#text returns text derived from the prompt', () => {
-    const out = mockResponder<{ text: string }>(
-      { ...call('coach.run#text', { prompt: 'Draft the Monday pack' }) },
-      undefined,
-    );
-    expect(out.text).toContain('Draft the Monday pack');
+  it('coach.run.* responders are deterministic per kind', () => {
+    const prompt = mockResponder<{ text: string }>(call('coach.run.prompt#text', { prompt: 'Draft the Monday pack' }), undefined);
+    expect(prompt.text).toContain('Draft the Monday pack');
+    const project = mockResponder<{ text: string }>(call('coach.run.project#text', { instructions: 'Three sections.', files: ['sop.md'], testTask: 'Draft it' }), undefined);
+    expect(project.text).toContain('sop.md');
+    const fired = mockResponder<any>(call('coach.run.skill', { skillMd: 'description: Use when preparing the Monday pack from notes.', request: 'Prepare the Monday pack please' }), SkillRunSchema);
+    expect(fired.fired).toBe(true);
+    const notFired = mockResponder<any>(call('coach.run.skill', { skillMd: 'description: Use when preparing the Monday pack from notes.', request: 'Write a limerick' }), SkillRunSchema);
+    expect(notFired.fired).toBe(false);
+    const wf = mockResponder<{ text: string }>(call('coach.run.workflow#text', { workflowName: 'RMD letters', schema: { inputs: [{ name: 'RMD row', source: 'Orion' }], humanReview: ['planner sign-off'] } }), undefined);
+    expect(wf.text).toContain('name: rmd-letters');
+    expect(wf.text).toContain('human_review: planner sign-off');
   });
 });

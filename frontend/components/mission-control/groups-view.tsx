@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMe } from "@/hooks/use-me"
 import { useGroups, useGroupsCompare } from "@/hooks/mc/use-mc"
 import { useMcFilters } from "@/hooks/mc/use-mc-filters"
-import type { GroupRow, Groups, GroupsCompare } from "@/hooks/mc/types"
+import type { GroupNormalised, GroupRow, Groups, GroupsCompare } from "@/hooks/mc/types"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { McHeader } from "./mc-header"
@@ -44,7 +44,7 @@ const METRICS: { key: keyof GroupRow; label: string; fmt: (v: number) => string;
   { key: "hoursBackPerPerson", label: "Hours back / person / wk", fmt: (v) => `${(v ?? 0).toFixed(1)}h`, higherIsBetter: true },
   { key: "skillsPublished", label: "Skills published per 10 people", fmt: (v) => (v ?? 0).toFixed(1), higherIsBetter: true, perPerson: true },
   { key: "skillsAdopted", label: "Skills adopted per 10 people", fmt: (v) => (v ?? 0).toFixed(1), higherIsBetter: true, perPerson: true },
-  { key: "promotionThroughput", label: "Promotions / wk", fmt: (v) => (v ?? 0).toFixed(2), higherIsBetter: true },
+  { key: "promotionThroughput", label: "Promotions merged, 30d", fmt: (v) => (v ?? 0).toFixed(0), higherIsBetter: true },
   { key: "reworkRate", label: "Rework rate (revise ÷ pass)", fmt: (v) => fmt.pct(v), higherIsBetter: false },
   { key: "championQueueAgeDays", label: "Champion queue age", fmt: (v) => `${(v ?? 0).toFixed(1)}d`, higherIsBetter: false },
 ]
@@ -119,7 +119,7 @@ function Body({ d, teamId }: { d: Groups; teamId: string | null }) {
             { key: "rungMix", header: "Rung mix", sortValue: (g) => weightedRung(g.rungMix), render: (g) => <RungMixBar counts={g.rungMix} className="w-28" /> },
             { key: "hoursBackPerPerson", header: "Hours back / person", align: "right", sortValue: (g) => g.hoursBackPerPerson, render: (g) => `${(g.hoursBackPerPerson ?? 0).toFixed(1)}h` },
             { key: "skills", header: "Published / adopted", align: "right", sortValue: (g) => g.skillsPublished, render: (g) => `${g.skillsPublished} / ${g.skillsAdopted}` },
-            { key: "promotionThroughput", header: "Promotions / wk", align: "right", sortValue: (g) => g.promotionThroughput, render: (g) => (g.promotionThroughput ?? 0).toFixed(2) },
+            { key: "promotionThroughput", header: "Promotions (30d)", align: "right", sortValue: (g) => g.promotionThroughput, render: (g) => g.promotionThroughput ?? 0 },
             { key: "reworkRate", header: "Rework", align: "right", sortValue: (g) => g.reworkRate, render: (g) => <span className={g.reworkRate > 0.5 ? "text-revise" : ""}>{fmt.pct(g.reworkRate)}</span> },
             { key: "queue", header: "Champion queue", align: "right", sortValue: (g) => g.championQueueAgeDays, render: (g) => <span className={g.championQueueAgeDays > 5 ? "text-fail" : ""}>{(g.championQueueAgeDays ?? 0).toFixed(1)}d</span> },
           ]}
@@ -157,6 +157,21 @@ function CompareCard({ c, fallbackA, fallbackB, source }: { c: GroupsCompare; fa
   const rows = useMemo(() => {
     if (c.metrics?.length) return c.metrics.map((m) => ({ ...m, format: (v: number) => (m.unit === "%" ? fmt.pct(v) : m.unit ? `${v.toFixed(1)}${m.unit}` : v.toFixed(1)), higherIsBetter: m.higherIsBetter ?? true }))
     if (!A || !B) return []
+    // Prefer the server's normalisation (per person, per program week) when the API supplies it.
+    const na = c.a?.normalised
+    const nb = c.b?.normalised
+    if (na && nb) {
+      const rows: { key: keyof GroupNormalised; label: string; fmt: (v: number) => string; higherIsBetter: boolean; scale?: number }[] = [
+        { key: "activePct", label: "Active on real work", fmt: (v) => fmt.pct(v), higherIsBetter: true },
+        { key: "hoursBackPerPerson", label: "Hours back / person / wk", fmt: (v) => `${(v ?? 0).toFixed(1)}h`, higherIsBetter: true },
+        { key: "skillsPublishedPerPerson", label: "Skills published per 10 people", fmt: (v) => (v ?? 0).toFixed(1), higherIsBetter: true, scale: 10 },
+        { key: "skillsAdoptedPerPerson", label: "Skills adopted per 10 people", fmt: (v) => (v ?? 0).toFixed(1), higherIsBetter: true, scale: 10 },
+        { key: "promotionsPerPersonPerWeek", label: "Promotions / person / wk", fmt: (v) => (v ?? 0).toFixed(3), higherIsBetter: true },
+        { key: "reworkRate", label: "Rework rate (revise ÷ pass)", fmt: (v) => fmt.pct(v), higherIsBetter: false },
+        { key: "championQueueAgeDays", label: "Champion queue age", fmt: (v) => `${(v ?? 0).toFixed(1)}d`, higherIsBetter: false },
+      ]
+      return rows.map((m) => ({ key: String(m.key), label: m.label, a: Number(na[m.key] ?? 0) * (m.scale ?? 1), b: Number(nb[m.key] ?? 0) * (m.scale ?? 1), format: m.fmt, higherIsBetter: m.higherIsBetter }))
+    }
     return METRICS.map((m) => {
       const norm = (g: GroupRow) => {
         const raw = Number(g[m.key] ?? 0)

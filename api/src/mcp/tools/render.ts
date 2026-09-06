@@ -246,9 +246,16 @@ export function renderInterview(d: Obj | null | undefined): string {
             .join(', ') || 'nothing yet'
         }.`
       : '';
+  // Checker flags are `{ field, issue }` (interviews.types.ts); older payloads used `message`.
   const flags =
     Array.isArray(d.checkerFlags) && d.checkerFlags.length
-      ? `Checker flags: ${d.checkerFlags.map((f: Obj) => (typeof f === 'string' ? f : (f.message ?? JSON.stringify(f)))).join('; ')}`
+      ? `Checker flags: ${d.checkerFlags
+          .map((f: Obj) =>
+            typeof f === 'string'
+              ? f
+              : `${f.field ? `${f.field}: ` : ''}${f.issue ?? f.message ?? JSON.stringify(f)}`,
+          )
+          .join('; ')}`
       : '';
   const done =
     (d.completeness ?? 0) >= 0.85
@@ -275,8 +282,13 @@ export function renderTeam(d: Obj | null | undefined): string {
   const backlog: Obj[] = Array.isArray(d.backlogTop)
     ? d.backlogTop.slice(0, 5)
     : [];
+  // Scorer composites are normalised 0..100 (workflows.types.ts), not fractions.
+  const composite = (w: Obj): string => {
+    const c = typeof w.score === 'number' ? w.score : w.score?.composite;
+    return typeof c === 'number' ? ` (${Math.round(c)}/100)` : '';
+  };
   const backlogLine = backlog.length
-    ? `Backlog top ${backlog.length}: ${backlog.map((w) => `${w.name}${w.score?.composite !== undefined ? ` (${pct(w.score.composite)})` : ''}`).join('; ')}.`
+    ? `Backlog top ${backlog.length}: ${backlog.map((w) => `${w.name}${composite(w)}`).join('; ')}.`
     : 'Backlog is empty; run a champion interview to seed it.';
   const reviews: Obj[] = Array.isArray(d.reviewQueue) ? d.reviewQueue : [];
   const reviewLine = reviews.length
@@ -339,7 +351,28 @@ export function renderPromotion(p: Obj): string {
     : '';
   return `- ${s.name ?? s.slug ?? 'skill'} v${p.version ?? '?'} by ${name(p.requestedBy)}${p.prNumber ? ` (PR #${p.prNumber})` : ''} — ${grade}${boundary ? `, ${boundary}` : ''}${
     p.highExposure ? ', HIGH EXPOSURE' : ''
-  }; ${approvals} approval${approvals === 1 ? '' : 's'}, needs ${required}; ${p.decision ?? 'pending'}${p.diffSummary ? `\n  ${String(p.diffSummary).split('\n')[0]}` : ''}`;
+  }; ${approvals} approval${approvals === 1 ? '' : 's'}, needs ${required}; ${p.decision ?? 'pending'}${diffLine(p.diffSummary)}`;
+}
+
+/** `diffSummary` is `{ filesChanged, additions, deletions, summary }` (promotion-request.entity.ts); a plain string is also accepted. */
+export function diffLine(diff: unknown): string {
+  if (!diff) return '';
+  if (typeof diff === 'string') return `\n  ${diff.split('\n')[0]}`;
+  if (typeof diff !== 'object') return '';
+  const d = diff as Obj;
+  const counts = [
+    typeof d.additions === 'number' ? `+${d.additions}` : '',
+    typeof d.deletions === 'number' ? `−${d.deletions}` : '',
+    typeof d.filesChanged === 'number'
+      ? `${d.filesChanged} file${d.filesChanged === 1 ? '' : 's'}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const summary =
+    typeof d.summary === 'string' ? d.summary.split('\n')[0].trim() : '';
+  const line = [counts, summary].filter(Boolean).join(' · ');
+  return line ? `\n  ${line}` : '';
 }
 
 export function renderPromotionQueue(d: Obj | null | undefined): string {

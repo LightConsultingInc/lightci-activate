@@ -559,7 +559,8 @@ export interface CostView {
 export interface LeadQueue {
   escalations: (Escalation & {
     org: { id: string; name: string; slug: string };
-    subject: string | null;
+    /** Small summary of the subject; `slug` present for skills / promotion requests. */
+    subject: { id: string; name: string; type: string; slug?: string | null } | null;
     assignee: PersonRef | null;
   })[];
   approvals: (PromotionView & {

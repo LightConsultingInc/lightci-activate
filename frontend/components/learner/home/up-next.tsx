@@ -1,9 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Clock, Play, Sparkles } from "lucide-react"
+import { ArrowRight, Clock, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Paper } from "@/components/brand/grain"
+import { askOf, practiceAction, practiceStatus, workflowOf } from "../modules/practice-tab"
 import type { Lesson, Module } from "@/content/lessons/types"
 import type { ExerciseSummary } from "@/hooks/learner/types"
 
@@ -11,11 +12,12 @@ type Props = { module: Module; lesson: Lesson | null; practice: ExerciseSummary 
 
 /**
  * One card that says, in plain words, what to do now. A lesson you have not watched in your current
- * module comes first; otherwise the exercise Coach picked. The other option stays one click away.
+ * module comes first; otherwise the practice Coach picked. The other option stays one click away.
  */
 export function UpNext({ module, lesson, practice, queuedCount }: Props) {
   const primary: "lesson" | "practice" | null = lesson ? "lesson" : practice ? "practice" : null
-  const practiceVerb = practice ? (practice.status === "active" || practice.status === "revise" ? "Continue" : "Start") : "Start"
+  const action = practice ? practiceAction(practice) : null
+  const wf = practice ? workflowOf(practice) : null
 
   return (
     <Paper className="rounded-xl border bg-card p-6 glow-ring" data-testid="up-next" data-kind={primary ?? "empty"}>
@@ -36,10 +38,11 @@ export function UpNext({ module, lesson, practice, queuedCount }: Props) {
       )}
       {primary === "practice" && practice && (
         <>
+          {wf && <p className="mt-2 eyebrow" data-testid="up-next-workflow">{wf}</p>}
           <h2 className="mt-1 font-display text-2xl font-medium leading-snug" data-testid="up-next-title">
-            Practice: {practice.title} <span className="text-muted-foreground">({practice.estimatedMinutes} min)</span>
+            {askOf(practice)} <span className="text-muted-foreground">({practice.estimatedMinutes} min)</span>
           </h2>
-          {practice.rationale && <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{practice.rationale}</p>}
+          <p className="mt-2 text-xs text-muted-foreground" data-testid="up-next-status">{practiceStatus(practice).text}</p>
         </>
       )}
       <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -48,27 +51,16 @@ export function UpNext({ module, lesson, practice, queuedCount }: Props) {
             <Play data-icon="inline-start" /> {primary === "lesson" ? "Watch now" : `Or watch '${lesson.title}' (${lesson.minutes} min)`}
           </Button>
         )}
-        {practice && practice.mode === "in_claude" ? (
-          <>
-            {/* In-Claude practice: the Open-in-Claude pack comes first; working in the app is the fallback. */}
-            <Button size="lg" variant={primary === "practice" ? "default" : "outline"} render={<Link href={`/exercise/${practice.id}?claude=1`} />} data-testid="next-up-start">
-              <Sparkles data-icon="inline-start" className={primary === "practice" ? "text-glow" : "text-claude"} />
-              {primary === "practice" ? "Do it in Claude" : `Or do it in Claude: ${practice.title} (${practice.estimatedMinutes} min)`}
-            </Button>
-            <Button size="lg" variant="ghost" render={<Link href={`/exercise/${practice.id}`} />} data-testid="next-up-here">
-              Do it here
-            </Button>
-          </>
-        ) : practice ? (
+        {practice && action && (
           <Button size="lg" variant={primary === "practice" ? "default" : "outline"} render={<Link href={`/exercise/${practice.id}`} />} data-testid="next-up-start">
             {primary === "practice" ? (
-              <>{practiceVerb} <ArrowRight data-icon="inline-end" /></>
+              <>{action.label} <ArrowRight data-icon="inline-end" /></>
             ) : (
-              <><Clock data-icon="inline-start" /> Or practice: {practice.title} ({practice.estimatedMinutes} min)</>
+              <><Clock data-icon="inline-start" /> Or practice: {askOf(practice)} ({practice.estimatedMinutes} min)</>
             )}
           </Button>
-        ) : null}
-        {practice && <span className="sr-only" data-testid="next-up-title">{practice.title}</span>}
+        )}
+        {practice && <span className="sr-only" data-testid="next-up-title">{askOf(practice)}</span>}
         {queuedCount > 0 && <span className="text-xs text-muted-foreground">{queuedCount} more practice waiting</span>}
       </div>
     </Paper>

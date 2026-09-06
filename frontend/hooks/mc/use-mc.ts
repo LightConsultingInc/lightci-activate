@@ -87,9 +87,9 @@ export function useTeamMutations() {
   }
   const create = useMutation({ mutationFn: (body: { name: string; slug?: string; pluginName?: string; rbacGroupId?: string }) => api.post<Team>("/api/teams", body), onSuccess: done })
   const patch = useMutation({ mutationFn: ({ id, ...body }: { id: string; name?: string; championPersonId?: string | null; inProgram?: boolean; pluginName?: string | null; rbacGroupId?: string | null }) => api.patch<Team>(`/api/teams/${id}`, body), onSuccess: done })
-  const importGroups = useMutation({ mutationFn: () => api.post<{ imported: number; teams?: Team[] }>("/api/teams/import-groups"), onSuccess: done })
+  const importGroups = useMutation({ mutationFn: () => api.post<{ groups: number; created: number; linked: number; teams?: Team[] }>("/api/teams/import-groups"), onSuccess: done })
   const patchPerson = useMutation({ mutationFn: ({ id, ...body }: { id: string; teamId?: string | null; roles?: Person["roles"]; title?: string; status?: Person["status"] }) => api.patch<Person>(`/api/people/${id}`, body), onSuccess: done })
-  const invite = useMutation({ mutationFn: (body: { email: string; teamId?: string }) => api.post<{ ok: boolean; personId: string }>("/api/auth/invites", body), onSuccess: done })
+  const invite = useMutation({ mutationFn: (body: { email: string; teamId?: string }) => api.post<{ ok: boolean; personId: string; invitation?: "sent" | "failed" | "skipped"; detail?: string }>("/api/auth/invites", body), onSuccess: done })
   return { create, patch, importGroups, patchPerson, invite }
 }
 export const useSetup = () => useQuery({ queryKey: ["org", "setup"], queryFn: () => api.get<Setup>("/api/org/setup") })

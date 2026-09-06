@@ -5,10 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { isoDay } from '../common/dates';
 import { Org } from '../orgs/entities/org.entity';
-import type { Person } from '../orgs/entities/person.entity';
+import { Person } from '../orgs/entities/person.entity';
 import { OrgService, slugify } from '../orgs/org.service';
 import { IntegrationsService } from '../orgs/integrations.service';
 import { AuditLog } from './entities/audit-log.entity';
@@ -23,7 +23,12 @@ import {
   type OrgFacts,
 } from './metrics.service';
 import { personById, personRef, promotionView } from './shape';
-import type { LeadClientRow, LeadQueue, PromotionView } from './ops.types';
+import type {
+  LeadClientRow,
+  LeadQueue,
+  PersonRef,
+  PromotionView,
+} from './ops.types';
 
 export const ACTIVE_PCT_TARGET = 0.6; // spec: weekly active on real work ≥ 60%
 
@@ -49,6 +54,7 @@ export class LeadService {
     @InjectRepository(CostInput)
     private readonly costInputs: Repository<CostInput>,
     @InjectRepository(AuditLog) private readonly audit: Repository<AuditLog>,
+    @InjectRepository(Person) private readonly people: Repository<Person>,
   ) {}
 
   private orgRef(o: Org) {
@@ -67,12 +73,22 @@ export class LeadService {
     for (const org of orgs) {
       const f = await this.metrics.load(org.id, { usageDays: 70 });
       const ref = this.orgRef(org);
-      for (const e of f.escalations.filter((x) => x.state !== 'resolved')) {
+      const open = f.escalations.filter((x) => x.state !== 'resolved');
+      // Assignees outside the org's roster (LightCI leads) are looked up directly.
+      const outsiders = await this.outsideAssignees(
+        f,
+        open.map((e) => e.assigneePersonId),
+      );
+      for (const e of open) {
         out.escalations.push({
           ...e,
           org: ref,
-          subject: this.subjectLabel(f, e.subjectType, e.subjectId),
-          assignee: personById(f, e.assigneePersonId),
+          subject: this.subject(f, e.subjectType, e.subjectId),
+          assignee:
+            personById(f, e.assigneePersonId) ??
+            (e.assigneePersonId
+              ? (outsiders.get(e.assigneePersonId) ?? null)
+              : null),
         });
       }
       for (const pr of f.promotions.filter((p) => p.decision === 'pending')) {
@@ -108,28 +124,64 @@ export class LeadService {
     return out;
   }
 
-  private subjectLabel(
+  private async outsideAssignees(
+    f: OrgFacts,
+    ids: (string | null)[],
+  ): Promise<Map<string, PersonRef>> {
+    const missing = [
+      ...new Set(
+        ids.filter(
+          (id): id is string =>
+            Boolean(id) && !f.people.some((p) => p.id === id),
+        ),
+      ),
+    ];
+    if (!missing.length) return new Map();
+    const rows = await this.people.find({ where: { id: In(missing) } });
+    return new Map(
+      rows.map((p) => [
+        p.id,
+        {
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          title: p.title,
+          avatarUrl: p.avatarUrl,
+          teamId: p.teamId,
+          teamName: null,
+          rung: 0,
+          roles: p.roles,
+        },
+      ]),
+    );
+  }
+
+  /** Small subject summary for the queue card and drawer; `slug` lets the UI deep-link skills. */
+  private subject(
     f: OrgFacts,
     type: string,
     id: string | null,
-  ): string | null {
+  ): { id: string; name: string; type: string; slug?: string | null } | null {
     if (!id) return null;
+    const mk = (name: string | null | undefined, slug?: string | null) =>
+      name ? { id, name, type, ...(slug !== undefined ? { slug } : {}) } : null;
     switch (type) {
       case 'person':
-        return f.people.find((p) => p.id === id)?.name ?? null;
+        return mk(f.people.find((p) => p.id === id)?.name);
       case 'team':
-        return f.teamName.get(id) ?? null;
-      case 'skill':
-        return f.skills.find((s) => s.id === id)?.name ?? null;
+        return mk(f.teamName.get(id));
+      case 'skill': {
+        const s = f.skills.find((x) => x.id === id);
+        return mk(s?.name, s?.slug ?? null);
+      }
       case 'workflow':
-        return f.workflows.find((w) => w.id === id)?.name ?? null;
+        return mk(f.workflows.find((w) => w.id === id)?.name);
       case 'exercise':
-        return f.exercises.find((e) => e.id === id)?.title ?? null;
+        return mk(f.exercises.find((e) => e.id === id)?.title);
       case 'promotion_request': {
         const pr = f.promotions.find((p) => p.id === id);
-        return pr
-          ? (f.skills.find((s) => s.id === pr.skillId)?.name ?? null)
-          : null;
+        const s = pr ? f.skills.find((x) => x.id === pr.skillId) : undefined;
+        return mk(s?.name, s?.slug ?? null);
       }
       default:
         return null;

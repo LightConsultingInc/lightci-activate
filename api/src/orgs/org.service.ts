@@ -41,6 +41,7 @@ export interface OrgPatch {
   name?: string;
   industry?: string | null;
   sponsorName?: string | null;
+  auditNote?: string;
 }
 
 export interface SetupStep {
@@ -116,8 +117,19 @@ export class OrgService {
     const org = await this.load(orgId);
     const before = settingsOf(org);
     const changes: Record<string, unknown> = {};
+    const note = dto.auditNote?.trim() || undefined;
+    if (note) changes.note = note;
     if (dto.settings) {
-      const next: GovernedOrgSettings = { ...before, ...dto.settings };
+      // Older clients sent their own `usagePolicyVersion`; the API owns every version field.
+      const {
+        usagePolicyVersion: _legacyVersion,
+        ...incoming
+      } = dto.settings as Partial<GovernedOrgSettings> & {
+        usagePolicyVersion?: number;
+      };
+      void _legacyVersion;
+      const next: GovernedOrgSettings = { ...before, ...incoming };
+      delete (next as { usagePolicyVersion?: number }).usagePolicyVersion;
       const policyChanged =
         dto.settings.usagePolicy !== undefined &&
         (dto.settings.usagePolicy ?? '') !== (before.usagePolicy ?? '');
@@ -138,6 +150,7 @@ export class OrgService {
         await this.log(orgId, actor, 'policy.updated', 'org', orgId, {
           version: next.policyVersion,
           chars: (next.usagePolicy ?? '').length,
+          ...(note ? { note } : {}),
         });
         changes.policyVersion = next.policyVersion;
       }
@@ -148,6 +161,7 @@ export class OrgService {
         await this.log(orgId, actor, 'boundary.updated', 'org', orgId, {
           version: next.boundaryVersion,
           boundary: next.boundary,
+          ...(note ? { note } : {}),
         });
         changes.boundaryVersion = next.boundaryVersion;
       }
@@ -381,7 +395,7 @@ export class OrgService {
         detail: keyKinds
           .map(
             (k) =>
-              `${k}: ${configured(k)?.configured ? (configured(k)!.status ?? configured(k)!.source) : 'missing'}`,
+              `${k}: ${configured(k)?.status ?? (configured(k)?.configured ? configured(k)!.source : 'missing')}`,
           )
           .join(', '),
       },
@@ -450,6 +464,7 @@ export class OrgService {
   // ---------------------------------------------------------------- teams
 
   async listTeams(orgId: string) {
+    if (!orgId) return []; // lead with no client selected
     const [teams, people] = await Promise.all([
       this.teams.find({ where: { orgId }, order: { name: 'ASC' } }),
       this.people.find({ where: { orgId } }),
@@ -616,6 +631,7 @@ export class OrgService {
   // ---------------------------------------------------------------- people
 
   async listPeople(orgId: string, teamId?: string | null) {
+    if (!orgId) return []; // lead with no client selected
     const people = await this.people.find({
       where: teamId ? { orgId, teamId } : { orgId },
       order: { name: 'ASC' },

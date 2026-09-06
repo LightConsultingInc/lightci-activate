@@ -25,7 +25,8 @@ export function composite(score: WorkflowScore): number | null {
 
 export function scoreField(score: WorkflowScore, key: "readiness" | "exposure" | "hoursAtStake"): number | string | null {
   if (score == null || typeof score === "number") return null
-  const v = score[key]
+  // The Scorer writes hours/week as `hours`; older payloads used `hoursAtStake`.
+  const v = key === "hoursAtStake" ? (score.hoursAtStake ?? score.hours) : score[key]
   return v == null ? null : v
 }
 

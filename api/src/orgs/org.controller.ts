@@ -34,6 +34,8 @@ class OrgPatchDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() industry?: string | null;
   @IsOptional() sponsorName?: string | null;
+  /** One line on why the policy/boundary changed; recorded on the policy.updated / boundary.updated audit rows. */
+  @IsOptional() @IsString() auditNote?: string;
 }
 
 class IntegrationDto {

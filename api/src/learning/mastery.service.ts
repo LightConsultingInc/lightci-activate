@@ -46,8 +46,8 @@ export interface GradedArtifact {
 const round3 = (x: number) => Math.round(x * 1000) / 1000;
 
 /**
- * Computes LadderView.competencies, the judgement summary and the promotion gate for a person
- * from Grades, Submissions, Revisits and Exercises, following docs/mastery-model.md §6.
+ * Computes LadderView.competencies, the (legacy, non-gating) judgement summary and the promotion gate
+ * for a person from Grades, Submissions, Revisits and Exercises, following docs/mastery-model.md §6.
  * Pure arithmetic lives in mastery-math.ts; this service does the joins and the persistence.
  */
 @Injectable()
@@ -376,7 +376,9 @@ export class MasteryService {
     const contextsMet =
       gateComps.length > 0 &&
       gateComps.every((c) => c.components.contexts >= gate.minContexts);
-    const judgementMet = judgement.score >= gate.minJudgement;
+    // Judgement is retired (practice v2, 2026-09-06): reported for display, never gating.
+    void judgement;
+    const judgementMet = true;
     const retained = competencies.filter((c) =>
       gate.retainedRungs.includes(c.rung as Rung),
     );
@@ -388,9 +390,7 @@ export class MasteryService {
       const k = Math.min(1, c.components.contexts / gate.minContexts);
       return 0.7 * m + 0.3 * k;
     });
-    const toNextRung = gateComps.length
-      ? round3(Math.min(1, mean(perComp) * (judgementMet ? 1 : 0.9)))
-      : 0;
+    const toNextRung = gateComps.length ? round3(Math.min(1, mean(perComp))) : 0;
     return {
       toNextRung,
       gate: view,
@@ -403,11 +403,11 @@ export class MasteryService {
     };
   }
 
-  /** Whether a competency view clears its own rung gate (mastery, contexts, judgement). */
-  competencyMeetsGate(c: CompetencyView, judgement: number): boolean {
+  /** Whether a competency view clears its own rung gate (mastery and contexts; judgement retired). */
+  competencyMeetsGate(c: CompetencyView, _judgement?: number): boolean {
     const gate = RUNG_GATES[c.rung as Rung];
     return meetsGate(
-      { mastery: c.mastery, contexts: c.components.contexts, judgement },
+      { mastery: c.mastery, contexts: c.components.contexts },
       gate,
     );
   }
@@ -449,7 +449,7 @@ export class MasteryService {
     await this.notes.save(
       this.notes.create({
         personId,
-        note: `Promoted to L${newRung}: every L${report.rung} competency cleared the gate (mastery ≥ ${report.progress.gate.masteryThreshold}, ≥ ${report.progress.gate.minContexts} contexts, judgement ${report.judgement.score}).`,
+        note: `Promoted to L${newRung}: every L${report.rung} competency cleared the gate (mastery ≥ ${report.progress.gate.masteryThreshold}, ≥ ${report.progress.gate.minContexts} contexts).`,
         tags: ['progress'],
         author: 'coach',
       }),

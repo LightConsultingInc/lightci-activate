@@ -1,0 +1,17 @@
+cards=12 api=12
+facets ok: rungs=[{"rung":1,"count":6},{"rung":2,"count":5},{"rung":3,"count":1}] statuses=[{"status":"published","count":7},{"status":"draft","count":3},{"status":"in_review","count":1},{"status":"deprecated","count":1}] teams=[["Client Service Ops",3],["Financial Planning",5],["Wealth Advisors",4]]
+team=FP rung=2 -> 2 cards
+q=meeting -> 6
+sort=newest UI order: client-followup-summary,advisor-meeting-prep,crm-note-cleanup,proposal-assembly | expected(updated): rmd-letter-draft,quarterly-commentary-narrative,crm-note-cleanup,ips-refresh-summary | usage: client-followup-summary,advisor-meeting-prep,crm-note-cleanup,proposal-assembly
+sort=newest matches updated? false ; matches usage? true
+advisor-meeting-prep: md text=2954 chars, headings=7, artefacts=[], missing underscore tokens=[]
+advisor-meeting-prep: boundary conflicts panel present=0 ; org boundary ref present=0
+advisor-meeting-prep: usage90 total=196 shown
+meeting-recap-email: md text=458 chars, headings=2, artefacts=[], missing underscore tokens=[]
+meeting-recap-email: boundary conflicts panel present=0 ; org boundary ref present=0
+meeting-recap-email: usage90 total=9 shown
+meeting-recap-email: successor link ok
+crm-note-cleanup: md text=1925 chars, headings=7, artefacts=[], missing underscore tokens=[]
+crm-note-cleanup: boundary conflicts panel present=0 ; org boundary ref present=0
+crm-note-cleanup: usage90 total=41 shown
+comment posted; api comments 2 -> 3; body=Audit 1788728181589: ran on the Okonkwo prep, action items section was thin.

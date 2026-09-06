@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClaudeEnterpriseService } from '../claude-enterprise/claude-enterprise.service';
 import { DAY_MS, isoDay } from '../common/dates';
+import { hasAnyRole } from '../common/roles.guard';
 import { IntegrationsService } from '../orgs/integrations.service';
 import type { Person } from '../orgs/entities/person.entity';
 import { settingsOf } from '../orgs/org-settings';
@@ -31,6 +33,7 @@ import {
   influenceOf,
   isChampionCandidate,
   lastActiveDay,
+  learners,
   markRising,
   MetricsService,
   personHoursBack,
@@ -266,9 +269,11 @@ export class MissionControlService {
     return { people: rows };
   }
 
+  /** Ranking rows: learners only (a sponsor/admin who is not on the ladder is not ranked). */
   peopleRows(f: OrgFacts): PeopleEntry[] {
     const today = isoDay(f.now);
-    const raw = f.people.map((p) => {
+    const people = learners(f);
+    const raw = people.map((p) => {
       const hb = personHoursBack(f, p.id);
       return {
         id: p.id,
@@ -289,15 +294,16 @@ export class MissionControlService {
       };
     });
     const scores = activationScores(raw);
+    // Rising is judged among people still in the program; inactive seats cannot be rising.
     const rising = markRising(
       rungGains(
         f.placements,
-        f.people.map((p) => p.id),
+        people.filter((p) => p.status !== 'inactive').map((p) => p.id),
         f.now,
         30,
       ),
     );
-    return f.people.map((p, i) => {
+    return people.map((p, i) => {
       const r = raw[i];
       const score = scores.get(p.id)!;
       const stalled = stalledFor(f, p);
@@ -321,10 +327,25 @@ export class MissionControlService {
     });
   }
 
-  async person(orgId: string, personId: string): Promise<PersonPage> {
+  async person(
+    orgId: string,
+    personId: string,
+    viewer?: Person,
+  ): Promise<PersonPage> {
     const f = await this.metrics.load(orgId, { usageDays: 120 });
     const person = f.people.find((p) => p.id === personId);
     if (!person) throw new NotFoundException('Person not found in this org');
+    if (viewer && !hasAnyRole(viewer, ['sponsor', 'admin'])) {
+      const team = person.teamId
+        ? f.teams.find((t) => t.id === person.teamId)
+        : null;
+      const sameTeam = Boolean(person.teamId) && person.teamId === viewer.teamId;
+      const championOf = team?.championPersonId === viewer.id;
+      if (person.id !== viewer.id && !sameTeam && !championOf)
+        throw new ForbiddenException(
+          'You may only view people on your own team.',
+        );
+    }
     const journey: JourneyEvent[] = [];
     for (const pl of f.placements.filter((x) => x.personId === personId))
       journey.push({
@@ -440,12 +461,17 @@ export class MissionControlService {
       ),
     }));
     const stuckAfter = Math.max(45, f.stalledAfterDays * 3);
+    // Cohorts and time-in-rung describe learners; a sponsor's L0 seat is not a stuck learner.
+    const ladderPeople = learners(f);
+    const ladderIds = new Set(ladderPeople.map((p) => p.id));
     const tir = timeInRung(
-      f.placements.map((p) => ({
-        personId: p.personId,
-        rung: p.rung,
-        placedAt: p.placedAt,
-      })),
+      f.placements
+        .filter((p) => ladderIds.has(p.personId))
+        .map((p) => ({
+          personId: p.personId,
+          rung: p.rung,
+          placedAt: p.placedAt,
+        })),
       f.now,
       stuckAfter,
     );
@@ -461,7 +487,7 @@ export class MissionControlService {
     return {
       heatmap,
       cohorts: cohorts(
-        f.people.map((p) => ({
+        ladderPeople.map((p) => ({
           cohortWeek: p.cohortWeek,
           rung: f.rungs.get(p.id) ?? 0,
         })),
@@ -628,7 +654,9 @@ export class MissionControlService {
       .map((s) => cards.find((c) => c.id === s.id))
       .filter((c): c is SkillCard => Boolean(c));
     return {
-      health: cards.filter((c) => c.health.length > 0),
+      // Every non-deprecated card with its flags (contract: "SkillCard[] (with health flags)");
+      // callers count the library from this and filter for the flagged ones.
+      health: cards,
       mostUsed: byRuns.slice(0, 5),
       leastUsed: [...byRuns].reverse().slice(0, 5),
       byTeam: [...byTeamMap.values()],
@@ -732,16 +760,32 @@ export class MissionControlService {
           source: 'audit_log' as const,
         }));
 
+    // Older orgs have no version stamps in settings; fall back to the audit trail
+    // (`policy.updated` / `boundary.updated` rows) so the version and date are still real.
+    const updates = (action: string) =>
+      log.filter((l) => l.action === action);
+    const policyUpdates = updates('policy.updated');
+    const boundaryUpdates = updates('boundary.updated');
     return {
       policy: {
         text: settings.usagePolicy ?? '',
-        version: settings.policyVersion ?? (settings.usagePolicy ? 1 : 0),
-        updatedAt: settings.policyUpdatedAt ?? null,
+        version:
+          settings.policyVersion ??
+          (settings.usagePolicy ? Math.max(1, policyUpdates.length) : 0),
+        updatedAt:
+          settings.policyUpdatedAt ??
+          policyUpdates[0]?.createdAt.toISOString() ??
+          null,
       },
       boundary: {
         value: settings.boundary ?? null,
-        version: settings.boundaryVersion ?? (settings.boundary ? 1 : 0),
-        updatedAt: settings.boundaryUpdatedAt ?? null,
+        version:
+          settings.boundaryVersion ??
+          (settings.boundary ? Math.max(1, boundaryUpdates.length) : 0),
+        updatedAt:
+          settings.boundaryUpdatedAt ??
+          boundaryUpdates[0]?.createdAt.toISOString() ??
+          null,
       },
       promotionLog,
       complianceTouch,
@@ -978,6 +1022,7 @@ export class MissionControlService {
         refs: hb.refs,
       }));
     const perSkill: ReturnFacts[] = f.skills
+      .filter((s) => s.status !== 'deprecated')
       .map((s) => {
         const wfIds = new Set<string>([
           ...(s.workflowMapId ? [s.workflowMapId] : []),

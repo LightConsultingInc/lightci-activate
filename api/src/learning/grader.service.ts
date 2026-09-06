@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { AiService } from '../ai/ai.service';
@@ -15,13 +15,14 @@ import { CoachNote } from './entities/coach-note.entity';
 import type { RubricCriterion } from './entities/competency.entity';
 import { Exercise } from './entities/exercise.entity';
 import { Grade, type RubricScore } from './entities/grade.entity';
-import type { RubricScoreWithSelfCheck } from './mappers';
+import { encodeFeedback, gradeOfRecord, practiceOf, score10Of } from './mappers';
+import type { PracticeFeedback } from './learning.types';
 import { Submission } from './entities/submission.entity';
 import { MasteryService } from './mastery.service';
 import { GRADER_FIRST_TASK_SYSTEM, GRADER_SKILL_SYSTEM, GRADER_SYSTEM, boundaryText } from './prompts';
 import './learning.mocks';
 
-export const GRADER_VERSION = 'grader-v1';
+export const GRADER_VERSION = 'grader-v2';
 export const SKILL_PASS_THRESHOLD = 0.85;
 export const FIRST_TASK_PASS_THRESHOLD = 0.7;
 
@@ -45,9 +46,10 @@ interface WeightedCriterion extends RubricCriterion {
 }
 
 /**
- * Grader role: rubric-based assessment of submissions and skills, honest pass/revise decisions,
- * critique quality, calibration accuracy, a just-in-time teaching moment and a security review
- * of skill text. Every Claude call goes through AiService (task grader.submission / grader.skill).
+ * Grader role: rubric-based assessment of submissions and skills, honest pass/revise decisions, the
+ * three learner-facing lines (what worked, what to change, one thing to try) and a security review of
+ * skill text. Every Claude call goes through AiService (task grader.submission / grader.skill).
+ * The three lines are persisted in grade.feedback (encodeFeedback) with tryNext also in teachingMoment.
  */
 @Injectable()
 export class GraderService {
@@ -134,6 +136,7 @@ export class GraderService {
     orgId: string | null,
   ): Promise<Grade> {
     const artifactType = submission.artifact?.type ?? 'text';
+    const practice = practiceOf(exercise);
     const rubric = this.rubricFor(exercise, artifactType);
     const threshold = this.thresholdFor(exercise, artifactType);
     const boundary = await this.orgBoundary(orgId);
@@ -151,12 +154,12 @@ export class GraderService {
           {
             role: 'user',
             content: [
-              `# Exercise (L${exercise.rung}, ${exercise.workSurface})`,
+              `# Practice (${practice.kind}; the learner's workflow: ${practice.workflowName})`,
               `Title: ${exercise.title}`,
-              `Brief: ${exercise.brief}`,
-              `Competencies: ${exercise.competencyCodes.map((c) => `${c} (${COMPETENCY_BY_CODE.get(c)?.name ?? c})`).join(', ')}`,
+              `The ask: ${practice.ask}`,
+              `Competencies (internal): ${exercise.competencyCodes.map((c) => `${c} (${COMPETENCY_BY_CODE.get(c)?.name ?? c})`).join(', ')}`,
               `Pass threshold (weighted score): ${threshold}`,
-              `Attempt: ${submission.attempt}; cold attempt (no worked example seen): ${submission.coldAttempt ? 'yes' : 'no'}`,
+              `Attempt: ${submission.attempt}`,
               '',
               '# Rubric (score each criterion 0..1; use the keys exactly)',
               ...rubric.map(
@@ -167,15 +170,8 @@ export class GraderService {
               '# Firm compliance boundary',
               boundaryText(boundary),
               '',
-              `# Learner's one-line guess of what they would get back (they rated the chance of passing at ${Math.round(submission.expectationConfidence * 100)}%)`,
-              submission.expectationText,
-              '',
-              '# Work',
+              "# The learner's work (what they typed, then what Claude produced on Run)",
               artifactText,
-              '',
-              "# Learner's self-check (rubric items ticked / left unticked, with any note)",
-              submission.critiqueText ?? '(none)',
-              `Parsed ticks: ${JSON.stringify(parseSelfCheck(submission.critiqueText ?? '', rubric))}`,
             ].join('\n'),
           },
         ],
@@ -185,32 +181,22 @@ export class GraderService {
             label: c.label,
           })),
           artifactText,
-          critiqueText: submission.critiqueText ?? '',
-          expectationText: submission.expectationText,
+          kind: practice.kind,
+          workflowName: practice.workflowName,
           isSkill: artifactType === 'skill',
           firstTask: exercise.rung === 0,
-          selfCheck: parseSelfCheck(submission.critiqueText ?? '', rubric),
         },
       },
       SubmissionGradeSchema,
     );
 
-    const parsed = parseSelfCheck(submission.critiqueText ?? '', rubric);
-    const rubricScores: RubricScoreWithSelfCheck[] = rubric.map((c) => {
+    const rubricScores: RubricScore[] = rubric.map((c) => {
       const s = out.rubric.find((r) => r.criterion === c.criterion);
-      const score = clamp01(s?.score ?? 0);
-      const agreement = out.selfCheckAgreement.find((a) => a.criterion === c.criterion);
-      const learner = agreement?.learner ?? parsed[c.criterion] ?? true;
       return {
         criterion: c.criterion,
         label: c.label,
-        score,
+        score: clamp01(s?.score ?? 0),
         note: s?.note ?? 'Not addressed by the grader.',
-        selfCheck: {
-          item: agreement?.item?.trim() || c.label,
-          learner,
-          grader: agreement?.grader ?? score >= 0.75,
-        },
       };
     });
     const score = this.weightedScore(rubric, rubricScores);
@@ -226,6 +212,11 @@ export class GraderService {
             ),
           )
         : [];
+    const feedback: PracticeFeedback = {
+      worked: oneLine(out.worked) || 'You made a real attempt on your own work.',
+      change: oneLine(out.change) || `Look again at ${(rubricScores.sort((a, b) => a.score - b.score)[0]?.label ?? 'the weakest part').toLowerCase()}.`,
+      tryNext: oneLine(out.tryNext) || 'Next run, say who reads this and what they will do with it.',
+    };
 
     const grade = this.grades.create({
       submissionId: submission.id,
@@ -233,20 +224,109 @@ export class GraderService {
       personId: person.id,
       rubric: rubricScores,
       score,
-      feedback: out.feedback,
+      feedback: encodeFeedback(feedback),
       decision,
-      critiqueQuality: clamp01(out.critiqueQuality),
-      expectationAccuracy: this.mastery.expectationAccuracy(
-        submission.expectationConfidence,
-        decision === 'pass',
-      ),
+      critiqueQuality: null,
+      expectationAccuracy: null,
       securityFindings,
-      teachingMoment: out.teachingMoment,
+      teachingMoment: feedback.tryNext,
       graderVersion: GRADER_VERSION,
       model: this.ai.provider === 'mock' ? 'mock' : this.ai.defaultModel,
       gradedByPersonId: null,
     });
     return this.grades.save(grade);
+  }
+
+  // ───────────────────────── review practice (L5) ─────────────────────────
+
+  /**
+   * Grade a review-kind submission: the learner scored a teammate's work out of 10 and wrote notes.
+   * Evidence is agreement with the Grader's score on that work (graded now if it was still pending).
+   * Deterministic; no Claude call. Returns the saved grade and the agreement the response exposes.
+   */
+  async gradeReview(
+    exercise: Exercise,
+    submission: Submission,
+    person: Person,
+    orgId: string | null,
+  ): Promise<{ grade: Grade; agreement: { learner: number; grader: number; note: string } }> {
+    const practice = practiceOf(exercise);
+    const targetId =
+      practice.kind === 'review' ? practice.prefill.submissionId : '';
+    const target = targetId
+      ? await this.submissions.findOne({ where: { id: targetId } })
+      : null;
+    if (!target)
+      throw new ConflictException("The work to review is no longer available; skip this one and Coach will queue another.");
+    let graderGrade = gradeOfRecord(
+      await this.grades.find({ where: { submissionId: target.id } }),
+    );
+    if (!graderGrade) {
+      const targetExercise = await this.exercises.findOne({ where: { id: target.exerciseId } });
+      const author = targetExercise ? ({ id: target.personId } as Person) : null;
+      if (!targetExercise || !author)
+        throw new ConflictException('The work to review has no grade yet and its exercise is missing.');
+      graderGrade = await this.gradeSubmission(targetExercise, target, author, orgId);
+    }
+    const learner10 = Math.round(Math.min(10, Math.max(0, Number(submission.artifact.score10 ?? 0))) * 10) / 10;
+    const grader10 = score10Of(graderGrade.score);
+    const delta = Math.abs(learner10 - grader10);
+    const agreementScore = clamp01(1 - delta / 10);
+    const decisionMatch = (learner10 >= 7) === (graderGrade.decision === 'pass');
+    const notes = (submission.artifact.notes ?? submission.artifact.content ?? '').trim();
+    const notesQuality = clamp01(
+      0.4 + (notes.length > 80 ? 0.3 : notes.length > 30 ? 0.15 : 0) + (/\b(change|instead|try|because|missing|add|cut|remove)\b/i.test(notes) ? 0.3 : 0),
+    );
+    const rubric = this.rubricFor(exercise, 'review');
+    const rubricScores: RubricScore[] = rubric.map((c) => {
+      const key = c.criterion.split('.').pop();
+      let score = agreementScore;
+      let note = `You gave ${learner10}/10; the Grader gave ${grader10}/10.`;
+      if (key === 'decision') {
+        score = decisionMatch ? 1 : 0.3;
+        note = decisionMatch ? 'Your pass / try-again call matched the Grader.' : 'Your pass / try-again call differed from the Grader.';
+      } else if (c.competencyCode === 'L5.feedback' || key === 'specific' || key === 'smallest' || key === 'principle') {
+        score = notesQuality;
+        note = notes.length > 80 ? 'Your notes name specific things to change.' : 'Your notes are short; name the one change that would fix the weakest part.';
+      } else if (key === 'consistency') {
+        score = clamp01((agreementScore + (decisionMatch ? 1 : 0.5)) / 2);
+        note = 'Consistency is judged across your reviews over time.';
+      }
+      return { criterion: c.criterion, label: c.label, score: clamp01(score), note };
+    });
+    const score = this.weightedScore(rubric, rubricScores);
+    const threshold = this.thresholdFor(exercise, 'review');
+    const decision: Grade['decision'] = score >= threshold ? 'pass' : 'revise';
+    const agreementNote =
+      delta <= 1
+        ? `Close: you and the Grader landed within a point (${learner10} vs ${grader10}).`
+        : learner10 > grader10
+          ? `You were ${delta.toFixed(1)} points kinder than the Grader (${learner10} vs ${grader10}).`
+          : `You were ${delta.toFixed(1)} points harsher than the Grader (${learner10} vs ${grader10}).`;
+    const feedback: PracticeFeedback = {
+      worked: delta <= 1 ? 'Your score landed close to the Grader\'s.' : notes.length > 80 ? 'Your notes point at specific things the author can change.' : 'You read the work and made a call.',
+      change: delta <= 1 ? (notes.length > 80 ? 'Nothing major; keep tying each note to one part of the work.' : 'Write notes the author can act on: name the part and the smallest change.') : `Re-read the rubric notes before scoring: ${agreementNote}`,
+      tryNext: 'Next review, write down your score before you read anyone else\'s, then compare.',
+    };
+    const grade = await this.grades.save(
+      this.grades.create({
+        submissionId: submission.id,
+        skillVersionId: null,
+        personId: person.id,
+        rubric: rubricScores,
+        score,
+        feedback: encodeFeedback(feedback),
+        decision,
+        critiqueQuality: null,
+        expectationAccuracy: null,
+        securityFindings: [],
+        teachingMoment: feedback.tryNext,
+        graderVersion: GRADER_VERSION,
+        model: null,
+        gradedByPersonId: null,
+      }),
+    );
+    return { grade, agreement: { learner: learner10, grader: grader10, note: agreementNote } };
   }
 
   // ───────────────────────── skills ─────────────────────────
@@ -503,10 +583,7 @@ export class GraderService {
         feedback,
         decision,
         critiqueQuality: draft?.critiqueQuality ?? null,
-        expectationAccuracy: this.mastery.expectationAccuracy(
-          submission.expectationConfidence,
-          decision === 'pass',
-        ),
+        expectationAccuracy: null,
         securityFindings: draft?.securityFindings ?? [],
         teachingMoment: draft?.teachingMoment ?? null,
         graderVersion: 'champion-v1',
@@ -563,7 +640,16 @@ export class GraderService {
     const a = submission.artifact;
     if (!a) return '';
     const parts = [`Type: ${a.type}`, a.content];
+    if (a.material) parts.push(`\n--- material the learner pasted ---\n${a.material}`);
+    if (a.testTask) parts.push(`\n--- test task ---\n${a.testTask}`);
+    if (a.schema) parts.push(`\n--- workflow map ---\n${JSON.stringify(a.schema, null, 2)}`);
     if (a.output) parts.push(`\n--- Claude output ---\n${a.output}`);
+    if (a.sampleRequests?.length && !a.results?.length)
+      parts.push(`\n--- sample requests ---\n${a.sampleRequests.join('\n')}`);
+    if (a.results?.length)
+      parts.push(
+        `\n--- sample requests run against the skill ---\n${a.results.map((r) => `request: ${r.request}\nfired: ${r.fired ? 'yes' : 'no'}\noutput: ${r.output}`).join('\n\n')}`,
+      );
     if (a.rationale)
       parts.push(`\n--- Include/exclude rationale ---\n${a.rationale}`);
     if (a.files?.length)
@@ -592,52 +678,8 @@ function clamp01(x: number): number {
   return Math.min(1, Math.max(0, Number.isFinite(x) ? x : 0));
 }
 
-/**
- * Parse the learner's self-check text into ticks per rubric criterion. Accepts "[x] label" / "[ ] label",
- * "✓ label" / "✗ label", "ticked: a; b" / "unticked: c", or a JSON object/array of {criterion|item, checked}.
- * Items are matched to criteria by key or by label words; unmatched criteria are left undefined.
- */
-export function parseSelfCheck(text: string, rubric: { criterion: string; label: string }[]): Record<string, boolean> {
-  const out: Record<string, boolean> = {};
-  if (!text.trim()) return out;
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const assign = (item: string, checked: boolean) => {
-    const n = norm(item);
-    if (!n) return;
-    const hit = rubric.find((c) => c.criterion.toLowerCase() === item.trim().toLowerCase()) ?? rubric.find((c) => norm(c.label) === n) ?? rubric.find((c) => n.includes(norm(c.label)) || norm(c.label).includes(n));
-    if (hit) out[hit.criterion] = checked;
-  };
-  try {
-    const json = JSON.parse(text) as unknown;
-    const rows = Array.isArray(json) ? json : json && typeof json === 'object' ? Object.entries(json as Record<string, unknown>).map(([k, v]) => ({ item: k, checked: v })) : [];
-    for (const r of rows as { criterion?: string; item?: string; label?: string; checked?: unknown; ticked?: unknown }[]) {
-      if (!r || typeof r !== 'object') continue;
-      const checked = Boolean(r.checked ?? r.ticked);
-      assign(String(r.criterion ?? r.item ?? r.label ?? ''), checked);
-    }
-    if (Object.keys(out).length) return out;
-  } catch {
-    /* not JSON */
-  }
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    let m = /^[-*]?\s*\[(x|X| )\]\s*(.+)$/.exec(line);
-    if (m) {
-      assign(m[2], m[1] !== ' ');
-      continue;
-    }
-    m = /^(✓|✔|☑|✗|✘|☐|✕)\s*(.+)$/.exec(line);
-    if (m) {
-      assign(m[2], /[✓✔☑]/.test(m[1]));
-      continue;
-    }
-    m = /^(ticked|checked|unticked|unchecked|not ticked|missed)\s*:\s*(.+)$/i.exec(line);
-    if (m) {
-      const checked = /^(ticked|checked)$/i.test(m[1]);
-      for (const item of m[2].split(/[;,]/)) assign(item, checked);
-    }
-  }
-  return out;
+function oneLine(text: string | null | undefined): string {
+  return (text ?? '').replace(/\s+/g, ' ').trim();
 }
 
 function escapeRegExp(s: string): string {

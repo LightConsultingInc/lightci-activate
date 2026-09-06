@@ -9,11 +9,15 @@ export const DECAY_LAMBDA = 0.01;
 export const OVERCONFIDENCE_KAPPA = 1.5;
 export const REVISIT_INTERVALS_DAYS = [2, 7, 21, 60, 120] as const;
 export const REVISIT_PASS_SCORE = 0.8;
+/**
+ * Practice v2 (2026-09-06): the judgement component is retired. Mastery is artifact 0.6,
+ * consistency 0.2, retention 0.2. `judgement` is still computed for legacy display but carries no weight.
+ */
 export const MASTERY_WEIGHTS = {
-  artifact: 0.4,
+  artifact: 0.6,
   consistency: 0.2,
   retention: 0.2,
-  judgement: 0.2,
+  judgement: 0,
 } as const;
 export const DECAY_REASSESS_THRESHOLD = 0.7;
 
@@ -120,18 +124,15 @@ export function judgementScore(
   return clamp01(0.5 * calibration + 0.5 * clamp01(critiqueQuality));
 }
 
-/** Mastery = 0.40·artifact + 0.20·consistency + 0.20·retention + 0.20·judgement. */
+/** Mastery = 0.60·artifact + 0.20·consistency + 0.20·retention (judgement retired 2026-09-06; accepted and ignored). */
 export function compositeMastery(
-  c: Pick<
-    MasteryComponents,
-    'artifact' | 'consistency' | 'retention' | 'judgement'
-  >,
+  c: Pick<MasteryComponents, 'artifact' | 'consistency' | 'retention'> &
+    Partial<Pick<MasteryComponents, 'judgement'>>,
 ): number {
   const m =
     MASTERY_WEIGHTS.artifact * c.artifact +
     MASTERY_WEIGHTS.consistency * c.consistency +
-    MASTERY_WEIGHTS.retention * c.retention +
-    MASTERY_WEIGHTS.judgement * c.judgement;
+    MASTERY_WEIGHTS.retention * c.retention;
   return Math.round(clamp01(m) * 1000) / 1000;
 }
 
@@ -154,8 +155,9 @@ export interface MasteryInput {
   artifacts: readonly ScoredArtifact[];
   /** Last successful revisit for this competency, if any. */
   lastRevisit?: { score: number; daysAgo: number } | null;
-  predictions: readonly Prediction[];
-  critiqueQuality: number;
+  /** Legacy inputs; still summarised into components.judgement for display, never weighted. */
+  predictions?: readonly Prediction[];
+  critiqueQuality?: number | null;
   requiredContexts: number;
   halfLifeDays?: number;
   lambda?: number;
@@ -193,8 +195,8 @@ export function computeMastery(input: MasteryInput): {
     retention = retentionDecay(latest.score, latest.daysAgo, input.lambda);
   }
   const judgement = judgementScore(
-    input.predictions,
-    input.critiqueQuality,
+    input.predictions ?? [],
+    input.critiqueQuality ?? 0,
     input.kappa,
   );
   const components: MasteryComponents = {
@@ -207,16 +209,12 @@ export function computeMastery(input: MasteryInput): {
   return { mastery: compositeMastery(components), components };
 }
 
-/** Promotion gate check from §6: mastery, contexts and judgement together. */
+/** Promotion gate check from §6: mastery and contexts. Judgement is accepted for compatibility and ignored (retired 2026-09-06). */
 export function meetsGate(
-  m: { mastery: number; contexts: number; judgement: number },
-  gate: { masteryThreshold: number; minContexts: number; minJudgement: number },
+  m: { mastery: number; contexts: number; judgement?: number | null },
+  gate: { masteryThreshold: number; minContexts: number; minJudgement?: number },
 ): boolean {
-  return (
-    m.mastery >= gate.masteryThreshold &&
-    m.contexts >= gate.minContexts &&
-    m.judgement >= gate.minJudgement
-  );
+  return m.mastery >= gate.masteryThreshold && m.contexts >= gate.minContexts;
 }
 
 function round3(x: number): number {

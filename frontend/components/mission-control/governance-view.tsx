@@ -46,7 +46,7 @@ function Inner() {
   )
 }
 
-export const MODE_LABEL: Record<string, string> = { hidden: "Hidden", available: "Available", auto_installed: "Auto-installed" }
+export const MODE_LABEL: Record<string, string> = { hidden: "Hidden", available: "Available", auto: "Auto-installed", auto_installed: "Auto-installed" }
 
 export function DriftBadge({ a }: { a: Assignment }) {
   if (!a.drift) return <Badge variant="outline" className="border-pass/40 bg-pass-soft text-foreground">In sync</Badge>
@@ -62,6 +62,10 @@ export function driftHint(a: Assignment) {
 function Body({ d }: { d: Governance }) {
   const me = useMe()
   const configured = d.complianceFeed?.configured ?? (d.eventsSource ? d.eventsSource === "compliance_api" : Boolean((me.org?.settings as { claudeComplianceConfigured?: boolean } | undefined)?.claudeComplianceConfigured))
+  // "Configured" is not "live": a key can be present but rejected (scopes, network). Only claim
+  // the Compliance API as the source when the rows actually came from it.
+  const live = (d.complianceFeed?.source ?? d.eventsSource ?? (configured ? "compliance_api" : "audit_log")) === "compliance_api"
+  const feedDetail = d.complianceFeed?.detail
   const events = d.complianceFeed?.events ?? d.events ?? []
   const boundaryVersion = d.boundary?.version
   return (
@@ -84,7 +88,7 @@ function Body({ d }: { d: Governance }) {
         <RankingTable
           testId="promotion-log"
           rows={d.promotionLog ?? []}
-          rowKey={(r, ) => `${r.at}-${typeof r.skill === "string" ? r.skill : r.skill.id}-${r.version}`}
+          rowKey={(r) => `${r.at}-${typeof r.skill === "string" ? r.skill : r.skill.id}-${r.version}-${r.decision}`}
           defaultSort={{ key: "at", dir: "desc" }}
           dense
           emptyLabel="No promotions yet."
@@ -142,8 +146,13 @@ function Body({ d }: { d: Governance }) {
         </Panel>
       </div>
 
-      <Panel title="Compliance API events" description={configured ? "Skill sharing, role assignment and plugin changes from your Claude Enterprise org." : "Falls back to Activate's own audit log until the Compliance key is added."} footer={<SourceLine source={configured ? "Claude Compliance API" : "Activate audit log"} baseline="n/a (event feed)" />} testId="panel-events">
+      <Panel title="Compliance API events" description={live ? "Skill sharing, role assignment and plugin changes from your Claude Enterprise org." : configured ? "Compliance key present but the feed is unavailable; showing Activate's own audit log instead." : "Falls back to Activate's own audit log until the Compliance key is added."} footer={<SourceLine source={live ? "Claude Compliance API" : "Activate audit log"} baseline="n/a (event feed)" />} testId="panel-events">
         {!configured && <NotConfigured kind="claude_compliance" feature="The Compliance API event feed" className="mb-4" />}
+        {configured && !live && (
+          <p className="mb-4 rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground" data-testid="compliance-feed-unavailable" role="status">
+            Compliance API feed unavailable{feedDetail ? `: ${feedDetail}` : ""}. Rows below are from Activate&apos;s audit log. Check the key&apos;s scopes under <Link href="/admin/integrations" className="underline underline-offset-4">Integrations &amp; Keys</Link>.
+          </p>
+        )}
         {events.length === 0 ? (
           <p className="text-sm text-muted-foreground">No events in range.</p>
         ) : (

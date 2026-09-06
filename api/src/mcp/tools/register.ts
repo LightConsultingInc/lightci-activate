@@ -14,7 +14,13 @@ import {
   webUrl,
 } from '../context';
 import type { McpService } from '../mcp.service';
-import { frontmatter, slugify } from './helpers';
+import {
+  frontmatter,
+  slugify,
+  toRestArtifact,
+  toRestBoundary,
+  toRestSampleCases,
+} from './helpers';
 import {
   renderError,
   renderInterview,
@@ -326,8 +332,8 @@ export function registerTools(
         skillRes = await rest(`/skills/${existing.body.id}`, 'PATCH', {
           skillMd: args.skill_md,
           triggerLine,
-          boundary: args.boundary,
-          sampleCases: args.sample_cases,
+          boundary: toRestBoundary(args.boundary),
+          sampleCases: toRestSampleCases(args.sample_cases),
           name,
         });
       } else {
@@ -336,8 +342,8 @@ export function registerTools(
           slug: slugify(name),
           triggerLine,
           skillMd: args.skill_md,
-          boundary: args.boundary,
-          sampleCases: args.sample_cases,
+          boundary: toRestBoundary(args.boundary),
+          sampleCases: toRestSampleCases(args.sample_cases),
           workflowMapId: args.workflow_map_id,
         });
       }
@@ -459,7 +465,7 @@ export function registerTools(
         {
           expectationText: args.expectation,
           expectationConfidence: args.confidence,
-          artifact: args.artifact,
+          artifact: toRestArtifact(args.artifact),
           critiqueText: args.critique,
           coldAttempt: args.cold_attempt ?? true,
         },

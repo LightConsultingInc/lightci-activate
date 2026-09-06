@@ -4487,7 +4487,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You write three or four CD memos a month and told Interviewer the cover note is the part you rewrite most. This teaches Description on a piece of your own work.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'cd-memo',
     workflowKey: 'cd-memo-drafting',
@@ -4543,7 +4543,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'RMD letters are your biggest single-week workload and they quote a dollar figure to a client, so the delegation decision matters more than the prompt.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'rmd-letters',
     workflowKey: 'rmd-letter-drafting',
@@ -4604,7 +4604,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You write ten of these a week. If Claude can draft the agenda section reliably, the Project you build at L2 will save you most of Monday morning.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'meeting-prep',
     workflowKey: 'monday-meeting-prep',
@@ -4687,7 +4687,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'Your last two submissions were strong on Description; this one is about the check you do before an advisor presents something Claude drafted.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'annual-review',
     workflowKey: 'annual-review-deck',
@@ -4749,7 +4749,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You run Monday prep every week for three advisors; a Project means each brief starts from your rules instead of a blank page. This is your L2 passing artifact.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'project',
     contextTag: 'meeting-prep',
     workflowKey: 'monday-meeting-prep',
@@ -4829,7 +4829,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'Your meeting-prep Project passed on selection; RMD letters are a different context with a client-facing output and a tighter boundary, so this checks the skill transfers.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'project',
     contextTag: 'rmd-letters',
     workflowKey: 'rmd-letter-drafting',
@@ -4900,7 +4900,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       "Third context for L2. It also tests whether you can build on a teammate's skill rather than duplicating it, which is the fastest route through L3.",
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'project',
     contextTag: 'annual-review',
     workflowKey: 'annual-review-deck',
@@ -4977,7 +4977,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You run Monday prep every week and your Project is the tool you will hand to Rajesh and Grace. Grader flagged the example briefs anchoring the output in your v1 critique; this closes that loop and gives you a fourth context for L2.selection.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'project',
     contextTag: 'meeting-prep',
     workflowKey: 'monday-meeting-prep',
@@ -5017,7 +5017,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You contributed the change; using it on real briefs is how we find out whether it holds up across three advisors.',
     kind: 'adopt',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'project',
     contextTag: 'meeting-prep',
     workflowKey: 'monday-meeting-prep',
@@ -5043,7 +5043,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You told Interviewer you ask Claude to "make this better" without saying what better is. This is your own call, with a reader and a format.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'discovery',
     workflowKey: 'proposal-assembly',
@@ -5105,7 +5105,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'Fee comms are the most sensitive thing you write. This exercise is as much about what must not go in the email as what should.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'fee-change',
     workflowKey: 'fee-change-comms',
@@ -5168,7 +5168,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You write five or six of these a week and you have adopted client-followup-summary. Before you rely on the skill, you should be able to write the prompt cold, so you can tell when the skill gets it wrong.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'follow-up',
     workflowKey: 'client-followup',
@@ -5197,7 +5197,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'Third context for L1. Diligence is the competency you have not yet shown.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'quarterly-review',
     hints: [
@@ -5225,7 +5225,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You arrived with a working Project; this makes the reasoning explicit so you can turn it into a skill at L3.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'project',
     contextTag: 'deck-narrative',
     workflowKey: 'annual-review-deck',
@@ -5483,7 +5483,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     rationale:
       'You already use a Project for CD memos; making the choices explicit is your L2 artifact.',
     kind: 'artifact',
-    mode: 'in_claude',
+    mode: 'in_app',
     workSurface: 'project',
     contextTag: 'cd-memo',
     workflowKey: 'cd-memo-drafting',
