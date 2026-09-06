@@ -21,9 +21,11 @@ function build(personProfile: Person['profile'] = {}, maps: Partial<WorkflowMap>
   const workflows = new FakeRepo<WorkflowMap>(maps);
   const ai = fakeAi();
   const structured = jest.spyOn(ai, 'structured');
-  const svc = new LessonsService(rows as any, layers as any, workflows as any, ai as any);
+  const memoryState = { version: 1 };
+  const memory = { get: jest.fn(() => Promise.resolve({ summary: 'Planner who does RMD letters most weeks.', strengths: [], struggles: ['gets caught on format'], preferences: [], vocabulary: [], systems: [], anchorWorkflows: [], version: memoryState.version, updatedAt: null, lastEvents: [] })), record: jest.fn(() => Promise.resolve({ version: memoryState.version })) };
+  const svc = new LessonsService(rows as any, layers as any, workflows as any, ai as any, memory as any);
   const person = { id: 'p1', title: 'Financial planner', profile: personProfile } as Person;
-  return { svc, rows, person, structured };
+  return { svc, rows, person, structured, memoryState, memory };
 }
 
 describe('LessonsService.personalise', () => {
@@ -40,7 +42,7 @@ describe('LessonsService.personalise', () => {
       { id: 'wf-a', orgId: 'org1', ownerPersonId: 'p1', name: 'Monday client review pack', schema: { runsPerWeek: 1, inputs: [{ name: 'Last week notes', source: 'Drive' }], outputs: [{ name: 'Pack', destination: 'Team' }] }, updatedAt: new Date() },
       { id: 'wf-b', orgId: 'org1', ownerPersonId: 'p1', name: 'RMD letters', schema: { runsPerWeek: 4, outputs: [{ name: 'Letter', destination: 'Client' }] }, updatedAt: new Date() },
     ];
-    const { svc, rows, person, structured } = build({ responsibilities: ['Client reviews'] }, maps);
+    const { svc, rows, person, structured, memoryState } = build({ responsibilities: ['Client reviews'] }, maps);
     const first = await svc.personalise(person, 'org1', 'say-who-it-is-for', lesson);
     expect(first.personalised).toBe(true);
     expect(first.example.title).toBe('RMD letters: A status note');
@@ -54,6 +56,20 @@ describe('LessonsService.personalise', () => {
     const second = await svc.personalise(person, 'org1', 'say-who-it-is-for', lesson);
     expect(second).toEqual(first);
     expect(structured).toHaveBeenCalledTimes(1); // cache hit, no second Claude call
+
+    memoryState.version = 2;
+    const third = await svc.personalise(person, 'org1', 'say-who-it-is-for', lesson);
+    expect(third.personalised).toBe(true);
+    expect(structured).toHaveBeenCalledTimes(2); // memory moved on → regenerated
+    expect(rows.rows).toHaveLength(1);
+    expect(rows.rows[0].memoryVersion).toBe(2);
+  });
+
+  it('checked() records a lesson_checked event', async () => {
+    const { svc, person, memory } = build({ responsibilities: ['x'] });
+    const out = await svc.checked(person, 'org1', 'say-who-it-is-for', false);
+    expect(out).toEqual({ ok: true, memoryVersion: 1 });
+    expect(memory.record).toHaveBeenCalledWith('p1', 'org1', expect.objectContaining({ kind: 'lesson_checked', data: { lessonSlug: 'say-who-it-is-for', correct: false } }));
   });
 
   it('uses the intake profile when there is no workflow map yet', async () => {

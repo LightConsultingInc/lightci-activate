@@ -253,6 +253,10 @@ export function IntakeChat({
     await runPlacement()
   }
 
+  useEffect(() => {
+    finishRef.current = finishFromChat
+  })
+
   if (q.isPending)
     return (
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
@@ -269,9 +273,6 @@ export function IntakeChat({
       />
     )
   const iv = q.data
-  useEffect(() => {
-    finishRef.current = finishFromChat
-  })
 
   if (phase === "placing")
     return (

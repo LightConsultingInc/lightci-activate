@@ -16,6 +16,7 @@ import { ModuleCard } from "./module-card"
 import { UpNext } from "./up-next"
 import { QuickRecaps } from "./quick-recaps"
 import { MySkillsPanel } from "./my-skills-panel"
+import { MemoryLine } from "../modules/memory-card"
 import type { RevisitSummary } from "@/hooks/learner/types"
 
 /** Home: a slim header, the six modules on your path, one "Up next", and today's quick recaps. */
@@ -85,6 +86,7 @@ export function HomeView() {
       </div>
 
       <MySkillsPanel />
+      <MemoryLine moduleCode={current.code} />
       <RevisitSheet revisit={revisit} onOpenChange={(o) => !o && setRevisit(null)} />
     </div>
   )

@@ -21,6 +21,7 @@ import {
   nextRevisitInterval,
 } from './mastery-math';
 import { MasteryService } from './mastery.service';
+import { MemoryService } from './memory.service';
 import { REVISIT_GRADER_SYSTEM } from './prompts';
 import './learning.mocks';
 
@@ -40,6 +41,7 @@ export class RevisitService {
     @InjectRepository(Revisit) private readonly revisits: Repository<Revisit>,
     private readonly ai: AiService,
     private readonly mastery: MasteryService,
+    private readonly memory: MemoryService,
   ) {}
 
   /** Pure scheduling rule, exposed for tests. */
@@ -174,6 +176,11 @@ export class RevisitService {
     );
     try {
       await this.mastery.snapshot(revisit.personId);
+      await this.memory.record(revisit.personId, orgId, {
+        kind: 'revisit_answered',
+        note: `Recall check on ${def?.name ?? revisit.competencyCode}: ${score >= REVISIT_PASS_SCORE ? 'passed' : 'missed'} (${score}). ${graded.feedback.slice(0, 140)}`,
+        data: { competencyCode: revisit.competencyCode, score },
+      });
     } catch (error) {
       this.logger.warn(
         `Mastery snapshot after revisit failed: ${error instanceof Error ? error.message : String(error)}`,

@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import type { Lesson } from "@/content/lessons/types"
 import { api, ApiError } from "@/lib/api"
 import type {
-  Artifact, Baseline, CompetencyCatalogEntry, ExerciseDetail, LessonPersonalised, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
+  Artifact, Baseline, CompetencyCatalogEntry, ExerciseDetail, LessonPersonalised, PersonMemory, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
   Measurement, MySkills, RealtimeSession, RevisitAnswer, SkillDetail, SubmitResult, VoiceTranscriptTurn, WorkflowDetail, WorkflowSchema, WorkflowSummary,
 } from "./types"
 
@@ -15,7 +15,9 @@ export const keys = {
   exercise: (id: string) => ["exercise", id] as const,
   exercises: (status: string) => ["exercises", status] as const,
   competencies: ["competencies"] as const,
-  lessonPersonalised: (slug: string) => ["lesson-personalised", slug] as const,
+  lessonPersonalised: (slug: string, memoryVersion?: number) => (memoryVersion == null ? (["lesson-personalised", slug] as const) : (["lesson-personalised", slug, memoryVersion] as const)),
+  memory: ["memory", "me"] as const,
+  whyMe: (code: string) => ["module", code, "why-me"] as const,
   history: ["history"] as const,
   workflows: ["workflows", "mine"] as const,
   workflow: (id: string) => ["workflow", id] as const,
@@ -41,12 +43,34 @@ export function useAnswerRevisit() {
   })
 }
 
+/** Resolve to null on 404 so optional endpoints degrade to "hidden" rather than an error state. */
+async function optional<T>(p: Promise<T>): Promise<T | null> {
+  try {
+    return await p
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null
+    throw e
+  }
+}
+
+// ─────────────────────────── Memory ───────────────────────────
+/** Coach's living picture of the person. Null until the API has one (404). */
+export const useMemory = () =>
+  useQuery({ queryKey: keys.memory, queryFn: () => optional(api.get<PersonMemory>("/api/memory/me")), staleTime: 60_000, retry: false })
+
+/** One line on why a module matters for this person. Null on 404. */
+export const useWhyMe = (code: string) =>
+  useQuery({ queryKey: keys.whyMe(code), queryFn: () => optional(api.get<{ line: string }>(`/api/modules/${encodeURIComponent(code)}/why-me`)), staleTime: 5 * 60_000, retry: false })
+
 // ─────────────────────────── Lessons ───────────────────────────
-/** The lesson's example and check, tailored to the learner's interview when one exists. */
-/** The API personalises on top of the generic lesson we send it (it has no copy of the content). */
-export const useLessonPersonalised = (lesson: Lesson | undefined) =>
+/**
+ * The lesson's example and check, tailored to the learner's interview when one exists. The API
+ * personalises on top of the generic lesson we send it (it has no copy of the content). Keyed by
+ * Coach's memory version so examples refresh after the memory changes.
+ */
+export const useLessonPersonalised = (lesson: Lesson | undefined, memoryVersion?: number) =>
   useQuery({
-    queryKey: keys.lessonPersonalised(lesson?.slug ?? ""),
+    queryKey: keys.lessonPersonalised(lesson?.slug ?? "", memoryVersion),
     enabled: Boolean(lesson),
     queryFn: () =>
       api.post<LessonPersonalised>(`/api/lessons/${encodeURIComponent(lesson!.slug)}/personalised`, {
@@ -60,6 +84,17 @@ export const useLessonPersonalised = (lesson: Lesson | undefined) =>
       }),
     staleTime: 5 * 60_000,
   })
+
+/** Fire-and-forget record of a quick-check answer. Failures are ignored; completion lives in localStorage. */
+export function useLessonChecked(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { correct: boolean }) => api.post<unknown>(`/api/lessons/${encodeURIComponent(slug)}/checked`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.memory }),
+    onError: () => {},
+    retry: false,
+  })
+}
 
 // ─────────────────────────── Exercise ───────────────────────────
 /** All of the caller's exercises, optionally narrowed to a comma-separated status list. */

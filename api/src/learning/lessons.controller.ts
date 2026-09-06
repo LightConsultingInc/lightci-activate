@@ -1,6 +1,6 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsInt, IsObject, IsString, Max, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsObject, IsString, Max, Min } from 'class-validator';
 import { CurrentUser, OrgId } from '../common/decorators';
 import { Person } from '../orgs/entities/person.entity';
 import type { LessonCheck, LessonExample } from './entities/lesson-personalisation.entity';
@@ -14,6 +14,10 @@ class PersonaliseLessonDto {
   @IsArray() keyPoints: string[];
   @IsObject() example: LessonExample;
   @IsObject() check: LessonCheck;
+}
+
+class LessonCheckedDto {
+  @IsBoolean() correct: boolean;
 }
 
 @ApiTags('Learning')
@@ -33,5 +37,11 @@ export class LessonsController {
       example: dto.example,
       check: dto.check,
     });
+  }
+
+  @Post(':slug/checked')
+  @ApiOperation({ summary: 'Record the outcome of a lesson check (feeds the person memory).' })
+  async checked(@CurrentUser() user: Person, @OrgId() orgId: string, @Param('slug') slug: string, @Body() dto: LessonCheckedDto): Promise<{ ok: true; memoryVersion: number }> {
+    return this.lessons.checked(user, orgId, slug.slice(0, 120), dto.correct);
   }
 }

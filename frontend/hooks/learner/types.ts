@@ -232,6 +232,16 @@ export type LadderView = {
   coachNotes: { note: string; tags: string[]; createdAt: string }[]
 }
 
+/** GET /memory/me: Coach's living picture of the person. */
+export type PersonMemory = {
+  summary: string
+  strengths: string[]
+  struggles: string[]
+  preferences: string[]
+  version: number
+  updatedAt: string
+}
+
 /** GET /lessons/:slug/personalised: the example and check rewritten around the learner's own work (or the static content echoed back). */
 export type LessonPersonalised = {
   example: { title: string; text: string }

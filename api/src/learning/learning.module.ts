@@ -27,6 +27,8 @@ import { LearningController } from './learning.controller';
 import { LessonPersonalisation } from './entities/lesson-personalisation.entity';
 import { LessonsController } from './lessons.controller';
 import { LessonsService } from './lessons.service';
+import { MemoryController } from './memory.controller';
+import { MemoryService } from './memory.service';
 import { MasteryService } from './mastery.service';
 import { PersonRefService } from './person-ref.service';
 import { RevisitService } from './revisit.service';
@@ -63,7 +65,7 @@ import './learning.mocks';
       UsageSnapshot,
     ]),
   ],
-  controllers: [LearningController, LessonsController],
+  controllers: [LearningController, LessonsController, MemoryController],
   providers: [
     PersonRefService,
     MasteryService,
@@ -72,6 +74,7 @@ import './learning.mocks';
     CoachService,
     LadderService,
     LessonsService,
+    MemoryService,
     LearningController,
   ],
   exports: [
@@ -83,6 +86,7 @@ import './learning.mocks';
     CoachService,
     LadderService,
     LessonsService,
+    MemoryService,
     LearningController,
   ],
 })

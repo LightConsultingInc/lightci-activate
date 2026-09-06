@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/shell/empty-state"
 import { Paper } from "@/components/brand/grain"
 import { lessonBySlug, moduleFor } from "@/content/lessons"
 import { useLessonProgress } from "@/hooks/learner/use-lesson-progress"
-import { useLessonPersonalised } from "@/hooks/learner/queries"
+import { useLessonChecked, useLessonPersonalised, useMemory } from "@/hooks/learner/queries"
 import { MarkdownLite } from "../markdown-lite"
 import { parseModuleCode } from "./module-state"
 import { cn } from "@/lib/utils"
@@ -21,7 +21,9 @@ export function LessonView({ code, slug }: { code: string; slug: string }) {
   const rung = parseModuleCode(code)
   const lesson = lessonBySlug(slug)
   const { isDone, markDone } = useLessonProgress()
-  const personalised = useLessonPersonalised(lesson)
+  const memory = useMemory()
+  const personalised = useLessonPersonalised(lesson, memory.data?.version)
+  const checked = useLessonChecked(slug)
   const [picked, setPicked] = useState<number | null>(null)
 
   if (rung == null || !lesson || lesson.rung !== rung) return <ErrorState title="No such lesson" detail={`"${slug}" is not part of ${code}.`} />
@@ -40,6 +42,7 @@ export function LessonView({ code, slug }: { code: string; slug: string }) {
     if (revealed) return
     setPicked(i)
     markDone(slug)
+    checked.mutate({ correct: i === check.answer })
   }
 
   return (

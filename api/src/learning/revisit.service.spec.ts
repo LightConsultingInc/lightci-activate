@@ -15,8 +15,9 @@ function build(seed: Partial<Revisit>[] = []) {
       Promise.resolve({ competencies: [], judgement: null, rung: 1 }),
     ),
   };
-  const svc = new RevisitService(repo as any, fakeAi() as any, mastery as any);
-  return { svc, repo, mastery };
+  const memory = { record: jest.fn(() => Promise.resolve({ version: 1 })) };
+  const svc = new RevisitService(repo as any, fakeAi() as any, mastery as any, memory as any);
+  return { svc, repo, mastery, memory };
 }
 
 describe('Leitner scheduler', () => {
@@ -86,7 +87,7 @@ describe('scheduleAfterGrade', () => {
 
 describe('answer() via the grader.revisit mock', () => {
   it('grades, closes the revisit and schedules the follow-up at the next interval', async () => {
-    const { svc, repo, mastery } = build([
+    const { svc, repo, mastery, memory } = build([
       {
         personId: 'p1',
         competencyCode: 'L1.description',
@@ -114,6 +115,7 @@ describe('answer() via the grader.revisit mock', () => {
     expect(repo.rows).toHaveLength(2);
     expect(repo.rows[1].prompt).not.toBe(revisit.prompt);
     expect(mastery.snapshot).toHaveBeenCalledWith('p1');
+    expect(memory.record).toHaveBeenCalledWith('p1', 'org1', expect.objectContaining({ kind: 'revisit_answered' }));
   });
 
   it('a short answer fails and resets to the 2-day box', async () => {

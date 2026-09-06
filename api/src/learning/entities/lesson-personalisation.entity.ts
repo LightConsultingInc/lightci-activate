@@ -13,5 +13,7 @@ export class LessonPersonalisation {
   @Column('jsonb') example: LessonExample;
   @Column('jsonb') check: LessonCheck;
   @Column('text', { nullable: true }) model: string | null;
+  /** Memory version the rewrite was based on; regenerated when the person's memory moves on. */
+  @Column('int', { default: 0 }) memoryVersion: number;
   @CreateDateColumn({ type: 'timestamptz' }) createdAt: Date;
 }

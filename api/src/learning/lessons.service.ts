@@ -7,6 +7,7 @@ import { ContextLayer } from '../context/entities/context-layer.entity';
 import { Person } from '../orgs/entities/person.entity';
 import { WorkflowMap } from '../workflows/entities/workflow-map.entity';
 import { LessonPersonalisation, type LessonCheck, type LessonExample } from './entities/lesson-personalisation.entity';
+import { MemoryService } from './memory.service';
 import { COACH_SYSTEM } from './prompts';
 import { buildSituation, type LearnerSituation } from './situation';
 import './learning.mocks';
@@ -54,6 +55,7 @@ export class LessonsService {
     @InjectRepository(ContextLayer) private readonly layers: Repository<ContextLayer>,
     @InjectRepository(WorkflowMap) private readonly workflows: Repository<WorkflowMap>,
     private readonly ai: AiService,
+    private readonly memory: MemoryService,
   ) {}
 
   /** Role, responsibilities and weekly workflows from the person ContextLayer, their WorkflowMaps and Person.profile. Null when nothing is known. */
@@ -68,8 +70,9 @@ export class LessonsService {
   async personalise(person: Person, orgId: string | null, slug: string, lesson: GenericLesson): Promise<PersonalisedLesson> {
     const situation = await this.situationFor(person, orgId);
     if (!situation) return { example: lesson.example, check: lesson.check, personalised: false };
+    const memory = await this.memory.get(person.id, orgId);
     const cached = await this.rows.findOne({ where: { personId: person.id, lessonSlug: slug } });
-    if (cached) return { example: cached.example, check: cached.check, personalised: true };
+    if (cached && cached.memoryVersion === memory.version) return { example: cached.example, check: cached.check, personalised: true };
 
     let out: z.infer<typeof PersonaliseLessonSchema>;
     try {
@@ -106,6 +109,11 @@ This call rewrites one lesson's example and check for one learner. The example m
                 `Weekly workflows: ${situation.workflows.map((w) => `${w.name}${w.runsPerWeek ? ` (${w.runsPerWeek}×/week${w.minutesPerRun ? `, ${w.minutesPerRun} min` : ''})` : ''}${w.inputs?.length ? `; inputs: ${w.inputs.join(', ')}` : ''}${w.outputs?.length ? `; outputs: ${w.outputs.join(', ')}` : ''}`).join('\n  ') || '(none recorded)'}`,
                 `Systems: ${situation.systems.join(', ') || '(none recorded)'}`,
                 situation.summary ? `Context: ${situation.summary}` : '',
+                '',
+                '# What Coach remembers (use the struggles to choose the framing)',
+                memory.summary ? `Summary: ${memory.summary}` : 'Summary: (nothing yet)',
+                `Struggles: ${memory.struggles.join('; ') || '(none recorded)'}`,
+                `Strengths: ${memory.strengths.join('; ') || '(none recorded)'}`,
               ].filter((l) => l !== '').join('\n'),
             },
           ],
@@ -121,7 +129,18 @@ This call rewrites one lesson's example and check for one learner. The example m
     const valid = options.length >= 3 && out.check.answer >= 0 && out.check.answer < options.length;
     const check: LessonCheck = valid ? { question: out.check.question, options, answer: out.check.answer, explanation: out.check.explanation } : lesson.check;
     const example: LessonExample = { title: out.example.title.slice(0, 120), text: out.example.text };
-    const row = await this.rows.save(this.rows.create({ personId: person.id, lessonSlug: slug, example, check, model: this.ai.provider === 'mock' ? 'mock' : this.ai.defaultModel }));
+    const model = this.ai.provider === 'mock' ? 'mock' : this.ai.defaultModel;
+    const row = await this.rows.save(cached ? Object.assign(cached, { example, check, model, memoryVersion: memory.version }) : this.rows.create({ personId: person.id, lessonSlug: slug, example, check, model, memoryVersion: memory.version }));
     return { example: row.example, check: row.check, personalised: true };
+  }
+
+  /** The learner answered a lesson check; remembered as a lesson_checked event. */
+  async checked(person: Person, orgId: string | null, slug: string, correct: boolean): Promise<{ ok: true; memoryVersion: number }> {
+    const memory = await this.memory.record(person.id, orgId, {
+      kind: 'lesson_checked',
+      note: `Lesson check "${slug}": ${correct ? 'correct' : 'incorrect'}.`,
+      data: { lessonSlug: slug, correct },
+    });
+    return { ok: true, memoryVersion: memory.version };
   }
 }

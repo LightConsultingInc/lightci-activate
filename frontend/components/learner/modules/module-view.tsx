@@ -10,7 +10,7 @@ import { ErrorState } from "@/components/shell/empty-state"
 import { Grain } from "@/components/brand/grain"
 import { rungColor } from "@/components/brand/rung"
 import { moduleFor } from "@/content/lessons"
-import { useLadder } from "@/hooks/learner/queries"
+import { useLadder, useWhyMe } from "@/hooks/learner/queries"
 import { ProgressRing } from "./progress-ring"
 import { moduleProgress, moduleState, parseModuleCode } from "./module-state"
 import { LearnTab } from "./learn-tab"
@@ -24,6 +24,7 @@ type Tab = (typeof TABS)[number]
 export function ModuleView({ code }: { code: string }) {
   const rung = parseModuleCode(code)
   const ladder = useLadder()
+  const whyMe = useWhyMe(code)
   const router = useRouter()
   const pathname = usePathname()
   const sp = useSearchParams()
@@ -63,6 +64,9 @@ export function ModuleView({ code }: { code: string }) {
             <p className="eyebrow text-paper/60">Module {rung + 1} of 6{state === "current" ? " · you are here" : state === "done" ? " · completed" : ""}</p>
             <h1 className="mt-1 font-display text-3xl font-medium leading-tight md:text-4xl" data-testid="module-name">{mod.name}</h1>
             <p className="mt-2 max-w-2xl text-sm text-paper/75">{mod.tagline}</p>
+            {whyMe.data?.line?.trim() && (
+              <p className="mt-2 max-w-2xl text-sm italic text-glow" data-testid="module-why-me">Why this matters for you: {whyMe.data.line}</p>
+            )}
             <ul className="mt-4 grid gap-2 sm:grid-cols-3" data-testid="module-outcomes">
               {mod.outcomes.map((o, i) => (
                 <li key={i} className="flex gap-2 rounded-lg border border-paper/10 bg-paper/5 p-3 text-xs leading-relaxed text-paper/85">

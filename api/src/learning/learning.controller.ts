@@ -56,6 +56,8 @@ import {
   toSubmissionView,
 } from './mappers';
 import { MasteryService } from './mastery.service';
+import { MemoryService } from './memory.service';
+import type { RubricScoreWithSelfCheck } from './mappers';
 import { PersonRefService } from './person-ref.service';
 import { RevisitService } from './revisit.service';
 
@@ -129,6 +131,7 @@ export class LearningController {
     private readonly revisits: RevisitService,
     private readonly ladder: LadderService,
     private readonly refs: PersonRefService,
+    private readonly memory: MemoryService,
   ) {}
 
   // ───────────────────────── ladder ─────────────────────────
@@ -387,6 +390,12 @@ export class LearningController {
     await this.revisits.scheduleAfterGrade(exercise, grade);
     await this.revisits.injectDecayRevisits(user.id);
     const promotion = await this.mastery.promoteIfEligible(user.id);
+    const missed = (grade.rubric as RubricScoreWithSelfCheck[]).filter((r) => r.score < 0.75 || (r.selfCheck && r.selfCheck.learner && !r.selfCheck.grader)).map((r) => r.selfCheck?.item ?? r.label);
+    await this.memory.record(user.id, orgId, {
+      kind: 'submission_graded',
+      note: `Graded "${exercise.title}" (${exercise.workSurface}, ${exercise.mode}): ${grade.score} ${grade.decision}${missed.length ? `; missed: ${missed.join(', ')}` : ''}${grade.teachingMoment ? `; next time: ${grade.teachingMoment.slice(0, 140)}` : ''}${promotion ? `; promoted to L${promotion.newRung}` : ''}.`,
+      data: { exerciseTitle: exercise.title, score: grade.score, decision: grade.decision, missedSelfCheck: missed, teachingMoment: grade.teachingMoment, mode: exercise.mode, workSurface: exercise.workSurface },
+    });
 
     let nextUp = await this.coach.nextUp(user.id);
     if (grade.decision === 'pass' && !nextUp) {

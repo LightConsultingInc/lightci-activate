@@ -11,7 +11,7 @@ function build(maps: Partial<WorkflowMap>[], layer: Partial<ContextLayer> | null
   const workflows = new FakeRepo<WorkflowMap>(maps);
   const empty = () => new FakeRepo<any>();
   const mastery = { report: jest.fn(() => Promise.resolve({ rung, nextRung: rung + 1, competencies: [], judgement: { score: 0 }, progress: {}, eligible: false })) };
-  const svc = new CoachService(exercises as any, empty() as any, empty() as any, empty() as any, empty() as any, layers as any, workflows as any, empty() as any, empty() as any, fakeAi() as any, mastery as any);
+  const svc = new CoachService(exercises as any, empty() as any, empty() as any, empty() as any, empty() as any, layers as any, workflows as any, empty() as any, empty() as any, fakeAi() as any, mastery as any, { get: jest.fn(() => Promise.resolve({ summary: null, strengths: [], struggles: [], preferences: [], vocabulary: [], systems: [], anchorWorkflows: [], version: 0, updatedAt: null, lastEvents: [] })), record: jest.fn(() => Promise.resolve({ version: 0 })) } as any);
   return { svc, exercises };
 }
 

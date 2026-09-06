@@ -21,6 +21,7 @@ import { Grade } from './entities/grade.entity';
 import { Submission } from './entities/submission.entity';
 import type { CompetencyView } from './learning.types';
 import { MasteryService } from './mastery.service';
+import { MemoryService, type PersonMemory } from './memory.service';
 import { COACH_RUN_SYSTEM, COACH_SYSTEM, boundaryText } from './prompts';
 import { buildSituation } from './situation';
 import './learning.mocks';
@@ -71,6 +72,7 @@ export class CoachService {
     @InjectRepository(Team) private readonly teams: Repository<Team>,
     private readonly ai: AiService,
     private readonly mastery: MasteryService,
+    private readonly memory: MemoryService,
   ) {}
 
   // ───────────────────────── queue ─────────────────────────
@@ -143,6 +145,7 @@ export class CoachService {
     const report = await this.mastery.report(person.id);
     const rung = report.rung;
     if (rung === 0 && !opts.kind && !opts.skillId) return this.generateFirstRealTask(person, orgId);
+    const memory = await this.memory.get(person.id, orgId);
     const unlocked = report.competencies.filter((c) => c.status !== 'locked');
     const target = this.pickTarget(
       unlocked,
@@ -258,6 +261,12 @@ export class CoachService {
                 ? `This exercise is about adopting skill ${opts.skillId} on the learner's own case.`
                 : '',
               '',
+              '# What Coach remembers about this learner (use it: target the struggles, build on the strengths, honour the preferences)',
+              memory.summary ? `Summary: ${memory.summary}` : 'Summary: (nothing yet)',
+              `Strengths: ${memory.strengths.join('; ') || '(none recorded)'}`,
+              `Struggles: ${memory.struggles.join('; ') || '(none recorded)'}`,
+              `Preferences: ${memory.preferences.join('; ') || '(none recorded)'}`,
+              '',
               '# Firm compliance boundary',
               boundaryText(org?.settings?.boundary),
               '',
@@ -269,6 +278,7 @@ export class CoachService {
         ],
         mockSeed: {
           rung,
+          struggles: memory.struggles,
           weakestCode: target.code,
           weakestName: target.name,
           workSurface: surface,
@@ -293,6 +303,7 @@ export class CoachService {
         opts,
       ),
     );
+    exercise.mode = modeForPreferences(memory, exercise.mode);
     const saved = await this.exercises.save(exercise);
     this.logger.log(
       `Coach generated "${saved.title}" (${saved.competencyCodes.join(',')}) for ${person.id}`,
@@ -707,9 +718,22 @@ export class CoachService {
         ? `${exercise.contextTag}`
         : exercise.contextTag;
     }
+    await this.memory.record(person.id, orgId, {
+      kind: 'exercise_skipped',
+      note: `Skipped "${exercise.title}" (${reason})${note ? `: ${note.slice(0, 120)}` : ''}${escalated ? '; escalated to champion' : ''}.`,
+      data: { exerciseTitle: exercise.title, skipReason: reason, mode: exercise.mode, workSurface: exercise.workSurface },
+    });
     const nextUp = await this.ensureNextUp(person, orgId);
     return { escalated, nextUp };
   }
+}
+
+/** Honour stated working preferences: typing-only / in-app → in_app; "in Claude" → in_claude. */
+export function modeForPreferences(memory: Pick<PersonMemory, 'preferences'>, fallback: Exercise['mode']): Exercise['mode'] {
+  const prefs = memory.preferences.join(' | ').toLowerCase();
+  if (/typing[- ]only|prefers? (to )?typ(e|ing)|in[- ]app|no claude|stay(s)? in (the )?app/.test(prefs)) return 'in_app';
+  if (/prefers? (working |doing it )?in claude|open in claude/.test(prefs)) return 'in_claude';
+  return fallback;
 }
 
 function slug(s: string | null | undefined): string {

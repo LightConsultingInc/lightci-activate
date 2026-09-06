@@ -184,3 +184,35 @@ registerMockResponder('coach.personalise-lesson', (call) => {
     check: { question: `In your ${workflow}, ${lower(check.question)}`, options: check.options, answer: check.answer, explanation: check.explanation },
   };
 });
+
+registerMockResponder('memory.synthesise', (call) => {
+  const s = seed<{ previous?: { summary: string | null; strengths: string[]; struggles: string[]; preferences: string[]; vocabulary: { term: string; meaning: string }[]; systems: string[]; anchorWorkflows: string[] }; events?: { kind: string; note: string }[]; allEvents?: { kind: string; note: string }[]; role?: string | null; profile?: { weeklyWorkflows?: string[]; responsibilities?: string[]; systems?: string[] } }>(call);
+  const prev = s.previous ?? { summary: null, strengths: [], struggles: [], preferences: [], vocabulary: [], systems: [], anchorWorkflows: [] };
+  const all = s.allEvents ?? s.events ?? [];
+  const graded = all.filter((e) => e.kind === 'submission_graded');
+  const passes = graded.filter((e) => /\bpass\b/.test(e.note)).length;
+  const revises = graded.filter((e) => /\brevise\b/.test(e.note)).length;
+  const missed = [...new Set(all.flatMap((e) => (/missed: ([^;.]+)/.exec(e.note)?.[1] ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)))];
+  const skips = all.filter((e) => e.kind === 'exercise_skipped');
+  const struggles = [...new Set([...prev.struggles, ...missed.map((m) => `gets caught on ${m}`), ...(skips.filter((e) => /blocked/.test(e.note)).length >= 2 ? ['often blocked by access or tooling'] : [])])].slice(0, 6);
+  const strengths = [...new Set([...prev.strengths, ...(passes >= 1 ? ['finishes real work with Claude'] : []), ...(all.some((e) => e.kind === 'revisit_answered' && /passed/.test(e.note)) ? ['recalls the rules later without prompting'] : [])])].slice(0, 6);
+  const preferences = [...new Set([...prev.preferences, ...all.filter((e) => /prefer/i.test(e.note)).map((e) => e.note.replace(/^.*?(prefer)/i, '$1').slice(0, 60)), ...(skips.filter((e) => /no_time/.test(e.note)).length >= 2 ? ['short exercises on busy weeks'] : [])])].slice(0, 6);
+  const workflows = [...new Set([...prev.anchorWorkflows, ...(s.profile?.weeklyWorkflows ?? [])])];
+  const role = s.role ?? 'professional';
+  return {
+    summary: `${role.charAt(0).toUpperCase()}${role.slice(1)} who does ${workflows.slice(0, 2).join(' and ') || 'recurring weekly work'} most weeks. Has ${graded.length} graded piece${graded.length === 1 ? '' : 's'} so far (${passes} passed, ${revises} sent back)${struggles.length ? `; keeps getting caught on ${struggles[0].replace(/^gets caught on /, '')}` : ''}. ${strengths.length ? `Strength: ${strengths[0]}.` : 'Still early; no clear strengths recorded yet.'} ${preferences.length ? `Prefers ${preferences[0]}.` : 'No working preferences recorded yet.'} Coach should keep tasks short and tied to those workflows.`,
+    strengths,
+    struggles,
+    preferences,
+    vocabulary: prev.vocabulary,
+    systems: [...new Set([...prev.systems, ...(s.profile?.systems ?? [])])],
+    anchorWorkflows: workflows,
+  };
+});
+
+registerMockResponder('memory.why-me', (call) => {
+  const s = seed<{ module?: string; struggles?: string[]; anchorWorkflows?: string[] }>(call);
+  const wf = s.anchorWorkflows?.[0];
+  const struggle = s.struggles?.[0];
+  return { line: struggle ? `Because you ${struggle.replace(/^gets /, '')}, ${s.module ?? 'this module'} is where you will get time back first.` : wf ? `Because you run ${wf} every week, ${s.module ?? 'this module'} pays off on the very next run.` : `${s.module ?? 'This module'} is the next step to handing real work to Claude and trusting what comes back.` };
+});

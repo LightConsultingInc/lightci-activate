@@ -15,6 +15,7 @@ import { AiService } from '../ai/ai.service';
 import { ContextLayer } from '../context/entities/context-layer.entity';
 import { ContextSource } from '../context/entities/context-source.entity';
 import { CoachService } from '../learning/coach.service';
+import { MemoryService } from '../learning/memory.service';
 import { Placement } from '../learning/entities/placement.entity';
 import type { ExerciseSummary } from '../learning/learning.types';
 import { toExerciseSummary } from '../learning/mappers';
@@ -98,6 +99,7 @@ export class InterviewerService {
     @InjectRepository(Team) private readonly teams: Repository<Team>,
     private readonly ai: AiService,
     private readonly coach: CoachService,
+    private readonly memory: MemoryService,
   ) {}
 
   // ───────────────────────── lifecycle ─────────────────────────
@@ -664,6 +666,14 @@ export class InterviewerService {
     latest.result = session.result;
     latest.status = 'complete';
     latest.completedAt = new Date();
+    try {
+      await this.memory.record(session.personId, orgId, {
+        kind: 'interview_completed',
+        note: `${session.mode} interview completed after ${session.turnCount} answers; ${workflowMapIds.length} workflow map(s)${placement ? `; placed at rung ${placement.rung}` : ''}.`,
+      });
+    } catch (error) {
+      this.logger.warn(`Memory record after interview failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
     if (latest.completeness < FINISH_COMPLETENESS)
       latest.completeness = Math.max(
         latest.completeness,

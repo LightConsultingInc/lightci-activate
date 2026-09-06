@@ -11,6 +11,7 @@ import { CompetencyRow } from "../competency-row"
 import { RevisitSheet } from "../revisit-sheet"
 import { QuickRecaps } from "../home/quick-recaps"
 import { CoachNotes } from "./coach-notes"
+import { MemoryCard } from "./memory-card"
 import { competenciesForRung, progressWords } from "./module-state"
 import { useHistory } from "@/hooks/learner/queries"
 import { fmt } from "@/lib/format"
@@ -82,6 +83,7 @@ export function FeedbackTab({ module, ladder }: { module: Module; ladder: Ladder
       </div>
 
       <div className="space-y-6">
+        <MemoryCard />
         <CoachNotes notes={ladder.coachNotes} />
         <QuickRecaps revisits={recaps} onOpen={setRevisit} title={`Quick recaps due · ${module.code}`} />
       </div>
