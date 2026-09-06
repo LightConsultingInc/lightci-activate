@@ -22,6 +22,7 @@ import { Submission } from './entities/submission.entity';
 import type { CompetencyView } from './learning.types';
 import { MasteryService } from './mastery.service';
 import { COACH_RUN_SYSTEM, COACH_SYSTEM, boundaryText } from './prompts';
+import { buildSituation } from './situation';
 import './learning.mocks';
 
 export type SkipReason = 'no_time' | 'blocked' | 'tool_issue' | 'not_relevant';
@@ -141,6 +142,7 @@ export class CoachService {
   ): Promise<Exercise> {
     const report = await this.mastery.report(person.id);
     const rung = report.rung;
+    if (rung === 0 && !opts.kind && !opts.skillId) return this.generateFirstRealTask(person, orgId);
     const unlocked = report.competencies.filter((c) => c.status !== 'locked');
     const target = this.pickTarget(
       unlocked,
@@ -295,6 +297,62 @@ export class CoachService {
     this.logger.log(
       `Coach generated "${saved.title}" (${saved.competencyCodes.join(',')}) for ${person.id}`,
     );
+    return saved;
+  }
+
+  /**
+   * Rung 0 practice is one real task: a starter prompt already filled with the learner's role and their
+   * most frequent workflow's inputs and outputs, done in Claude, no policy quiz and no reading surface.
+   */
+  async generateFirstRealTask(person: Person, orgId: string | null): Promise<Exercise> {
+    const [layers, maps] = await Promise.all([
+      this.layersFor(person, orgId),
+      orgId ? this.workflows.find({ where: [{ ownerPersonId: person.id, orgId }, ...(person.teamId ? [{ teamId: person.teamId, orgId }] : [])], order: { updatedAt: 'DESC' }, take: 8 }) : Promise.resolve<WorkflowMap[]>([]),
+    ]);
+    const situation = buildSituation(person, layers.find((l) => l.layer === 'person') ?? null, maps.filter((m) => m.ownerPersonId === person.id).concat(maps.filter((m) => m.ownerPersonId !== person.id)));
+    const wf = situation?.workflows[0] ?? null;
+    const task = wf?.name ?? 'the task you do most';
+    const role = situation?.role ?? person.title ?? 'professional';
+    const inputs = wf?.inputs?.length ? wf.inputs.join(', ') : 'the notes I paste below';
+    const outputs = wf?.outputs?.length ? wf.outputs.join(', ') : 'a finished draft I can use as it is';
+    const systems = wf?.systems?.length ? ` We normally work in ${wf.systems.join(' and ')}.` : '';
+    const brief = [
+      `I am a ${role}. Help me with ${task}.${systems}`,
+      `Inputs I will give you: ${inputs}.`,
+      `What I need back: ${outputs}, in the shape we use for ${task}.`,
+      'Use only the facts I give you. Put [placeholders] where something is missing rather than guessing. If anything is unclear, ask me one question before you start.',
+      '',
+      '[Paste your inputs here. No client names or account details.]',
+    ].join('\n');
+    const cadence = wf?.runsPerWeek ? `${wf.runsPerWeek} time${wf.runsPerWeek === 1 ? '' : 's'} a week` : 'more than anything else';
+    const exercise = this.exercises.create({
+      personId: person.id,
+      rung: 0,
+      competencyCodes: ['L0.surfaces'],
+      title: `Do one real thing: ${task}`.replace(/\s+/g, ' ').slice(0, 60),
+      brief,
+      rationale: `You do ${task} ${cadence}. Finishing one real run of it with Claude, start to end, is the quickest way to see what this is for; nothing to read first.`,
+      kind: 'artifact',
+      mode: 'in_claude',
+      workSurface: 'prompt',
+      contextTag: slug(task) || 'first-task',
+      workflowMapId: wf?.workflowMapId ?? null,
+      skillId: null,
+      hints: [
+        'Try pasting in the real inputs you would use this week, with names and numbers swapped for placeholders.',
+        'Try telling Claude who reads the result and what they will do with it.',
+        'Try asking for the shape you actually use (headings, length, tone) instead of accepting the default.',
+      ],
+      workedExample: null,
+      starter: { starterPrompt: brief, workflowName: wf?.name ?? null },
+      status: 'queued',
+      estimatedMinutes: 15,
+      scheduledFor: new Date(),
+      generatedBy: 'coach',
+      hintsRevealed: 0,
+    });
+    const saved = await this.exercises.save(exercise);
+    this.logger.log(`Coach set the first real task "${saved.title}" for ${person.id}`);
     return saved;
   }
 

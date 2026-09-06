@@ -24,6 +24,9 @@ import { Submission } from './entities/submission.entity';
 import { GraderService } from './grader.service';
 import { LadderService } from './ladder.service';
 import { LearningController } from './learning.controller';
+import { LessonPersonalisation } from './entities/lesson-personalisation.entity';
+import { LessonsController } from './lessons.controller';
+import { LessonsService } from './lessons.service';
 import { MasteryService } from './mastery.service';
 import { PersonRefService } from './person-ref.service';
 import { RevisitService } from './revisit.service';
@@ -45,7 +48,7 @@ import './learning.mocks';
       Grade,
       Revisit,
       CoachNote,
-      MasterySnapshot,
+      MasterySnapshot, LessonPersonalisation,
       Person,
       Team,
       Org,
@@ -60,7 +63,7 @@ import './learning.mocks';
       UsageSnapshot,
     ]),
   ],
-  controllers: [LearningController],
+  controllers: [LearningController, LessonsController],
   providers: [
     PersonRefService,
     MasteryService,
@@ -68,6 +71,7 @@ import './learning.mocks';
     GraderService,
     CoachService,
     LadderService,
+    LessonsService,
     LearningController,
   ],
   exports: [
@@ -78,6 +82,7 @@ import './learning.mocks';
     GraderService,
     CoachService,
     LadderService,
+    LessonsService,
     LearningController,
   ],
 })

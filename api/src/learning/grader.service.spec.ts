@@ -159,6 +159,29 @@ describe('GraderService.gradeSubmission (mock path)', () => {
   });
 });
 
+describe('rung 0 first real task grading', () => {
+  const first = { id: 'ex0', personId: 'p1', rung: 0, title: 'Do one real thing: RMD letters', brief: 'starter', workSurface: 'prompt', competencyCodes: ['L0.surfaces'] } as Exercise;
+
+  it('passes a finished, usable piece of work with encouraging feedback of at most two short paragraphs', async () => {
+    const { svc } = build();
+    const submission = { id: 's0', exerciseId: 'ex0', personId: 'p1', attempt: 1, expectationText: 'A letter I can send', expectationConfidence: 0.6, artifact: { type: 'prompt_run' as const, content: 'Dear [client name], this letter confirms the required minimum distribution for [year] from your [account type]. Based on the household summary you shared, the amount is [figure]. Please review and confirm by [date].' }, critiqueText: '[x] Finished and usable\n[x] Only uses facts the learner gave it', coldAttempt: true } as Submission;
+    const grade = await svc.gradeSubmission(first, submission, person, 'org1');
+    expect(grade.decision).toBe('pass');
+    expect(grade.rubric.map((r) => r.criterion)).toEqual(['first.finished', 'first.own_facts']);
+    expect(grade.feedback.split(/\n\s*\n/).length).toBeLessThanOrEqual(2);
+    expect(grade.feedback).not.toMatch(/expectation|critique|competency|\bL0\b/i);
+    expect((grade.teachingMoment ?? '').split(/(?<=[.!?])\s+/).length).toBeLessThanOrEqual(2);
+  });
+
+  it('sends back a fragment', async () => {
+    const { svc } = build();
+    const submission = { id: 's0b', exerciseId: 'ex0', personId: 'p1', attempt: 1, expectationText: 'x', expectationConfidence: 0.5, artifact: { type: 'prompt_run' as const, content: 'Outline: 1. intro 2. amount' }, critiqueText: 'not sure', coldAttempt: true } as Submission;
+    const grade = await svc.gradeSubmission(first, submission, person, 'org1');
+    expect(grade.decision).toBe('revise');
+    expect(svc.thresholdFor(first, 'prompt_run')).toBe(0.7);
+  });
+});
+
 describe('parseSelfCheck', () => {
   const rubric = [{ criterion: 'a.goal', label: 'Goal and audience clear' }, { criterion: 'a.format', label: 'Format and constraints specified' }, { criterion: 'a.context', label: 'Relevant context included' }];
   it('reads checkbox, tick-mark, ticked/unticked and JSON forms', () => {

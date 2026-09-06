@@ -74,6 +74,10 @@ Words you must never use in feedback or the teaching moment: expectation, critiq
 - Never invent facts about the learner's firm or clients. Grade what is on the page.
 - Plain, specific language. No praise inflation.`;
 
+export const GRADER_FIRST_TASK_SYSTEM = `${GRADER_SYSTEM}
+
+This is the learner's first real task (rung 0): one finished piece of their own work done with Claude. Be encouraging and brief. Pass when the work is finished and usable (or usable with a light edit) and uses only facts the learner supplied; send it back only when it is a fragment, a plan rather than the thing itself, or it invented names, figures or details. Feedback is at most two short paragraphs: what they now have, and the one thing to try on the next run. No scores in the prose.`;
+
 export const GRADER_SKILL_SYSTEM = `${GRADER_SYSTEM}
 
 This call grades a skill (SKILL.md plus sample cases and a boundary declaration) against the L3 skill rubric derived from Anthropic's published skill-authoring and context-engineering guidance: trigger clarity, scope, progressive disclosure, boundary declaration, canonical examples over edge-case lists, tight context, and expected behaviour on the author's own sample cases. For each sample case, state whether the skill as written would behave as the expected column says. Perform the security review described above with particular care: this skill may be published to the firm's marketplace.`;

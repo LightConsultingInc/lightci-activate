@@ -30,10 +30,30 @@ export function selfCheckItem(label: string): string {
   return /^(only|uses|names|states|keeps|stays|has|is|covers|matches)\b/i.test(l) ? l : `${l.charAt(0).toLowerCase()}${l.slice(1)} is right`;
 }
 
+/** Rung 0: encouraging, two short paragraphs; pass when there is a usable piece of work (> 120 chars). */
+function mockFirstTaskGrade(criteria: Criterion[], artifact: string, selfCheckText: string, ticks: Record<string, boolean>): SubmissionGradeOutput {
+  const usable = artifact.trim().length > 120;
+  const invented = /\$\d|\b\d{6,}\b/.test(artifact) && !/\[/.test(artifact);
+  const scores: Record<string, number> = { 'first.finished': usable ? 0.9 : 0.5, 'first.own_facts': invented ? 0.4 : 0.9 };
+  const rubric = criteria.map((c) => ({ criterion: c.criterion, score: scores[c.criterion] ?? (usable ? 0.85 : 0.5), note: c.criterion.endsWith('own_facts') ? (invented ? 'A figure appears that you did not supply.' : 'Everything in it came from what you gave Claude.') : usable ? 'This is a finished piece you could use.' : 'This is a fragment; the task is not finished yet.' }));
+  return {
+    rubric,
+    feedback: usable
+      ? `You have a finished piece of real work you could use today${invented ? ', though one figure crept in that you never supplied; swap it for a placeholder' : ''}. That is the whole point of this first task.\n\nNext run, tell Claude who reads this and what they will do with it; the shape will tighten up straight away.`
+      : `You have made a start, but this is not yet something you could use as it is. Finish the run: paste the real inputs (with placeholders for anything sensitive) and ask for the whole thing.\n\nNext run, say what shape you need back so Claude does not stop at an outline.`,
+    critiqueQuality: selfCheckText.length > 40 ? 0.7 : 0.5,
+    selfCheckAgreement: criteria.map((c) => ({ criterion: c.criterion, item: selfCheckItem(c.label), learner: ticks[c.criterion] ?? true, grader: (scores[c.criterion] ?? 0.85) >= 0.75 })),
+    teachingMoment: usable ? 'Next time, name the reader and what they need to do with it in the first line of your prompt.' : 'Next time, ask for the finished thing in the shape you use, not an outline.',
+    securityFindings: [],
+    strengths: [usable ? 'Finished a real piece of work with Claude' : 'Started on real work rather than a demo'],
+  };
+}
+
 registerMockResponder('grader.submission', (call): SubmissionGradeOutput => {
-  const s = seed<{ criteria?: Criterion[]; artifactText?: string; critiqueText?: string; expectationText?: string; isSkill?: boolean; selfCheck?: Record<string, boolean> }>(call);
+  const s = seed<{ criteria?: Criterion[]; artifactText?: string; critiqueText?: string; expectationText?: string; isSkill?: boolean; firstTask?: boolean; selfCheck?: Record<string, boolean> }>(call);
   const criteria = s.criteria ?? [{ criterion: 'quality', label: 'Quality' }];
   const artifact = s.artifactText ?? '';
+  if (s.firstTask) return mockFirstTaskGrade(criteria, artifact, s.critiqueText ?? '', s.selfCheck ?? {});
   const base = mockArtifactScore(artifact);
   const strong = base >= MOCK_GOOD_SCORE;
   const selfCheckText = (s.critiqueText ?? '').trim();
@@ -150,5 +170,17 @@ registerMockResponder('coach.run#text', (call) => {
   const prompt = (s.prompt ?? '').trim();
   return {
     text: `Here is a first draft for: "${prompt.slice(0, 160)}". Figures and names are placeholders because none were given.\n\n1. Purpose: [the goal in one line]\n2. Reader: [who this is for]\n3. Draft:\n   - Opening line with the outcome.\n   - Two supporting points with placeholders such as [client name] and [figure].\n   - A closing line with the next action.`,
+  };
+});
+
+registerMockResponder('coach.personalise-lesson', (call) => {
+  const s = seed<{ workflow?: string | null; role?: string | null; example?: { title: string; text: string }; check?: { question: string; options: string[]; answer: number; explanation: string } }>(call);
+  const workflow = s.workflow ?? 'your weekly task';
+  const example = s.example ?? { title: 'Example', text: 'An example.' };
+  const check = s.check ?? { question: 'What matters most?', options: ['A', 'B', 'C'], answer: 0, explanation: 'Because.' };
+  const lower = (q: string) => q.charAt(0).toLowerCase() + q.slice(1);
+  return {
+    example: { title: `${workflow}: ${example.title}`, text: `Take your ${workflow}${s.role ? ` as a ${s.role}` : ''}. ${example.text}` },
+    check: { question: `In your ${workflow}, ${lower(check.question)}`, options: check.options, answer: check.answer, explanation: check.explanation },
   };
 });

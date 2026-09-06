@@ -18,11 +18,18 @@ import { Grade, type RubricScore } from './entities/grade.entity';
 import type { RubricScoreWithSelfCheck } from './mappers';
 import { Submission } from './entities/submission.entity';
 import { MasteryService } from './mastery.service';
-import { GRADER_SKILL_SYSTEM, GRADER_SYSTEM, boundaryText } from './prompts';
+import { GRADER_FIRST_TASK_SYSTEM, GRADER_SKILL_SYSTEM, GRADER_SYSTEM, boundaryText } from './prompts';
 import './learning.mocks';
 
 export const GRADER_VERSION = 'grader-v1';
 export const SKILL_PASS_THRESHOLD = 0.85;
+export const FIRST_TASK_PASS_THRESHOLD = 0.7;
+
+/** Rung 0: one real task. Pass when it is finished and usable and uses only what the learner supplied. */
+export const FIRST_TASK_RUBRIC: readonly RubricCriterion[] = [
+  { key: 'finished', label: 'Finished and usable', description: 'A complete piece of the learner\'s real work they could use as it is (or with a light edit), not a fragment or a plan.', weight: 0.6 },
+  { key: 'own_facts', label: 'Only uses facts the learner gave it', description: 'No invented names, figures or details; placeholders where something was missing.', weight: 0.4 },
+];
 
 export interface SecurityFinding {
   severity: 'low' | 'medium' | 'high';
@@ -62,9 +69,11 @@ export class GraderService {
 
   /** Union of the exercise's competency rubrics (+ the skill rubric for skill artifacts), weights normalised to 1. */
   rubricFor(
-    exercise: Pick<Exercise, 'competencyCodes'>,
+    exercise: Pick<Exercise, 'competencyCodes'> & { rung?: number },
     artifactType: string,
   ): WeightedCriterion[] {
+    if (exercise.rung === 0)
+      return FIRST_TASK_RUBRIC.map((r) => ({ ...r, criterion: `first.${r.key}`, competencyCode: 'L0.surfaces' }));
     const out: WeightedCriterion[] = [];
     for (const code of exercise.competencyCodes) {
       const def = COMPETENCY_BY_CODE.get(code);
@@ -93,9 +102,10 @@ export class GraderService {
 
   /** Pass threshold for an exercise: the strictest of its competencies (skill artifacts at least 0.85). */
   thresholdFor(
-    exercise: Pick<Exercise, 'competencyCodes'>,
+    exercise: Pick<Exercise, 'competencyCodes'> & { rung?: number },
     artifactType: string,
   ): number {
+    if (exercise.rung === 0) return FIRST_TASK_PASS_THRESHOLD;
     const thresholds = exercise.competencyCodes.map(
       (c) => COMPETENCY_BY_CODE.get(c)?.masteryThreshold ?? 0.8,
     );
@@ -136,7 +146,7 @@ export class GraderService {
         orgId,
         personId: person.id,
         effort: 'medium',
-        system: GRADER_SYSTEM,
+        system: exercise.rung === 0 ? GRADER_FIRST_TASK_SYSTEM : GRADER_SYSTEM,
         messages: [
           {
             role: 'user',
@@ -178,6 +188,7 @@ export class GraderService {
           critiqueText: submission.critiqueText ?? '',
           expectationText: submission.expectationText,
           isSkill: artifactType === 'skill',
+          firstTask: exercise.rung === 0,
           selfCheck: parseSelfCheck(submission.critiqueText ?? '', rubric),
         },
       },
