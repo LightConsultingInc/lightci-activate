@@ -2,7 +2,7 @@ import { authkitMiddleware } from "@workos-inc/authkit-nextjs"
 import type { NextFetchEvent, NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
-const PUBLIC_PATHS = ["/login", "/sign-in", "/callback", "/api/auth/sign-out", "/auth/token", "/brand"]
+const PUBLIC_PATHS = ["/login", "/sign-in", "/callback", "/api/auth/sign-out", "/api/health", "/auth/token", "/brand"]
 
 const authkit = authkitMiddleware({
   middlewareAuth: { enabled: false, unauthenticatedPaths: PUBLIC_PATHS },
