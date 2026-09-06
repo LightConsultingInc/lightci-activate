@@ -81,7 +81,11 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
   const [error, setError] = useState<VoiceError | null>(null)
   const [muted, setMuted] = useState(false)
   const [userSpeaking, setUserSpeaking] = useState(false)
-  const [partial, setPartial] = useState("")
+  /** The interviewer's current (or last finished) sentence; stays until the next response starts. */
+  const [caption, setCaption] = useState("")
+  /** The person's last transcribed utterance. */
+  const [lastUserUtterance, setLastUserUtterance] = useState("")
+  const captionResponse = useRef<string | null>(null)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
   const [acked, setAcked] = useState(0)
   const [finishing, setFinishing] = useState(false)
@@ -182,8 +186,8 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
     micRef.current = null
     audioRef.current = null
     speakingRef.current = false
+    captionResponse.current = null
     setUserSpeaking(false)
-    setPartial("")
     setMuted(false)
   }, [])
 
@@ -262,7 +266,6 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
         case "output_audio_buffer.stopped":
         case "output_audio_buffer.cleared":
           speakingRef.current = false
-          setPartial("")
           setStatus((s) => (s === "speaking" ? "listening" : s))
           if (f.active && f.awaitingAudioStop) void finalize("agent")
           break
@@ -270,18 +273,28 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
         case "response.audio_transcript.delta":
           if (f.active) f.spoke = true
           setStatus((s) => (s === "listening" ? "speaking" : s))
-          setPartial((p) => p + (ev.delta ?? ""))
+          if (captionResponse.current !== (ev.response_id ?? null)) {
+            // A new response: replace the previous sentence rather than appending to it.
+            captionResponse.current = ev.response_id ?? null
+            setCaption(ev.delta ?? "")
+          } else setCaption((c) => c + (ev.delta ?? ""))
           break
         case "conversation.item.input_audio_transcription.completed": {
           const content = (ev.transcript ?? "").trim()
-          if (content) pushTurn("user", content)
+          if (content) {
+            setLastUserUtterance(content)
+            pushTurn("user", content)
+          }
           break
         }
         case "response.output_audio_transcript.done":
         case "response.audio_transcript.done": {
           const content = (ev.transcript ?? "").trim()
-          setPartial("")
-          if (content) pushTurn("interviewer", content)
+          if (content) {
+            setCaption(content)
+            captionResponse.current = ev.response_id ?? captionResponse.current
+            pushTurn("interviewer", content)
+          }
           if (f.active) finishAfterAudio()
           break
         }
@@ -312,6 +325,8 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
     handledCalls.current.clear()
     setError(null)
     setFinishing(false)
+    setCaption("")
+    setLastUserUtterance("")
     setStatus("connecting")
     const superseded: StartResult = { ok: false, kind: "connection", message: "Superseded" }
     const fail = (kind: VoiceErrorKind, message: string): StartResult => {
@@ -428,5 +443,5 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
     [flush, teardown],
   )
 
-  return { status, error, muted, userSpeaking, partial, turns, acked, finishing, start, stop, endCall, toggleMute, flush }
+  return { status, error, muted, userSpeaking, caption, lastUserUtterance, turns, acked, finishing, start, stop, endCall, toggleMute, flush }
 }
