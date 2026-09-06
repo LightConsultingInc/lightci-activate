@@ -93,7 +93,7 @@ test.describe("onboarding intake", () => {
   })
 
   test("finishing places the learner and offers a first exercise", async ({ page }) => {
-    await page.goto(`/onboarding?interview=${interviewId}`)
+    await page.goto(`/onboarding?interview=${interviewId}&mode=chat`)
     await expect(page.getByTestId("intake-chat")).toBeVisible()
     expect(await intOf(page.getByTestId("scribe-completeness"))).toBeGreaterThanOrEqual(completenessAfterTurns)
     const finish = page.getByTestId("complete-button")
