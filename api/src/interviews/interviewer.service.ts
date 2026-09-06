@@ -9,6 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Exercise } from '../learning/entities/exercise.entity';
 import { In, IsNull, Repository } from 'typeorm';
+import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import type { ZodType } from 'zod';
 import { AiService } from '../ai/ai.service';
 import { ContextLayer } from '../context/entities/context-layer.entity';
@@ -28,14 +29,18 @@ import {
   type InterviewTurn,
 } from './entities/interview-session.entity';
 import {
+  INTERVIEW_PLAN,
   INTERVIEWER_COMPLETE_SYSTEM,
+  INTERVIEWER_SCRIBE_SYSTEM,
   INTERVIEWER_SYSTEM,
   MODE_BRIEF,
   OPENING_QUESTION,
+  renderInterviewState,
 } from './interviewer.prompts';
 import {
   completeSchemaFor,
   schemaCompleteness,
+  scribeSchemaFor,
   stripNulls,
   turnSchemaFor,
   WORKFLOW_SCHEMA_KEYS,
@@ -55,6 +60,12 @@ import './interviewer.mocks';
 
 export const FINISH_COMPLETENESS = 0.85;
 export const FINISH_TURNS = 14;
+/** Per-call ceiling for interviewer Claude calls (turn, scribe, complete). */
+export const AI_TIMEOUT_MS = 120_000;
+/** Spoken turns rendered into a prompt; older turns are summarised by the scribe state. */
+export const PROMPT_TURNS = 40;
+/** Budget for the first Coach exercise inside intake completion; past it we fall back to the queue. */
+const FIRST_EXERCISE_BUDGET_MS = 90_000;
 
 /**
  * Interviewer role (assistant / scribe / checker). Persists transcript, scribe draft and checker flags
@@ -64,6 +75,11 @@ export const FINISH_TURNS = 14;
 @Injectable()
 export class InterviewerService {
   private readonly logger = new Logger(InterviewerService.name);
+  /** In-flight completions by session id so a double call (finish button + voice flush) runs once. */
+  private readonly completing = new Map<
+    string,
+    Promise<InterviewCompleteResponse>
+  >();
 
   constructor(
     @InjectRepository(InterviewSession)
@@ -77,7 +93,8 @@ export class InterviewerService {
     @InjectRepository(Placement)
     private readonly placements: Repository<Placement>,
     @InjectRepository(Person) private readonly people: Repository<Person>,
-    @InjectRepository(Exercise) private readonly exercises: Repository<Exercise>,
+    @InjectRepository(Exercise)
+    private readonly exercises: Repository<Exercise>,
     @InjectRepository(Team) private readonly teams: Repository<Team>,
     private readonly ai: AiService,
     private readonly coach: CoachService,
@@ -179,6 +196,7 @@ export class InterviewerService {
         role: t.role,
         content: t.content,
         at: t.at,
+        ...(t.via ? { via: t.via } : {}),
       })),
       scribe: session.scribe,
       checkerFlags: session.checkerFlags,
@@ -212,7 +230,12 @@ export class InterviewerService {
     return this.runScribe(session);
   }
 
-  /** Voice: append several turns (user + interviewer) at once, then re-run scribe/checker on the whole transcript. */
+  /**
+   * Voice: append turns spoken in the Realtime session (the agent is the interviewer there), then run the
+   * scribe + checker only (task interviewer.scribe). No question is generated; `view()` returns the
+   * agent's last spoken question as `nextQuestion`. Writes are conditional on `status = 'active'` so a
+   * flush that lands while `complete()` is finishing can never reopen the interview.
+   */
   async appendVoiceTranscript(
     session: InterviewSession,
     turns: { role: 'user' | 'interviewer'; content: string }[],
@@ -229,45 +252,111 @@ export class InterviewerService {
     const at = new Date().toISOString();
     session.transcript = [
       ...session.transcript,
-      ...clean.map((t) => ({ role: t.role, content: t.content, at })),
+      ...clean.map((t) => ({
+        role: t.role,
+        content: t.content,
+        at,
+        via: 'voice' as const,
+      })),
     ];
     session.turnCount += clean.filter((t) => t.role === 'user').length;
     session.voice = true;
-    return this.runScribe(session);
+    if (session.turnCount === 0) return this.saveIfActive(session);
+    const out = await this.ai.structured(
+      {
+        agent: 'interviewer',
+        task: 'interviewer.scribe',
+        orgId: session.orgId,
+        personId: session.personId,
+        effort: 'low',
+        maxTokens: 4000,
+        timeoutMs: AI_TIMEOUT_MS,
+        system: `${INTERVIEWER_SCRIBE_SYSTEM}\n\n${MODE_BRIEF[session.mode]}`,
+        messages: [
+          {
+            role: 'user',
+            content: renderInterviewState(
+              session,
+              'Produce the scribe update, checker flags and completeness for everything said so far.',
+              PROMPT_TURNS,
+            ),
+          },
+        ],
+        mockSeed: this.mockSeed(session),
+      },
+      scribeSchemaFor(session.mode),
+    );
+    this.applyScribe(session, out);
+    return this.saveIfActive(session);
   }
 
   private async runScribe(
     session: InterviewSession,
   ): Promise<InterviewSession> {
-    const lastUser =
-      [...session.transcript].reverse().find((t) => t.role === 'user')
-        ?.content ?? '';
     const out = await this.ai.structured(
       {
         agent: 'interviewer',
         task: 'interviewer.turn',
         orgId: session.orgId,
         personId: session.personId,
-        effort: 'medium',
-        system: `${INTERVIEWER_SYSTEM}\n\n${MODE_BRIEF[session.mode]}`,
+        effort: 'low',
+        maxTokens: 4000,
+        timeoutMs: AI_TIMEOUT_MS,
+        system: `${INTERVIEWER_SYSTEM}\n\n${MODE_BRIEF[session.mode]}\n\nInterview plan (in order):\n${INTERVIEW_PLAN[session.mode].map((p, i) => `${i + 1}. ${p}`).join('\n')}`,
         messages: [
           {
             role: 'user',
-            content: this.renderState(
+            content: renderInterviewState(
               session,
-              'Produce the next question, the scribe update, checker flags, completeness and whether to propose finishing.',
+              'Turns marked "(voice)" were spoken in a voice session and count as answered. Produce the next question, the scribe update, checker flags, completeness and whether to propose finishing.',
+              PROMPT_TURNS,
             ),
           },
         ],
-        mockSeed: {
-          mode: session.mode,
-          turnCount: session.turnCount,
-          lastUser,
-          scribe: session.scribe,
-        },
+        mockSeed: this.mockSeed(session),
       },
       turnSchemaFor(session.mode),
     );
+    this.applyScribe(session, out);
+    const mustPropose =
+      session.completeness >= FINISH_COMPLETENESS ||
+      session.turnCount >= FINISH_TURNS;
+    const nextQuestion =
+      mustPropose && !out.proposeFinish
+        ? `${out.nextQuestion.trim()} (I think we have enough to finish whenever you are ready; is there anything I have missed?)`
+        : out.nextQuestion.trim();
+    session.transcript = [
+      ...session.transcript,
+      {
+        role: 'interviewer' as const,
+        content: nextQuestion,
+        at: new Date().toISOString(),
+      },
+    ];
+    return this.saveIfActive(session);
+  }
+
+  private mockSeed(session: InterviewSession): Record<string, unknown> {
+    const lastUser =
+      [...session.transcript].reverse().find((t) => t.role === 'user')
+        ?.content ?? '';
+    return {
+      mode: session.mode,
+      turnCount: session.turnCount,
+      lastUser,
+      scribe: session.scribe,
+    };
+  }
+
+  /** Merge a scribe/checker output into the session and append the scribe/checker transcript rows. */
+  private applyScribe(
+    session: InterviewSession,
+    out: {
+      scribeUpdate: unknown;
+      checkerFlags: { field: string; issue: string }[];
+      completeness: number;
+    },
+  ): void {
     const update = stripNulls(out.scribeUpdate as Record<string, unknown>);
     session.scribe = { ...session.scribe, ...update };
     session.checkerFlags = out.checkerFlags.slice(0, 12);
@@ -279,78 +368,88 @@ export class InterviewerService {
           Math.max(0, Math.max(local * 0.9, Math.min(1, out.completeness))),
         ) * 100,
       ) / 100;
-    const mustPropose =
-      session.completeness >= FINISH_COMPLETENESS ||
-      session.turnCount >= FINISH_TURNS;
-    const nextQuestion =
-      mustPropose && !out.proposeFinish
-        ? `${out.nextQuestion.trim()} (I think we have enough to finish whenever you are ready; is there anything I have missed?)`
-        : out.nextQuestion.trim();
+    const at = new Date().toISOString();
     session.transcript = [
       ...session.transcript,
       ...(Object.keys(update).length
-        ? [
-            {
-              role: 'scribe' as const,
-              content: JSON.stringify(update),
-              at: new Date().toISOString(),
-            },
-          ]
+        ? [{ role: 'scribe' as const, content: JSON.stringify(update), at }]
         : []),
       ...(session.checkerFlags.length
         ? [
             {
               role: 'checker' as const,
               content: JSON.stringify(session.checkerFlags),
-              at: new Date().toISOString(),
+              at,
             },
           ]
         : []),
-      {
-        role: 'interviewer' as const,
-        content: nextQuestion,
-        at: new Date().toISOString(),
-      },
     ];
-    return this.sessions.save(session);
   }
 
-  private renderState(session: InterviewSession, instruction: string): string {
-    const convo = session.transcript
-      .filter((t) => t.role === 'interviewer' || t.role === 'user')
-      .map(
-        (t) => `${t.role === 'user' ? 'Person' : 'Interviewer'}: ${t.content}`,
-      )
-      .join('\n');
-    return [
-      `# Transcript so far (${session.turnCount} answers)`,
-      convo,
-      '',
-      '# Scribe state (current draft of the schema)',
-      JSON.stringify(session.scribe ?? {}, null, 2),
-      '',
-      '# Open checker flags',
-      session.checkerFlags.length
-        ? session.checkerFlags.map((f) => `- ${f.field}: ${f.issue}`).join('\n')
-        : '(none)',
-      '',
-      instruction,
-    ].join('\n');
+  /**
+   * Persist turn state only while the row is still active (a concurrent `complete()` wins). Returns the
+   * row as stored, so a caller racing completion sees `status: 'complete'` rather than a stale copy.
+   */
+  private async saveIfActive(
+    session: InterviewSession,
+  ): Promise<InterviewSession> {
+    const patch: Partial<InterviewSession> = {
+      transcript: session.transcript,
+      scribe: session.scribe,
+      checkerFlags: session.checkerFlags,
+      completeness: session.completeness,
+      turnCount: session.turnCount,
+      voice: session.voice,
+    };
+    const res = await this.sessions.update(
+      { id: session.id, status: 'active' },
+      patch as QueryDeepPartialEntity<InterviewSession>,
+    );
+    if (res.affected === 0) {
+      const fresh = await this.sessions.findOne({ where: { id: session.id } });
+      if (fresh) return fresh;
+    }
+    return session;
   }
 
   // ───────────────────────── completion ─────────────────────────
 
+  /**
+   * Idempotent: an already-complete session returns its stored result; concurrent calls for the same
+   * session share one run. The row is re-read first so voice turns flushed just before (or alongside)
+   * the finish call are included.
+   */
   async complete(
     session: InterviewSession,
     user: Person,
     orgId: string,
   ): Promise<InterviewCompleteResponse> {
+    const inflight = this.completing.get(session.id);
+    if (inflight) return inflight;
+    const run = this.completeOnce(session, user, orgId).finally(() =>
+      this.completing.delete(session.id),
+    );
+    this.completing.set(session.id, run);
+    return run;
+  }
+
+  private async completeOnce(
+    stale: InterviewSession,
+    user: Person,
+    orgId: string,
+  ): Promise<InterviewCompleteResponse> {
+    const session =
+      (await this.sessions.findOne({ where: { id: stale.id, orgId } })) ??
+      stale;
     if (session.status === 'complete') {
       const ids = (session.result?.exerciseIds as string[] | undefined) ?? [];
       const prior = ids.length
         ? await this.exercises.find({ where: { id: In(ids) } })
         : await this.exercises.find({
-            where: { personId: session.personId, status: In(['active', 'queued']) },
+            where: {
+              personId: session.personId,
+              status: In(['active', 'queued']),
+            },
             order: { createdAt: 'ASC' },
             take: 1,
           });
@@ -381,14 +480,17 @@ export class InterviewerService {
         task: 'interviewer.complete',
         orgId,
         personId: session.personId,
-        effort: 'medium',
+        effort: 'low',
+        maxTokens: 6000,
+        timeoutMs: AI_TIMEOUT_MS,
         system: `${INTERVIEWER_COMPLETE_SYSTEM}\n\n${MODE_BRIEF[session.mode]}`,
         messages: [
           {
             role: 'user',
-            content: this.renderState(
+            content: renderInterviewState(
               session,
-              'Produce the final structured result for this mode.',
+              'Turns marked "(voice)" were spoken in a voice session. Produce the final structured result for this mode.',
+              PROMPT_TURNS,
             ),
           },
         ],
@@ -458,9 +560,15 @@ export class InterviewerService {
         }),
       );
       try {
-        const first = await this.coach.generateNextExercise(subject, orgId, {
-          workflowMapId: workflowMapIds[0] ?? null,
-        });
+        // Bounded: a slow Coach call must not hold the completion response (a live run hit 13m on a
+        // connection error inside the SDK's retries); the queued-exercise fallback below covers it.
+        const first = await withBudget(
+          this.coach.generateNextExercise(subject, orgId, {
+            workflowMapId: workflowMapIds[0] ?? null,
+          }),
+          FIRST_EXERCISE_BUDGET_MS,
+          'coach.next-exercise',
+        );
         exercises = [toExerciseSummary(first)];
       } catch (error) {
         this.logger.warn(
@@ -553,14 +661,18 @@ export class InterviewerService {
       };
     }
 
-    session.status = 'complete';
-    session.completedAt = new Date();
-    if (session.completeness < FINISH_COMPLETENESS)
-      session.completeness = Math.max(
-        session.completeness,
-        schemaCompleteness(session.mode, session.scribe),
+    // Re-read before the final write so a voice flush that landed during the Claude call is kept.
+    const latest =
+      (await this.sessions.findOne({ where: { id: session.id } })) ?? session;
+    latest.result = session.result;
+    latest.status = 'complete';
+    latest.completedAt = new Date();
+    if (latest.completeness < FINISH_COMPLETENESS)
+      latest.completeness = Math.max(
+        latest.completeness,
+        schemaCompleteness(latest.mode, latest.scribe),
       );
-    const saved = await this.sessions.save(session);
+    const saved = await this.sessions.save(latest);
     return {
       interview: this.view(saved),
       workflowMapIds,
@@ -615,12 +727,18 @@ export class InterviewerService {
     orgId: string,
     owner: Person,
     session: InterviewSession,
-    maps: ({ name: string; schema: WorkflowScribe | Record<string, unknown> } | WorkflowMapOutT)[],
+    maps: (
+      | { name: string; schema: WorkflowScribe | Record<string, unknown> }
+      | WorkflowMapOutT
+    )[],
     teamId?: string | null,
   ): Promise<string[]> {
     const ids: string[] = [];
     for (const m of maps) {
-      const raw = 'schema' in m ? (m.schema as Record<string, unknown>) : compactMapToScribe(m);
+      const raw =
+        'schema' in m
+          ? (m.schema as Record<string, unknown>)
+          : compactMapToScribe(m);
       const schema = toWorkflowSchema(stripNulls(raw));
       const row = await this.workflows.save(
         this.workflows.create({
@@ -767,6 +885,26 @@ export function toWorkflowSchema(
       ...(i.dataClass ? { dataClass: i.dataClass } : {}),
     }));
   return out;
+}
+
+/** Resolve with the promise or reject after `ms` (the underlying work keeps running; the caller falls back). */
+function withBudget<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} exceeded ${ms}ms budget`)),
+      ms,
+    );
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e: unknown) => {
+        clearTimeout(timer);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      },
+    );
+  });
 }
 
 function uniq(xs: string[]): string[] {

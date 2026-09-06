@@ -41,7 +41,13 @@ export interface InterviewView {
   mode: InterviewMode;
   status: InterviewSession['status'];
   completeness: number;
-  transcript: { role: 'interviewer' | 'user'; content: string; at: string }[];
+  transcript: {
+    role: 'interviewer' | 'user';
+    content: string;
+    at: string;
+    /** Present on turns spoken in a Realtime voice session. */
+    via?: 'voice';
+  }[];
   scribe:
     Partial<WorkflowSchema> | Partial<IntakeProfile> | Partial<ChampionProfile>;
   checkerFlags: { field: string; issue: string }[];

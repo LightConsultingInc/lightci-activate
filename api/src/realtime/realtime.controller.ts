@@ -14,7 +14,11 @@ import { IsString } from 'class-validator';
 import { Repository } from 'typeorm';
 import { CurrentUser, OrgId } from '../common/decorators';
 import { InterviewSession } from '../interviews/entities/interview-session.entity';
-import { buildRealtimeInstructions } from '../interviews/interviewer.prompts';
+import {
+  buildRealtimeInstructions,
+  FINISH_INTERVIEW_TOOL,
+  FINISH_INTERVIEW_TOOL_NAME,
+} from '../interviews/interviewer.prompts';
 import { Person } from '../orgs/entities/person.entity';
 
 class RealtimeSessionDto {
@@ -26,6 +30,8 @@ export interface RealtimeSessionResponse {
   model: string;
   expiresAt: string;
   instructions: string;
+  /** Name of the function tool the agent calls to end the interview; the client then flushes turns and POSTs /complete. */
+  finishTool: string;
 }
 
 interface ClientSecretResponse {
@@ -38,10 +44,12 @@ export const REALTIME_CLIENT_SECRETS_URL =
   'https://api.openai.com/v1/realtime/client_secrets';
 
 /**
- * Mints an OpenAI Realtime ephemeral client secret for a voice interview. The browser connects to
- * OpenAI with it; the transcript comes back through POST /interviews/:id/voice-transcript.
- * Request shape verified against the Realtime API reference (session.type/model/instructions/audio.output.voice;
- * response {value, expires_at, session}).
+ * Mints an OpenAI Realtime ephemeral client secret for a voice interview. In voice mode the Realtime
+ * agent IS the interviewer (single brain): the session carries the persona, plan, scribe state and full
+ * transcript as `instructions`, plus the `finish_interview` function tool. The browser connects to
+ * OpenAI with the secret; transcripts come back through POST /interviews/:id/voice-transcript, which runs
+ * scribe + checker only. Request shape verified against the Realtime API reference (session.type/model/
+ * instructions/audio.output.voice; tools under session.tools with type 'function'; response {value, expires_at, session}).
  */
 @ApiTags('Realtime')
 @Controller('realtime')
@@ -90,6 +98,8 @@ export class RealtimeController {
           type: 'realtime',
           model,
           instructions,
+          tools: [FINISH_INTERVIEW_TOOL],
+          tool_choice: 'auto',
           audio: { output: { voice: 'marin' } },
         },
       }),
@@ -119,6 +129,7 @@ export class RealtimeController {
         (json.expires_at ?? Math.floor(Date.now() / 1000) + 600) * 1000,
       ).toISOString(),
       instructions,
+      finishTool: FINISH_INTERVIEW_TOOL_NAME,
     };
   }
 }

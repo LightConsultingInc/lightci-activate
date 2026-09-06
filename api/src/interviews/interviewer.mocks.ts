@@ -102,10 +102,9 @@ function words(s: string): string[] {
     .slice(0, 4);
 }
 
-registerMockResponder('interviewer.turn', (call) => {
+/** Scribe + checker body shared by interviewer.turn and interviewer.scribe. */
+function scribeBody(call: AiCall) {
   const { mode, turnCount, lastUser } = seed(call);
-  const list = QUESTIONS[mode];
-  const k = Math.min(turnCount, list.length - 1);
   const completeness = Math.min(1, turnCount / 8);
   let scribeUpdate: Record<string, unknown>;
   if (mode === 'intake') {
@@ -246,7 +245,6 @@ registerMockResponder('interviewer.turn', (call) => {
       ];
   }
   return {
-    nextQuestion: list[k],
     scribeUpdate,
     checkerFlags:
       turnCount === 3 && mode !== 'champion'
@@ -259,28 +257,101 @@ registerMockResponder('interviewer.turn', (call) => {
           ]
         : [],
     completeness,
-    proposeFinish: completeness >= 0.85,
+  };
+}
+
+registerMockResponder('interviewer.turn', (call) => {
+  const { mode, turnCount } = seed(call);
+  const list = QUESTIONS[mode];
+  const body = scribeBody(call);
+  return {
+    nextQuestion: list[Math.min(turnCount, list.length - 1)],
+    ...body,
+    proposeFinish: body.completeness >= 0.85,
   };
 });
 
+/** Voice mode: the Realtime agent asked the question; only scribe/checker/completeness come back. */
+registerMockResponder('interviewer.scribe', (call) => scribeBody(call));
+
+/** Full WorkflowScribe-shaped draft used by compactMap (intake/champion) and the workflow completion. */
+const wfSchema = (
+  name: string,
+  minutes: number,
+  runs: number,
+  systems: string[],
+) => ({
+  purpose: `Produce the ${name.toLowerCase()} on time to the usual standard`,
+  trigger: 'Start of the week',
+  frequency: 'weekly' as const,
+  minutesPerRun: minutes,
+  runsPerWeek: runs,
+  inputs: [
+    {
+      name: 'Previous version',
+      source: 'Shared drive',
+      dataClass: 'internal',
+    },
+  ],
+  steps: [
+    {
+      order: 1,
+      action: 'Gather inputs',
+      actor: 'human' as const,
+      system: systems[0] ?? null,
+    },
+    { order: 2, action: 'Draft', actor: 'claude' as const, system: null },
+    {
+      order: 3,
+      action: 'Review and send',
+      actor: 'human' as const,
+      system: 'Email',
+    },
+  ],
+  decisions: [{ point: 'Before sending', rule: 'Figures match the source' }],
+  exceptions: [{ case: 'Missing input', handling: 'Ask the owner and delay' }],
+  systems,
+  mustNeverLeave: ['client account data'],
+  outputs: [{ name, destination: 'Team' }],
+  humanReview: ['Before sending'],
+});
 
 /** Compact completion draft (see WorkflowMapOut): flat string lists instead of nested objects. */
-function compactMap(name: string, minutesPerRun: number, runsPerWeek: number, systems: string[]) {
-  const s = wfSchema(name, minutesPerRun, runsPerWeek, systems) as Record<string, any>;
+function compactMap(
+  name: string,
+  minutesPerRun: number,
+  runsPerWeek: number,
+  systems: string[],
+) {
+  const s = wfSchema(name, minutesPerRun, runsPerWeek, systems) as Record<
+    string,
+    any
+  >;
   return {
     name,
     purpose: String(s.purpose ?? `${name} done reliably each week`),
     trigger: String(s.trigger ?? 'Weekly schedule'),
-    frequency: (s.frequency ?? 'weekly') as 'daily' | 'weekly' | 'monthly' | 'ad_hoc',
+    frequency: (s.frequency ?? 'weekly') as
+      'daily' | 'weekly' | 'monthly' | 'ad_hoc',
     minutesPerRun,
     runsPerWeek,
-    inputs: ((s.inputs ?? []) as { name: string; source: string }[]).map((i) => `${i.name} — ${i.source}`),
-    steps: ((s.steps ?? []) as { action: string; actor: string }[]).map((st) => `${st.actor}: ${st.action}`),
-    decisions: ((s.decisions ?? []) as { point: string; rule: string }[]).map((d) => `${d.point} — ${d.rule}`),
-    exceptions: ((s.exceptions ?? []) as { case: string; handling: string }[]).map((e) => `${e.case} — ${e.handling}`),
+    inputs: ((s.inputs ?? []) as { name: string; source: string }[]).map(
+      (i) => `${i.name} — ${i.source}`,
+    ),
+    steps: ((s.steps ?? []) as { action: string; actor: string }[]).map(
+      (st) => `${st.actor}: ${st.action}`,
+    ),
+    decisions: ((s.decisions ?? []) as { point: string; rule: string }[]).map(
+      (d) => `${d.point} — ${d.rule}`,
+    ),
+    exceptions: (
+      (s.exceptions ?? []) as { case: string; handling: string }[]
+    ).map((e) => `${e.case} — ${e.handling}`),
     systems,
     mustNeverLeave: (s.mustNeverLeave ?? []) as string[],
-    outputs: ((s.outputs ?? []) as { name: string; destination: string }[]).map((o) => `${o.name} — ${o.destination}`),
+    outputs: ((s.outputs ?? []) as { name: string; destination: string }[]).map(
+      (o) => `${o.name} — ${o.destination}`,
+    ),
     humanReview: (s.humanReview ?? []) as string[],
   };
 }
@@ -300,48 +371,6 @@ registerMockResponder('interviewer.complete', (call) => {
       'client account data',
     ],
     systems: (scribe.systems as string[] | undefined) ?? ['Email', 'CRM'],
-  });
-  const wfSchema = (
-    name: string,
-    minutes: number,
-    runs: number,
-    systems: string[],
-  ) => ({
-    purpose: `Produce the ${name.toLowerCase()} on time to the usual standard`,
-    trigger: 'Start of the week',
-    frequency: 'weekly' as const,
-    minutesPerRun: minutes,
-    runsPerWeek: runs,
-    inputs: [
-      {
-        name: 'Previous version',
-        source: 'Shared drive',
-        dataClass: 'internal',
-      },
-    ],
-    steps: [
-      {
-        order: 1,
-        action: 'Gather inputs',
-        actor: 'human' as const,
-        system: systems[0] ?? null,
-      },
-      { order: 2, action: 'Draft', actor: 'claude' as const, system: null },
-      {
-        order: 3,
-        action: 'Review and send',
-        actor: 'human' as const,
-        system: 'Email',
-      },
-    ],
-    decisions: [{ point: 'Before sending', rule: 'Figures match the source' }],
-    exceptions: [
-      { case: 'Missing input', handling: 'Ask the owner and delay' },
-    ],
-    systems,
-    mustNeverLeave: ['client account data'],
-    outputs: [{ name, destination: 'Team' }],
-    humanReview: ['Before sending'],
   });
   if (mode === 'intake') {
     const wfs =
@@ -399,7 +428,9 @@ registerMockResponder('interviewer.complete', (call) => {
       contextLayer: layer(
         `${text(scribe.role, 'Analyst')} responsible for ${((scribe.responsibilities as string[] | undefined) ?? ['weekly reporting']).join(', ')}; repeats ${padded.map((w) => w.name).join(', ')} weekly.`,
       ),
-      workflowMaps: padded.map((w) => compactMap(w.name, w.minutesPerRun, w.runsPerWeek, w.systems)),
+      workflowMaps: padded.map((w) =>
+        compactMap(w.name, w.minutesPerRun, w.runsPerWeek, w.systems),
+      ),
       placement: {
         rung,
         evidence: [
@@ -434,7 +465,9 @@ registerMockResponder('interviewer.complete', (call) => {
     return {
       teamPurpose: text(scribe.teamPurpose, 'Advisory support'),
       contextLayer: layer(text(scribe.teamPurpose, 'Advisory support team')),
-      workflowMaps: seeds.map((w) => compactMap(w.name, w.minutesPerRun, w.runsPerWeek, w.systems)),
+      workflowMaps: seeds.map((w) =>
+        compactMap(w.name, w.minutesPerRun, w.runsPerWeek, w.systems),
+      ),
       priorities: (scribe.priorities as string[] | undefined) ?? [
         'Cut weekly reporting time',
       ],

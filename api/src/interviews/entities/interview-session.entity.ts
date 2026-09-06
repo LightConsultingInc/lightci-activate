@@ -10,6 +10,8 @@ export interface InterviewTurn {
   role: 'interviewer' | 'user' | 'scribe' | 'checker';
   content: string;
   at: string;
+  /** Set on turns that came from the Realtime voice session (the agent spoke the question). */
+  via?: 'voice';
 }
 
 @Entity('interview_sessions')

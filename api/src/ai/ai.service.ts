@@ -18,6 +18,8 @@ export interface AiCall {
   model?: string;
   effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   maxTokens?: number;
+  /** Per-request timeout (ms) passed to the SDK; defaults to the client's 10-minute timeout. */
+  timeoutMs?: number;
   /** Deterministic input the mock provider can key off (also logged). */
   mockSeed?: Record<string, unknown>;
 }
@@ -90,23 +92,26 @@ export class AiService {
     try {
       const { client } = await this.clientFor(call.orgId);
       const model = call.model ?? this.defaultModel;
-      const response = await client.messages.parse({
-        model,
-        max_tokens: call.maxTokens ?? 16000,
-        system: [
-          {
-            type: 'text',
-            text: call.system,
-            cache_control: { type: 'ephemeral' },
+      const response = await client.messages.parse(
+        {
+          model,
+          max_tokens: call.maxTokens ?? 16000,
+          system: [
+            {
+              type: 'text',
+              text: call.system,
+              cache_control: { type: 'ephemeral' },
+            },
+          ],
+          messages: call.messages,
+          thinking: { type: 'adaptive' },
+          output_config: {
+            format: zodOutputFormat(schema),
+            effort: call.effort ?? 'medium',
           },
-        ],
-        messages: call.messages,
-        thinking: { type: 'adaptive' },
-        output_config: {
-          format: zodOutputFormat(schema),
-          effort: call.effort ?? 'medium',
         },
-      });
+        call.timeoutMs ? { timeout: call.timeoutMs } : undefined,
+      );
       run.model = model;
       run.inputTokens = response.usage.input_tokens;
       run.outputTokens = response.usage.output_tokens;
@@ -158,20 +163,23 @@ export class AiService {
     try {
       const { client } = await this.clientFor(call.orgId);
       const model = call.model ?? this.defaultModel;
-      const stream = client.messages.stream({
-        model,
-        max_tokens: call.maxTokens ?? 16000,
-        system: [
-          {
-            type: 'text',
-            text: call.system,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
-        messages: call.messages,
-        thinking: { type: 'adaptive' },
-        output_config: { effort: call.effort ?? 'medium' },
-      });
+      const stream = client.messages.stream(
+        {
+          model,
+          max_tokens: call.maxTokens ?? 16000,
+          system: [
+            {
+              type: 'text',
+              text: call.system,
+              cache_control: { type: 'ephemeral' },
+            },
+          ],
+          messages: call.messages,
+          thinking: { type: 'adaptive' },
+          output_config: { effort: call.effort ?? 'medium' },
+        },
+        call.timeoutMs ? { timeout: call.timeoutMs } : undefined,
+      );
       const message = await stream.finalMessage();
       const text = message.content
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
