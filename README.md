@@ -28,11 +28,17 @@ Swagger: http://localhost:4310/docs. MCP endpoint: http://localhost:4310/mcp (bu
 ## Tests
 
 ```bash
-(cd api && yarn test)                    # unit
-(cd frontend && yarn tsc --noEmit)
-./scripts/dev.sh mock &                  # stack with deterministic AI
-(cd e2e && yarn test)                    # Playwright, signs in as each demo role
+(cd api && yarn test)                    # 165 unit tests
+(cd frontend && yarn tsc --noEmit && yarn lint)
+./scripts/dev.sh mock &                  # stack with deterministic AI (AI_PROVIDER=mock)
+(cd e2e && yarn test)                    # 82 Playwright tests, signs in as each demo role via WorkOS
 ```
+
+The E2E suite resets the demo seed first, so run it against a local stack only.
+
+## In Claude
+
+Add `http://localhost:4310/mcp` (or the deployed API) as a custom connector. Tools: `my_ladder`, `library`, `skill_detail`, `submit_skill`, `submit_artifact`, `map_workflow`, `team`, `org`, `promotion_queue`. The Coach skill lives in `marketplace/plugins/activate-coach`. For a local MCP client without OAuth set `MCP_DEV_USER_EMAIL=priya.nair@meridianwealth.demo` and send `X-Activate-Dev-User` with that email.
 
 ## Deploy
 
