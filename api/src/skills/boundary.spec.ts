@@ -1,5 +1,5 @@
 import type { ComplianceBoundary } from '../orgs/entities/org.entity';
-import { boundaryBadge, checkBoundary, jaccard, textMentionsClass, triggerTokens, undeclaredForbiddenClasses } from './boundary';
+import { boundaryBadge, checkBoundary, jaccard, mentionsWriteTo, textMentionsClass, triggerTokens, undeclaredForbiddenClasses } from './boundary';
 
 const ORG: ComplianceBoundary = {
   allowedDataClasses: ['aggregated_client_summaries', 'internal_templates', 'public_regulation', 'calendar', 'crm_summary_export'],
@@ -97,6 +97,15 @@ describe('checkBoundary', () => {
     const r = checkBoundary(skill({ mustNeverReceive: ['client_pii_documents', 'account_numbers', 'ssn', 'statements_raw'], skillMd: 'Then update Salesforce with the note automatically.' }), ORG);
     expect(r.ok).toBe(false);
     expect(r.notes).toMatch(/read-only system/);
+  });
+
+  it('does not flag a negated boundary statement about a read-only system', () => {
+    const md = '## Boundaries\n\n- **Human review:** the advisor reviews the summary before the client meeting; nothing here is sent to the client or entered into Salesforce by this skill.\n- The planner, not Claude, updates Orion afterwards.';
+    const r = checkBoundary(skill({ mustNeverReceive: ['client_pii_documents', 'account_numbers', 'ssn', 'statements_raw'], humanReview: ['before_client_meeting'], skillMd: md }), ORG);
+    expect(r.ok).toBe(true);
+    expect(r.notes).not.toMatch(/read-only system/);
+    expect(mentionsWriteTo('Push the note into eMoney when done.', 'emoney')).toBe(true);
+    expect(mentionsWriteTo('Never push anything into eMoney.', 'emoney')).toBe(false);
   });
 });
 

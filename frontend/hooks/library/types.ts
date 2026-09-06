@@ -130,8 +130,9 @@ export type PromotionView = {
   testResults: string | null
   createdAt: string
   decidedAt: string | null
-  /** Set once merged (tag `<slug>@vN`). Not in the contract; rendered when present. */
-  tag?: string | null
+  /** Set once merged: the merge tags a new version (N+1 of `version`). Older API builds omit these. */
+  mergedTag?: string | null
+  mergedVersion?: number | null
 }
 
 export type PromotionDetail = PromotionView & { skillMd: string; previousSkillMd: string | null }

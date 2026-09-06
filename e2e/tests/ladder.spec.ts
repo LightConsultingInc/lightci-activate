@@ -146,7 +146,7 @@ test.describe("module page", () => {
     // Example and check come from /lessons/:slug/personalised (static content while loading).
     const example = page.getByTestId("lesson-example")
     await expect(example).toBeVisible()
-    await expect(example.locator("h2")).not.toBeEmpty()
+    await expect(example.locator(".eyebrow").first()).toHaveText(/Try this|For example/)
     await expect(example).toHaveAttribute("data-personalised", /true|false/)
     if ((await example.getAttribute("data-personalised")) === "true") await expect(page.getByTestId("lesson-tailored")).toContainText("Tailored to your work")
 

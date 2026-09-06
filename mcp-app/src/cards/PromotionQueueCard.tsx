@@ -2,8 +2,20 @@ import { useState } from 'react';
 import { CardShell } from '../components/CardShell';
 import { Avatar, BoundaryDot, DecisionPill, Pill, Section, StateBlock } from '../components/ui';
 import { shortDate } from '../lib/format';
-import type { PromotionQueuePayload, PromotionView } from '../types';
+import type { DiffSummary, PromotionQueuePayload, PromotionView } from '../types';
 import { errorMessage, type CardProps } from './shared';
+
+/** `diffSummary` arrives as `{ filesChanged, additions, deletions, summary }` from REST (or a string in older fixtures). Never render the object itself. */
+function diffText(diff: DiffSummary | string | null | undefined): string {
+  if (!diff) return '';
+  if (typeof diff === 'string') return diff;
+  const counts = [
+    typeof diff.additions === 'number' ? `+${diff.additions}` : '',
+    typeof diff.deletions === 'number' ? `−${diff.deletions}` : '',
+    typeof diff.filesChanged === 'number' ? `${diff.filesChanged} file${diff.filesChanged === 1 ? '' : 's'}` : '',
+  ].filter(Boolean).join(' ');
+  return [counts, diff.summary?.trim() ?? ''].filter(Boolean).join(' · ');
+}
 
 export function PromotionQueueCard({ envelope, api, shell }: CardProps<PromotionQueuePayload>) {
   const [items, setItems] = useState<PromotionView[]>(envelope.data.promotions ?? []);
@@ -74,7 +86,7 @@ export function PromotionQueueCard({ envelope, api, shell }: CardProps<Promotion
           {selected ? (
             <div data-testid="promotion-detail">
               <Section title="What changed">
-                <p className="m-0 text-[12.5px]">{selected.diffSummary ?? 'No diff summary recorded.'}</p>
+                <p className="m-0 text-[12.5px]">{diffText(selected.diffSummary) || 'No diff summary recorded.'}</p>
                 <div className="flex items-center gap-2 mt-2 text-[11.5px]" style={{ color: 'var(--fg-2)' }}>
                   <Avatar person={selected.requestedBy} size={20} />
                   <span>{selected.requestedBy.name} · branch <code className="text-[10.5px]">{selected.branch ?? '—'}</code></span>

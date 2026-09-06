@@ -29,7 +29,11 @@ export function slugify(s: string): string {
 /** Tool-facing sample case (`expected` is the verdict) → REST `SampleCase` (`shouldTrigger` yes/no/ambiguous, `expected` is the free-text note). */
 export function toRestSampleCases(
   cases: { input: string; expected?: string; note?: string }[] | undefined,
-): { input: string; shouldTrigger: 'yes' | 'no' | 'ambiguous'; expected: string }[] {
+): {
+  input: string;
+  shouldTrigger: 'yes' | 'no' | 'ambiguous';
+  expected: string;
+}[] {
   const verdict = (e: string | undefined): 'yes' | 'no' | 'ambiguous' =>
     e === 'should_trigger' || e === 'yes'
       ? 'yes'

@@ -903,10 +903,29 @@ export class LibraryService {
       ? await this.grades.findOne({ where: { id: pr.gradeId } })
       : null;
     const approverRefs = await this.refMap(pr.approvals.map((a) => a.personId));
+    // The merge tags a *new* SkillVersion (N+1), so the promoted `version` is not the published one.
+    let mergedTag: string | null = null;
+    let mergedVersion: number | null = null;
+    if (pr.decision === 'merged') {
+      const tagged = await this.versions.find({
+        where: { skillId: pr.skillId, tag: Not(IsNull()) },
+        order: { version: 'DESC' },
+      });
+      const hit =
+        tagged.find(
+          (v) =>
+            (pr.gradeId ? v.gradeId === pr.gradeId : true) &&
+            v.version >= (version?.version ?? 0),
+        ) ?? null;
+      mergedTag = hit?.tag ?? null;
+      mergedVersion = hit?.version ?? null;
+    }
     return {
       id: pr.id,
       skill,
       version: version?.version ?? skill.version,
+      mergedTag,
+      mergedVersion,
       requestedBy: requester,
       prNumber: pr.prNumber,
       prUrl: pr.prUrl,

@@ -121,12 +121,10 @@ export class OrgService {
     if (note) changes.note = note;
     if (dto.settings) {
       // Older clients sent their own `usagePolicyVersion`; the API owns every version field.
-      const {
-        usagePolicyVersion: _legacyVersion,
-        ...incoming
-      } = dto.settings as Partial<GovernedOrgSettings> & {
-        usagePolicyVersion?: number;
-      };
+      const { usagePolicyVersion: _legacyVersion, ...incoming } =
+        dto.settings as Partial<GovernedOrgSettings> & {
+          usagePolicyVersion?: number;
+        };
       void _legacyVersion;
       const next: GovernedOrgSettings = { ...before, ...incoming };
       delete (next as { usagePolicyVersion?: number }).usagePolicyVersion;

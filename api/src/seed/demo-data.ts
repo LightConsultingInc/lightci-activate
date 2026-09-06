@@ -594,7 +594,7 @@ export const DEMO_PEOPLE: DemoPerson[] = [
         evidence: {
           tasks: ['follow-up-email-rewrite', 'boundary-sort'],
           graderScore: 0.66,
-          note: 'Comfortable in chat; no prediction habit yet.',
+          note: 'Comfortable in chat; sends drafts without checking figures.',
         },
       },
     ],
@@ -644,7 +644,7 @@ export const DEMO_PEOPLE: DemoPerson[] = [
         daysAgo: 62,
         by: 'diagnostic',
         evidence: {
-          tasks: ['skill-cold-draft', 'project-critique'],
+          tasks: ['skill-first-draft', 'project-review'],
           graderScore: 0.89,
         },
       },
@@ -987,7 +987,7 @@ export const DEMO_PEOPLE: DemoPerson[] = [
         rung: 3,
         daysAgo: 44,
         by: 'promotion',
-        evidence: { skill: 'client-followup-summary', gradeScore: 0.88 },
+        evidence: { skill: 'client-followup-notes', gradeScore: 0.88 },
       },
       {
         rung: 4,
@@ -996,7 +996,7 @@ export const DEMO_PEOPLE: DemoPerson[] = [
         evidence: {
           workflow: 'client-followup',
           baseline: true,
-          promotion: 'client-followup-summary@v3',
+          promotion: 'client-followup-notes@v3',
         },
       },
     ],
@@ -1135,7 +1135,7 @@ export const DEMO_PEOPLE: DemoPerson[] = [
         rung: 3,
         daysAgo: 12,
         by: 'promotion',
-        evidence: { skill: 'fee-change-client-comms', gradeScore: 0.86 },
+        evidence: { skill: 'fee-change-comms', gradeScore: 0.86 },
       },
     ],
     usage: {
@@ -1256,7 +1256,7 @@ export const DEMO_PEOPLE: DemoPerson[] = [
       responsibilities: ['CRM data quality', 'Service request triage'],
       weeklyWorkflows: ['CRM note cleanup', 'Service request triage'],
       claudeUseToday:
-        'Daily. Wrote the CRM cleanup skill in her first week from an existing Project.',
+        'Daily. Wrote the exception-memo skill with Jonas in her first week from an existing Project.',
       selfRatedComfort: 4,
       systems: ['Salesforce', 'Outlook'],
     },
@@ -1267,7 +1267,7 @@ export const DEMO_PEOPLE: DemoPerson[] = [
         by: 'diagnostic',
         evidence: {
           graderScore: 0.85,
-          note: 'Arrived with a working Project; skill cold-draft passed.',
+          note: 'Arrived with a working Project; first skill draft passed.',
         },
       },
     ],
@@ -1620,7 +1620,7 @@ TOM: The checklist and the document names and page counts. Not the documents the
     tags: { mode: 'intake', turns: '9' },
     ingestedDaysAgo: 13,
     content:
-      'Wealth advisor, ~70 households. Weekly: follow-up emails after review meetings (5–6 a week, ~20 min each plus a Salesforce note), discovery-call summaries for prospects, quarterly review talking points. Uses Claude to polish emails without giving it context. Wants to sound less templated. Self-rated comfort 2/5. Placed L1 by diagnostic; no prediction habit.',
+      'Wealth advisor, ~70 households. Weekly: follow-up emails after review meetings (5–6 a week, ~20 min each plus a Salesforce note), discovery-call summaries for prospects, quarterly review talking points. Uses Claude to polish emails without giving it context. Wants to sound less templated. Self-rated comfort 2/5. Placed L1 by diagnostic; sends drafts without checking them.',
   },
   {
     layer: 'person',
@@ -2278,7 +2278,7 @@ export const DEMO_WORKFLOWS: DemoWorkflow[] = [
     championVerified: true,
     status: 'measured',
     nextWave: false,
-    linkedSkillSlugs: ['client-followup-summary', 'meeting-recap-email'],
+    linkedSkillSlugs: ['client-followup-notes', 'crm-note-cleanup'],
     score: {
       value: 0.8,
       hours: 10,
@@ -2447,7 +2447,7 @@ export const DEMO_WORKFLOWS: DemoWorkflow[] = [
     championVerified: true,
     status: 'in_build',
     nextWave: false,
-    linkedSkillSlugs: ['fee-change-client-comms'],
+    linkedSkillSlugs: ['fee-change-comms'],
     score: {
       value: 0.7,
       hours: 2.5,
@@ -2517,13 +2517,13 @@ export const DEMO_WORKFLOWS: DemoWorkflow[] = [
     key: 'ips-refresh',
     teamSlug: 'wa',
     ownerKey: 'kevin',
-    name: 'IPS refresh summary',
+    name: 'IPS refresh checklist',
     createdDaysAgo: 20,
     completeness: 0.6,
     championVerified: false,
     status: 'scored',
     nextWave: true,
-    linkedSkillSlugs: ['ips-refresh-summary'],
+    linkedSkillSlugs: ['ips-refresh-checklist'],
     score: {
       value: 0.6,
       hours: 3,
@@ -2654,7 +2654,7 @@ export const DEMO_WORKFLOWS: DemoWorkflow[] = [
     championVerified: true,
     status: 'measured',
     nextWave: false,
-    linkedSkillSlugs: ['crm-note-cleanup'],
+    linkedSkillSlugs: [],
     score: {
       value: 0.6,
       hours: 6,
@@ -2726,7 +2726,7 @@ export const DEMO_WORKFLOWS: DemoWorkflow[] = [
     championVerified: false,
     status: 'in_build',
     nextWave: true,
-    linkedSkillSlugs: ['compliance-attestation-summary'],
+    linkedSkillSlugs: ['attestation-summary'],
     score: {
       value: 0.7,
       hours: 3,
@@ -2778,9 +2778,9 @@ export const DEMO_WORKFLOWS: DemoWorkflow[] = [
     createdDaysAgo: 9,
     completeness: 0.45,
     championVerified: false,
-    status: 'candidate',
+    status: 'in_build',
     nextWave: true,
-    linkedSkillSlugs: [],
+    linkedSkillSlugs: ['rebalancing-exception-memo'],
     score: null,
     schema: {
       purpose:
@@ -2897,7 +2897,7 @@ export const DEMO_SKILLS: DemoSkill[] = [
         input: 'Write the post-meeting note for the Hale review.',
         shouldTrigger: 'no',
         expected:
-          'Not a prep brief; client-followup-summary handles post-meeting notes.',
+          'Not a prep brief; client-followup-notes handles post-meeting notes.',
       },
       {
         input:
@@ -2923,7 +2923,7 @@ description: Draft the one-page Monday prep brief for a client review meeting fr
 ## When to use
 A planner asks for the prep brief for a named household's upcoming review meeting and supplies (or will supply) the Salesforce meeting summary, the Orion household summary page and the eMoney open items. If any of those is missing, ask for it once and draft with what you have, marking the gap.
 
-Not for: post-meeting notes or follow-up emails (client-followup-summary), prospect meetings (use the discovery-notes variant in references/prospect-brief.md), or annual review decks.
+Not for: post-meeting notes or follow-up emails (client-followup-notes), prospect meetings (use the discovery-notes variant in references/prospect-brief.md), or annual review decks.
 
 ## Inputs
 - Salesforce meeting summary export: date, attendees, last two meeting notes (summary form).
@@ -2971,9 +2971,9 @@ Markdown with the five numbered section headings from the template. No tables. F
           },
           decision: 'revise',
           feedback:
-            'The boundary declaration is complete and the steps honour it, which is the hard part. The description, though, lists the skill\'s internal steps rather than the situations that should trigger it, and the body inlines the whole brief template, which doubles its length. Move the template to a referenced file and rewrite the description as "use when a planner names a household and an upcoming meeting". The examples are edge cases (stale data, missing input) with no canonical example of a normal brief.',
+            'What worked: the boundary is complete and every step respects it, which is the hard part.\nWhat to change: the description lists the skill\'s own steps instead of when a planner would use it, and the full brief template sits in the body, doubling its length; both examples are odd cases with no ordinary brief shown.\nTry next: move the template to references/, rewrite the description as "use when a planner names a household and an upcoming meeting", and add one example of a normal brief.',
           teachingMoment:
-            'A description is a routing signal for Claude choosing among many skills, not documentation. Write it in the words the planner would use.',
+            'Rewrite the description in the words a planner would say when they need it, not as a list of what the skill does.',
         },
       },
       {
@@ -2981,7 +2981,7 @@ Markdown with the five numbered section headings from the template. No tables. F
         daysAgo: 48,
         authorKey: 'daniel',
         changelog:
-          'Rewrote description as a trigger; moved brief template to references/; added a canonical example; tightened steps.',
+          'Rewrote the description as when-to-use; moved the brief template to references/; added a typical example; tightened the steps.',
         grade: {
           scores: {
             trigger_clarity: 0.9,
@@ -2994,7 +2994,7 @@ Markdown with the five numbered section headings from the template. No tables. F
           },
           decision: 'pass',
           feedback:
-            'Trigger now reads as the planner would say it and the non-triggers are named. Template lives in references/ and the body is a page. Two examples, one normal and one stale-data, are the right pair. Sample cases cover should, should-not and ambiguous. Pass.',
+            'What worked: the description now reads as a planner would say it and names what it is not for; the template lives in references/ and the body is one page.\nWhat to change: nothing blocking; the two examples (normal and stale data) are the right pair.\nTry next: watch the first week of real briefs for anything the sample requests did not cover.',
         },
         approverKeys: ['sofia'],
       },
@@ -3016,7 +3016,7 @@ Markdown with the five numbered section headings from the template. No tables. F
           },
           decision: 'pass',
           feedback:
-            "Incremental change that follows the workflow's decision rules; boundary unchanged; sample cases updated to cover the RMD line. Pass.",
+            'What worked: a small change that follows the rules Daniel verified in the workflow map, with the boundary unchanged.\nWhat to change: nothing.\nTry next: update the sample request for the Hale household so it shows the new RMD-method line.',
         },
         approverKeys: ['sofia'],
       },
@@ -3029,7 +3029,7 @@ Markdown with the five numbered section headings from the template. No tables. F
       "Use when a planner needs the slide-by-slide outline and speaker narrative for a household's annual review deck from eMoney and Orion summaries.",
     plugin: 'fp-meeting-prep',
     teamSlug: 'fp',
-    ownerKey: 'hannah',
+    ownerKey: 'priya',
     status: 'published',
     rungRequired: 2,
     workflowFamily: 'annual-review',
@@ -3103,8 +3103,7 @@ Numbered slide list. Under each: a bold slide title, a one-line content note ("c
         version: 1,
         daysAgo: 24,
         authorKey: 'hannah',
-        changelog:
-          'Cold draft from my deck-narrative Project, before seeing the worked example.',
+        changelog: 'First draft from my deck-narrative Project.',
         grade: {
           scores: {
             trigger_clarity: 0.85,
@@ -3117,9 +3116,9 @@ Numbered slide list. Under each: a bold slide title, a one-line content note ("c
           },
           decision: 'pass',
           feedback:
-            'A strong cold draft. The scope is exactly one job and it names what it will not do (charts, quarterly reviews, life events). The two examples are canonical, one on-track and one off-track, and the narrative voice guidance is specific. The slide order belongs in a referenced file rather than being implied; add references/deck-order.md.',
+            'What worked: the skill does exactly one job and says what it will not do (charts, quarterly reviews, life events); the two examples show an on-track deck and an off-track one, and the voice notes are specific.\nWhat to change: the slide order is only implied; put it in a file called references/deck-order.md and point to it.\nTry next: ask a teammate to run it on one of their households and note their first question.',
           teachingMoment:
-            'When a skill depends on a fixed ordering or template, put it in a file the skill links to. The body should say what to do; the file says what it looks like.',
+            'Put the slide order in its own file and have the skill point to it, so the main file says what to do and the file shows what it looks like.',
         },
       },
       {
@@ -3140,7 +3139,7 @@ Numbered slide list. Under each: a bold slide title, a one-line content note ("c
           },
           decision: 'pass',
           feedback:
-            'Ready to publish. Progressive disclosure now done properly; nothing in the body could be removed without changing behaviour.',
+            'What worked: the slide order now lives in its own file and nothing in the main file could be removed without changing the result.\nWhat to change: nothing.\nTry next: publish, then check usage after two weeks.',
         },
         approverKeys: ['daniel'],
       },
@@ -3153,7 +3152,7 @@ Numbered slide list. Under each: a bold slide title, a one-line content note ("c
       'Use when a planner needs an RMD letter for a household from the Orion RMD summary row and the firm template.',
     plugin: 'fp-meeting-prep',
     teamSlug: 'fp',
-    ownerKey: 'hannah',
+    ownerKey: 'priya',
     status: 'in_review',
     rungRequired: 2,
     workflowFamily: 'rmd-letters',
@@ -3242,28 +3241,28 @@ Plain prose letter, four paragraphs, no headings, no tables.
     ],
   },
   {
-    slug: 'meeting-recap-email',
-    name: 'Meeting recap email',
+    slug: 'crm-note-cleanup',
+    name: 'CRM note cleanup',
     triggerLine:
-      'Use when a planner wants a recap email to the advisor after a client meeting. Deprecated: use client-followup-summary.',
-    plugin: 'fp-meeting-prep',
-    teamSlug: 'fp',
-    ownerKey: 'daniel',
+      'Use when an advisor wants a pasted Salesforce note tidied into the firm format. Retired: client-followup-notes writes the note directly.',
+    plugin: 'shared',
+    teamSlug: 'shared',
+    ownerKey: 'marcus',
     status: 'deprecated',
     rungRequired: 1,
     workflowFamily: 'follow-up',
     workflowKey: 'client-followup',
     authoredBy: 'builder',
-    boundary: B.clientComms,
+    boundary: B.ops,
     createdDaysAgo: 54,
     publishedDaysAgo: 47,
-    successorSlug: 'client-followup-summary',
+    successorSlug: 'client-followup-notes',
     usageRate: 0.3,
     sampleCases: [
       {
-        input: "Recap of today's Hale meeting for Chris.",
+        input: 'Tidy this Salesforce note into our format.',
         shouldTrigger: 'yes',
-        expected: 'Short recap email to the advisor.',
+        expected: 'Summary / Decisions / Actions / Follow-up date.',
       },
       {
         input: 'Prep brief for the Hale meeting.',
@@ -3274,28 +3273,28 @@ Plain prose letter, four paragraphs, no headings, no tables.
         input: 'Write up the Hale meeting.',
         shouldTrigger: 'ambiguous',
         expected:
-          'Overlaps with client-followup-summary; this is why the skill was deprecated.',
+          'Overlaps with client-followup-notes; this is why the skill was retired.',
       },
     ],
     skillMd: `---
-name: meeting-recap-email
-description: DEPRECATED. Draft a short recap email to the advisor after a client meeting from the planner's notes. Superseded by client-followup-summary, which produces the client email and the CRM note from the same notes.
+name: crm-note-cleanup
+description: RETIRED. Tidy a pasted Salesforce meeting note into the firm format (Summary, Decisions, Actions, Follow-up date). Superseded by client-followup-notes, which writes the Salesforce note from the meeting notes in the first place.
 ---
 
-# Meeting recap email (deprecated)
+# CRM note cleanup (retired)
 
-Use client-followup-summary instead. This skill's trigger overlapped with it and produced two different write-ups of the same meeting.
+Use client-followup-notes instead. This skill tidied a note after the fact; the follow-up skill now produces the email and the Salesforce note from the same meeting notes, so there is nothing left to tidy.
 
 ## When to use
-Do not. Retained for version history.
+Do not. Kept for version history.
 `,
     versions: [
       {
         version: 1,
         daysAgo: 54,
-        authorKey: 'daniel',
+        authorKey: 'marcus',
         changelog:
-          'Builder draft: recap email to the advisor after a planner-attended meeting.',
+          'Builder draft: tidy a pasted Salesforce note into the firm format.',
         grade: {
           scores: {
             trigger_clarity: 0.6,
@@ -3308,25 +3307,25 @@ Do not. Retained for version history.
           },
           decision: 'pass',
           feedback:
-            'Passes on boundary and context, but the trigger ("write up the meeting") is close to client-followup-summary in the wa plugin. Flagging duplicate-trigger risk for the champions.',
+            'What worked: the boundary is right and the body is short.\nWhat to change: "write up the meeting" also fires client-followup-notes in the advisors\' plugin, so both may answer the same request.\nTry next: agree with Sofia which skill owns post-meeting write-ups.',
           teachingMoment:
-            'Two skills that fire on the same phrase make both worse. Merge or differentiate by audience.',
+            'Two skills that fire on the same phrase make both worse; merge them or give each a different audience.',
         },
         approverKeys: ['sofia'],
       },
       {
         version: 2,
         daysAgo: 20,
-        authorKey: 'daniel',
+        authorKey: 'sofia',
         changelog:
-          'Deprecated in favour of client-followup-summary after usage showed both firing on the same meetings.',
+          'Retired in favour of client-followup-notes after usage showed both firing on the same meetings.',
         approverKeys: ['sofia'],
       },
     ],
   },
   {
-    slug: 'client-followup-summary',
-    name: 'Client follow-up summary',
+    slug: 'client-followup-notes',
+    name: 'Client follow-up notes',
     triggerLine:
       'Use after a client review meeting when an advisor pastes their notes and wants the follow-up email and the structured Salesforce note.',
     plugin: 'wa-client-comms',
@@ -3359,7 +3358,7 @@ Do not. Retained for version history.
           'They asked about our fees; I said we would follow up. Write the email.',
         shouldTrigger: 'ambiguous',
         expected:
-          'Draft the non-fee parts; state that fee content is removed and must go through fee-change-client-comms or Compliance.',
+          'Draft the non-fee parts; state that fee content is removed and must go through fee-change-comms or Compliance.',
       },
       {
         input:
@@ -3370,7 +3369,7 @@ Do not. Retained for version history.
       },
     ],
     skillMd: `---
-name: client-followup-summary
+name: client-followup-notes
 description: From an advisor's meeting notes, draft the same-day client follow-up email (what we discussed, what we agreed, what we need from you) and the structured Salesforce note. Use right after a review meeting. Not for proposals, fee communications or prep briefs.
 ---
 
@@ -3425,9 +3424,9 @@ Two blocks separated by a horizontal rule: "Email" then "Salesforce note". Email
           },
           decision: 'revise',
           feedback:
-            "Good bones. The body restates the firm's boundary in three places; say it once in Boundaries and reference it. The CRM note format is inline; move to references/. Add the fee-mention rule as a step, since it is the most common exception.",
+            'What worked: the three-part structure is exactly what advisors need and the examples are real.\nWhat to change: the firm\'s boundary is repeated three times in the body (say it once under Boundaries), the CRM note format is inline (move it to references/), and the fee-mention rule is missing as a step.\nTry next: add "if fees were discussed, remove that content and flag it" as step 2 and resubmit.',
           teachingMoment:
-            'Claude already sees the firm boundary through the plugin. Repeating it in the body costs tokens and does not change behaviour.',
+            'Say the boundary once under Boundaries; repeating it in the body adds length without changing what Claude does.',
         },
       },
       {
@@ -3447,7 +3446,8 @@ Two blocks separated by a horizontal rule: "Email" then "Salesforce note". Email
             sample_cases: 0.85,
           },
           decision: 'pass',
-          feedback: 'Tight and specific. Pass.',
+          feedback:
+            'What worked: short, specific, and the fee-mention step is now the second thing the skill does.\nWhat to change: nothing.\nTry next: publish and watch the first ten follow-ups for anything the sample requests missed.',
         },
         approverKeys: ['daniel'],
       },
@@ -3468,7 +3468,8 @@ Two blocks separated by a horizontal rule: "Email" then "Salesforce note". Email
             sample_cases: 0.9,
           },
           decision: 'pass',
-          feedback: 'Rule is precise and a sample case exercises it. Pass.',
+          feedback:
+            'What worked: the performance rule is precise and one of the sample requests exercises it.\nWhat to change: nothing.\nTry next: none needed.',
         },
         approverKeys: ['daniel'],
       },
@@ -3490,20 +3491,20 @@ Two blocks separated by a horizontal rule: "Email" then "Salesforce note". Email
           },
           decision: 'pass',
           feedback:
-            'Transcript handling keeps the performance rule intact. Pass.',
+            'What worked: transcripts are handled without loosening the performance rule.\nWhat to change: nothing.\nTry next: none needed.',
         },
         approverKeys: ['daniel'],
       },
     ],
   },
   {
-    slug: 'fee-change-client-comms',
+    slug: 'fee-change-comms',
     name: 'Fee-change client letter',
     triggerLine:
       'Use when an advisor needs a fee schedule change letter for a household using the Compliance-approved explanation.',
     plugin: 'wa-client-comms',
     teamSlug: 'wa',
-    ownerKey: 'kevin',
+    ownerKey: 'marcus',
     status: 'in_review',
     rungRequired: 2,
     workflowFamily: 'fee-change',
@@ -3534,7 +3535,7 @@ Two blocks separated by a horizontal rule: "Email" then "Salesforce note". Email
       },
     ],
     skillMd: `---
-name: fee-change-client-comms
+name: fee-change-comms
 description: Draft a fee schedule change letter for one household using the Compliance-approved explanation verbatim, the household's old and new tier, and a personal opening from the advisor. Use only for the approved scheduled change. Not for ad hoc fee questions or negotiated-fee households.
 ---
 
@@ -3577,7 +3578,7 @@ Letter, under one page, approved text set off as its own paragraph.
         version: 1,
         daysAgo: 18,
         authorKey: 'kevin',
-        changelog: 'Cold draft during the fee migration planning.',
+        changelog: 'First draft during the fee migration planning.',
         grade: {
           scores: {
             trigger_clarity: 0.85,
@@ -3590,9 +3591,9 @@ Letter, under one page, approved text set off as its own paragraph.
           },
           decision: 'pass',
           feedback:
-            'Scope is exactly right and the "approved text verbatim" rule is the correct centre of gravity. Boundary is declared but the skill touches fee communications, which the firm treats as Compliance-reviewed; the promotion will need a Compliance approver. Add the negotiated-fee exclusion as a sample case.',
+            'What worked: the scope is exactly right and "use the approved text word for word" is the correct centre of the skill.\nWhat to change: the letters go to clients about fees, which the firm treats as Compliance-reviewed, so the promotion needs a Compliance approver; add the negotiated-fee household as a sample request.\nTry next: say in the description that the output is Compliance-reviewed so approvers see it at a glance.',
           teachingMoment:
-            'Boundary declarations describe data classes; some skills are high exposure because of who reads the output, not what goes in. Say so in the description so approvers see it.',
+            'Add one line to the description saying the letters are reviewed by Compliance before sending.',
         },
       },
       {
@@ -3612,7 +3613,8 @@ Letter, under one page, approved text set off as its own paragraph.
             sample_cases: 0.9,
           },
           decision: 'pass',
-          feedback: 'Ready for promotion with Compliance sign-off.',
+          feedback:
+            'What worked: the negotiated-fee stop step and the Compliance footer close the two gaps from v1.\nWhat to change: nothing.\nTry next: request promotion; Compliance sign-off is required before merge.',
         },
       },
     ],
@@ -3711,7 +3713,7 @@ Headed sections in the outline order. Placeholder for section 3 in brackets.
           },
           decision: 'pass',
           feedback:
-            'The decision to leave the recommendation to the advisor is the right scope call and the skill enforces it. Fee language inline; move it to a referenced file so Compliance can update one place.',
+            'What worked: leaving the recommendation section to the advisor is the right call and the skill enforces it.\nWhat to change: the fee language is pasted inline; move it to a file so Compliance can update one place.\nTry next: add the $5M routing rule as step 1.',
         },
       },
       {
@@ -3731,20 +3733,21 @@ Headed sections in the outline order. Placeholder for section 3 in brackets.
             sample_cases: 0.85,
           },
           decision: 'pass',
-          feedback: 'Pass.',
+          feedback:
+            'What worked: fee language is now in one file and the $5M routing step is first.\nWhat to change: nothing.\nTry next: none needed.',
         },
         approverKeys: ['daniel'],
       },
     ],
   },
   {
-    slug: 'ips-refresh-summary',
-    name: 'IPS refresh summary',
+    slug: 'ips-refresh-checklist',
+    name: 'IPS refresh checklist',
     triggerLine:
       "Use when an advisor lists the changes to a household's IPS at annual refresh and wants the client-facing change summary.",
     plugin: 'wa-client-comms',
     teamSlug: 'wa',
-    ownerKey: 'kevin',
+    ownerKey: 'sofia',
     status: 'draft',
     rungRequired: 2,
     workflowFamily: 'ips',
@@ -3768,7 +3771,7 @@ Headed sections in the outline order. Placeholder for section 3 in brackets.
       },
     ],
     skillMd: `---
-name: ips-refresh-summary
+name: ips-refresh-checklist
 description: Draft the client-facing summary of changes to a household's Investment Policy Statement from the advisor's change notes. Use at annual refresh when the advisor lists what changed. Never from the IPS document itself.
 ---
 
@@ -3893,7 +3896,8 @@ Two lists with checklist item numbers. Packet verdict at the top: Complete, Inco
         version: 1,
         daysAgo: 12,
         authorKey: 'tom',
-        changelog: 'Cold draft from the intake interview and the QA checklist.',
+        changelog:
+          'First draft from the intake interview and the QA checklist.',
         grade: {
           scores: {
             trigger_clarity: 0.85,
@@ -3906,9 +3910,9 @@ Two lists with checklist item numbers. Packet verdict at the top: Complete, Inco
           },
           decision: 'pass',
           feedback:
-            'The decision to work from the inventory rather than the documents makes this publishable in Ops at all; the stop-step in step 1 is exactly right. Add the "unverifiable from inventory" category so the output does not overclaim.',
+            'What worked: working from the document inventory instead of the documents is what makes this publishable in Ops at all, and step 1 refuses anything else.\nWhat to change: the output should say which checklist items the inventory cannot prove, so it does not claim more than it knows.\nTry next: add an "open and confirm" list under the gaps.',
           teachingMoment:
-            'A skill that says what it cannot know is more trusted than one that guesses.',
+            'Add a section to the output for items the skill cannot confirm from its inputs.',
         },
       },
       {
@@ -3928,91 +3932,93 @@ Two lists with checklist item numbers. Packet verdict at the top: Complete, Inco
           },
           decision: 'pass',
           feedback:
-            'Pass. The verdict line makes the output actionable at a glance.',
+            'What worked: the verdict line at the top makes the result usable at a glance, and the "open and confirm" list is honest about what the inventory cannot show.\nWhat to change: nothing.\nTry next: publish and time the first five packets against the baseline.',
         },
         approverKeys: ['daniel'],
       },
     ],
   },
   {
-    slug: 'crm-note-cleanup',
-    name: 'CRM note cleanup',
+    slug: 'rebalancing-exception-memo',
+    name: 'Rebalancing exception memo',
     triggerLine:
-      'Use when a Client Service manager pastes redacted Salesforce notes and wants them restructured into the firm note format.',
+      'Use when Operations pastes stripped Orion exception rows and wants the memo explaining why each trade was held or overridden.',
     plugin: 'cso-operations',
     teamSlug: 'cso',
-    ownerKey: 'amara',
+    ownerKey: 'tom',
     status: 'published',
-    rungRequired: 1,
-    workflowFamily: 'crm-hygiene',
-    workflowKey: 'crm-note-cleanup',
+    rungRequired: 2,
+    workflowFamily: 'exceptions',
+    workflowKey: 'rebalancing-exception-memo',
     authoredBy: 'learner',
     boundary: B.ops,
     createdDaysAgo: 12,
     publishedDaysAgo: 9,
-    usageRate: 3.0,
+    usageRate: 1.5,
     sampleCases: [
       {
-        input: 'Ten redacted notes from the weekly report, restructure please.',
+        input:
+          "Eight exception rows from this morning's rebalancer run, account numbers stripped. Memos please.",
         shouldTrigger: 'yes',
         expected:
-          'Ten notes in Summary / Decisions / Actions / Follow-up format, each labelled with its original note id.',
+          'One short memo per row: household and model, what the rebalancer wanted, why it was held or overridden, what happens next.',
       },
       {
-        input: 'Here is the raw export, the macro failed.',
+        input: 'Here is the raw rebalancer output, I skipped the export step.',
         shouldTrigger: 'no',
         expected:
-          'Unredacted export: stop; ask for the macro to be re-run or the notes to be scrubbed first.',
+          'Raw output carries account numbers: stop and ask for the stripped export.',
       },
       {
         input:
-          'This note mentions the client is unhappy about a transfer delay, clean it up.',
+          'The Okonkwo trade was held because they are mid-transfer. Write it up.',
         shouldTrigger: 'ambiguous',
         expected:
-          'Possible complaint: flag for Compliance and do not restructure that note.',
+          'One row given in prose; draft the memo but mark the reason as "as reported by Operations" since it is not a rebalancer reason code.',
       },
     ],
     skillMd: `---
-name: crm-note-cleanup
-description: Restructure redacted free-text Salesforce meeting notes into the firm note format (Summary, Decisions, Actions with owner and date, Follow-up date). Use when the weekly note-quality export has been run through the redaction macro. Not for unredacted notes or notes that may be complaints.
+name: rebalancing-exception-memo
+description: Draft the short memo that explains why a rebalancing trade was held or overridden, from stripped Orion exception rows (household, model, drift, reason code, action taken). Use when Operations has the daily exception export with account numbers removed. Not for raw rebalancer output or for deciding whether to trade.
 ---
 
-# CRM note cleanup
+# Rebalancing exception memo
 
 ## When to use
-The weekly note-quality report has flagged non-conforming notes and the export has been through the redaction macro (account numbers replaced with [ACCT]).
+The morning rebalancer run has produced exceptions and Operations has exported them with account numbers stripped. Each row needs a memo the advisor can read in thirty seconds.
 
-Not for: raw exports, or any note that reads like a complaint (flag it instead).
+Not for: raw rebalancer output (it carries account numbers), or deciding whether a trade should go ahead; the memo records a decision Operations already made.
 
 ## Inputs
-- Redacted notes, each with a note id.
-Format: references/note-format.md.
+- Exception rows: household, model, drift, reason code, action taken (held / overridden / traded), one line of notes if any.
+Reason codes and their plain-English meaning: references/reason-codes.md.
 
 ## Steps
-1. If any note contains a string that looks like an account number or SSN, stop and say the export was not redacted.
-2. If a note mentions dissatisfaction, a delay complaint or a regulator, mark it "Flag: possible complaint" and leave it unchanged.
-3. For every other note, produce Summary (two sentences), Decisions, Actions (owner and date where the note gives them; otherwise "date not recorded"), Follow-up date.
-4. Do not invent facts absent from the note; write "not recorded".
+1. If any row contains a string that looks like an account number, stop and say the export was not stripped.
+2. For each row, write three sentences: what the rebalancer wanted to do; why it was held or overridden, using the reason code's plain-English meaning; what happens next and when it will be looked at again.
+3. If the reason is not a reason code (typed by Operations), write it as "as reported by Operations".
+4. Refer to accounts as household plus model, never by number.
 
 ## Output format
-One block per note, headed by the note id.
+One block per row, headed by household and model. Under 60 words each.
 
 ## Boundaries
-- may_read: crm_summary_export, internal_templates
+- may_read: aggregated_client_summaries, internal_templates, crm_summary_export
 - must_never_receive: account_numbers, ssn, client_pii_documents, statements_raw
-- human_review: before_crm_entry.
+- human_review: before_crm_entry (the analyst pastes the memo into the household record after reading it).
 
 ## Examples
-**Example 1.** Note 4471: "met w/ Dunn, talked abt the rollover, he'll call the old plan, we said we'd send the form, check back in 2 wks." Output: Summary "Discussed rollover of Mr Dunn's former employer plan. Client will contact the plan administrator." Decisions "Proceed with rollover." Actions "Client: call plan administrator (date not recorded); Advisor: send rollover form (date not recorded)." Follow-up: two weeks from note date.
+**Example 1: held.** Row: Dunn household, Balanced 60/40, drift 6.2%, code TLH (tax-loss window), held. Memo: "The rebalancer proposed trimming equities by about 6% to return to target. The trade was held because the household is inside its tax-loss harvesting window and selling now would realise gains. It will be reviewed at the next run after the window closes on 15 October."
 
-**Example 2: flag.** Note 4488 mentions "still upset the transfer took 3 weeks". Output: "Flag: possible complaint. Not restructured."
+**Example 2: overridden.** Row: Reyes household, Growth 80/20, drift 4.1%, code XFER (transfer in progress), overridden to trade cash only. Memo names the transfer, says only the incoming cash was invested, and gives the date the full rebalance will run.
 `,
     versions: [
       {
         version: 1,
         daysAgo: 12,
         authorKey: 'amara',
-        changelog: "Cold draft from Amara's existing Project.",
+        changelog:
+          'First draft from the exception-memo Project Amara and Jonas built in week one.',
         grade: {
           scores: {
             trigger_clarity: 0.85,
@@ -4025,7 +4031,7 @@ One block per note, headed by the note id.
           },
           decision: 'pass',
           feedback:
-            'Excellent first skill. The redaction check and the complaint flag are the two rules that make this safe, and both are steps rather than warnings. Pass.',
+            'What worked: the check for account numbers and the "as reported by Operations" rule are written as steps, not warnings, which is what makes this safe.\nWhat to change: nothing.\nTry next: keep step 1 in every future version; it is the only thing standing between Claude and account numbers.',
         },
         approverKeys: ['tom'],
       },
@@ -4034,7 +4040,7 @@ One block per note, headed by the note id.
         daysAgo: 3,
         authorKey: 'amara',
         changelog:
-          'Allow pasting full note bodies directly from Salesforce to skip the macro step.',
+          'Allow pasting the raw rebalancer output directly to skip the export step.',
         grade: {
           scores: {
             trigger_clarity: 0.85,
@@ -4047,12 +4053,12 @@ One block per note, headed by the note id.
           },
           decision: 'revise',
           feedback:
-            'This version removes the only control that keeps account numbers out of the model: it invites unredacted note bodies and drops the step-1 check. The boundary declaration still says must_never_receive account_numbers, so the steps no longer honour the declaration. Revert to the macro-first flow or add an equivalent check.',
+            'What worked: the memo steps are unchanged and still good.\nWhat to change: this version invites raw rebalancer output and drops the step-1 check, so account numbers can reach the model while the skill still promises they never will.\nTry next: put the stripped-export step back, or add a check in step 1 that stops on anything resembling an account number, and resubmit.',
           securityFindings: [
             {
               severity: 'high',
               finding:
-                'Instructs the user to paste full Salesforce note bodies, which may contain account numbers or SSNs, and removes the redaction check.',
+                'Instructs the user to paste raw rebalancer output, which contains account numbers, and removes the step-1 check.',
             },
           ],
         },
@@ -4060,7 +4066,7 @@ One block per note, headed by the note id.
     ],
   },
   {
-    slug: 'compliance-attestation-summary',
+    slug: 'attestation-summary',
     name: 'Compliance attestation summary',
     triggerLine:
       'Use when Ops has the de-identified quarterly attestation exception export and needs the CCO summary.',
@@ -4099,7 +4105,7 @@ One block per note, headed by the note id.
       },
     ],
     skillMd: `---
-name: compliance-attestation-summary
+name: attestation-summary
 description: Draft the quarterly attestation exception summary for the CCO from a de-identified export (staff ids, exception type, status). Use when the attestation window has closed and Ops has run the de-identification. Builder draft; not yet graded.
 ---
 
@@ -4153,20 +4159,20 @@ export const DEMO_ADOPTIONS: {
   { skillSlug: 'advisor-meeting-prep', personKey: 'rajesh', daysAgo: 45 },
   { skillSlug: 'annual-review-deck-outline', personKey: 'priya', daysAgo: 15 },
   { skillSlug: 'annual-review-deck-outline', personKey: 'grace', daysAgo: 10 },
-  { skillSlug: 'client-followup-summary', personKey: 'marcus', daysAgo: 8 },
-  { skillSlug: 'client-followup-summary', personKey: 'nathan', daysAgo: 40 },
-  { skillSlug: 'client-followup-summary', personKey: 'isabelle', daysAgo: 35 },
-  { skillSlug: 'client-followup-summary', personKey: 'kevin', daysAgo: 42 },
-  { skillSlug: 'client-followup-summary', personKey: 'priya', daysAgo: 20 },
+  { skillSlug: 'client-followup-notes', personKey: 'marcus', daysAgo: 8 },
+  { skillSlug: 'client-followup-notes', personKey: 'nathan', daysAgo: 40 },
+  { skillSlug: 'client-followup-notes', personKey: 'isabelle', daysAgo: 35 },
+  { skillSlug: 'client-followup-notes', personKey: 'kevin', daysAgo: 42 },
+  { skillSlug: 'client-followup-notes', personKey: 'priya', daysAgo: 20 },
   { skillSlug: 'proposal-assembly', personKey: 'kevin', daysAgo: 28 },
   { skillSlug: 'proposal-assembly', personKey: 'nathan', daysAgo: 25 },
   { skillSlug: 'proposal-assembly', personKey: 'isabelle', daysAgo: 20 },
   { skillSlug: 'onboarding-packet-qa', personKey: 'megan', daysAgo: 6 },
   { skillSlug: 'onboarding-packet-qa', personKey: 'jonas', daysAgo: 5 },
-  { skillSlug: 'crm-note-cleanup', personKey: 'tom', daysAgo: 8 },
-  { skillSlug: 'crm-note-cleanup', personKey: 'megan', daysAgo: 7 },
-  { skillSlug: 'crm-note-cleanup', personKey: 'jonas', daysAgo: 8 },
-  { skillSlug: 'meeting-recap-email', personKey: 'grace', daysAgo: 45 },
+  { skillSlug: 'rebalancing-exception-memo', personKey: 'tom', daysAgo: 8 },
+  { skillSlug: 'rebalancing-exception-memo', personKey: 'megan', daysAgo: 7 },
+  { skillSlug: 'rebalancing-exception-memo', personKey: 'jonas', daysAgo: 8 },
+  { skillSlug: 'crm-note-cleanup', personKey: 'nathan', daysAgo: 45 },
 ];
 
 export const DEMO_ASSIGNMENTS: {
@@ -4228,30 +4234,30 @@ export const DEMO_COMMENTS: {
     daysAgo: 14,
   },
   {
-    skillSlug: 'client-followup-summary',
+    skillSlug: 'client-followup-notes',
     personKey: 'nathan',
     body: 'After about twenty runs: the email closing was always generic. Suggest it name the next touchpoint from the notes. Sofia let me ship that as v4.',
     kind: 'feedback',
     daysAgo: 13,
   },
   {
-    skillSlug: 'crm-note-cleanup',
+    skillSlug: 'rebalancing-exception-memo',
     personKey: 'tom',
-    body: 'Sending v2 back. Skipping the macro is the convenience everyone wants and exactly the thing we cannot allow. Happy to look at an in-skill redaction check instead.',
+    body: 'Sending v2 back. Pasting the raw rebalancer output is the convenience everyone wants and exactly the thing we cannot allow: it carries account numbers. Happy to look at a check inside the skill instead.',
     kind: 'feedback',
     daysAgo: 3,
   },
   {
-    skillSlug: 'crm-note-cleanup',
+    skillSlug: 'rebalancing-exception-memo',
     personKey: 'amara',
-    body: 'Grader security review on v2: high severity, invites unredacted note bodies. Decision: revise.',
+    body: 'Grader security review on v2: high severity, invites raw rebalancer output with account numbers. Decision: revise.',
     kind: 'grader',
     daysAgo: 3,
   },
   {
-    skillSlug: 'meeting-recap-email',
-    personKey: 'daniel',
-    body: 'Deprecated. Both this and client-followup-summary were firing on "write up the meeting" and producing two different accounts of it. Sofia\'s handles the CRM note too, so hers stays.',
+    skillSlug: 'crm-note-cleanup',
+    personKey: 'sofia',
+    body: 'Retired. This tidied a Salesforce note after the fact; client-followup-notes now writes the note from the meeting notes in the first place, so both were answering the same request.',
     kind: 'system',
     daysAgo: 20,
   },
@@ -4298,7 +4304,7 @@ export const DEMO_PROMOTIONS: DemoPromotion[] = [
   },
   {
     key: 'pr-followup-v4',
-    skillSlug: 'client-followup-summary',
+    skillSlug: 'client-followup-notes',
     version: 4,
     requestedByKey: 'nathan',
     prNumber: 19,
@@ -4395,7 +4401,7 @@ export const DEMO_PROMOTIONS: DemoPromotion[] = [
   },
   {
     key: 'pr-fee-v2',
-    skillSlug: 'fee-change-client-comms',
+    skillSlug: 'fee-change-comms',
     version: 2,
     requestedByKey: 'kevin',
     prNumber: 23,
@@ -4432,7 +4438,7 @@ export const DEMO_PROMOTIONS: DemoPromotion[] = [
   },
   {
     key: 'pr-crm-v2',
-    skillSlug: 'crm-note-cleanup',
+    skillSlug: 'rebalancing-exception-memo',
     version: 2,
     requestedByKey: 'amara',
     prNumber: 26,
@@ -4447,20 +4453,20 @@ export const DEMO_PROMOTIONS: DemoPromotion[] = [
       missingDeclarations: [],
       humanReviewRequired: true,
       notes:
-        'Steps invite unredacted note bodies; declaration says must_never_receive account_numbers. Steps do not honour the declaration.',
+        'Steps invite raw rebalancer output; the declaration says must_never_receive account_numbers. Steps do not honour the declaration.',
     },
     diffSummary: {
       filesChanged: 1,
       additions: 6,
       deletions: 9,
-      summary: 'Removed redaction-macro prerequisite and the step-1 check.',
+      summary: 'Removed the stripped-export prerequisite and the step-1 check.',
     },
     approvals: [
       {
         personKey: 'tom',
         role: 'champion',
         decision: 'send_back',
-        note: 'The macro step is the control. Revert it, or build a redaction check into step 1 that stops on anything resembling an account number, and resubmit.',
+        note: 'The stripped export is the control. Put it back, or build a check into step 1 that stops on anything resembling an account number, and resubmit.',
         daysAgo: 3,
       },
     ],
@@ -4481,20 +4487,20 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 1,
     competencyCodes: ['L1.description', 'L1.discernment'],
-    title: 'Draft a CD memo cover note for the Ortiz plan change',
+    title: 'Draft the Ortiz CD memo cover note',
     brief:
-      "The Ortiz household moved from a 60/40 target to 50/50 after their June review. Write the prompt that gets Claude to draft the one-paragraph cover note that sits on top of the CD memo for Daniel's review. Give Claude the goal, the audience, the format and the plan delta, and nothing else. Before you run it, write down what you expect to be good and weak about the output.",
+      'For your CD memos, write the prompt that gets Claude to draft the one-paragraph cover note for the Ortiz plan change.',
     rationale:
-      'You write three or four CD memos a month and told Interviewer the cover note is the part you rewrite most. This teaches Description on a piece of your own work.',
+      'You write three or four CD memos a month and the cover note is the part you rewrite most.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'cd-memo',
     workflowKey: 'cd-memo-drafting',
     hints: [
-      'Who reads the cover note, and what do they need to decide from it in ten seconds?',
-      'You included the whole plan summary. Which two numbers actually changed?',
-      'Name the format: one paragraph, under 80 words, no bullet points, in the register Daniel expects.',
+      'Say who reads the note and what they decide from it.',
+      'Give only the two numbers that changed, not the whole plan summary.',
+      'Ask for one paragraph under 80 words, no bullets.',
     ],
     status: 'passed',
     estimatedMinutes: 15,
@@ -4507,7 +4513,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 58,
         expectationText:
-          'It will get the structure right but be too formal and it will repeat all the numbers I gave it instead of just the change.',
+          'Good enough if Daniel can see what changed and why in ten seconds.',
         expectationConfidence: 0.6,
         coldAttempt: true,
         artifact: {
@@ -4518,16 +4524,16 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             "The Ortiz household's target allocation has moved from 60/40 to 50/50 following Mr Ortiz's retirement, at the clients' request during the June review. The change reduces equity exposure ahead of drawdown beginning in 2027. Please confirm the revised withdrawal assumptions in eMoney reflect the new allocation and that the IPS refresh is scheduled for the annual review.",
         },
         critiqueText:
-          'Better than I expected. It did not repeat the numbers. Weakness: "reduces equity exposure ahead of drawdown" is an inference I did not give it; true here, but I should not let it invent the rationale. The IPS point is a good catch I had not included.',
+          'It added a reason I never gave it (equity exposure ahead of drawdown). True here, but I should state the reason myself.',
         grade: {
           daysAgo: 58,
           scores: { goal: 0.85, format: 0.85, context: 0.8, vocabulary: 0.8 },
           decision: 'pass',
           critiqueQuality: 0.75,
           feedback:
-            'The prompt names the reader and the ten-second decision, which is what made the output usable. You caught the invented rationale in your critique, which is the skill we want; next time state the reason in the prompt so Claude does not have to guess. Slightly underconfident: the draft was closer to sendable than you predicted.',
+            'What worked: you said who reads the note and what they decide from it, so the draft is short and usable.\nWhat to change: Claude made up the reason for the change; the reason should come from you.\nTry next: add one line starting "The reason for the change is" before you run it.',
           teachingMoment:
-            'When you know the "why", give it. Claude fills gaps with plausible inferences, and plausible is the dangerous kind of wrong in a memo Daniel signs.',
+            'Write the reason for the change into the prompt so Claude does not have to guess it.',
         },
       },
     ],
@@ -4537,20 +4543,20 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 1,
     competencyCodes: ['L1.delegation', 'L1.diligence'],
-    title: 'Decide what to delegate in the RMD letter batch',
+    title: 'Draft one RMD letter from a summary row',
     brief:
-      'The November batch is 118 letters. Split the work: which parts can Claude draft from the Orion RMD summary rows, and which parts stay with you? Write the split down first, then run the prompt for one household (Delgado, 76, traditional IRA, $27,310, quarterly on file) and check the output against the SOP.',
+      'For your RMD letters, write the prompt that drafts the Delgado letter from its summary row, then check the draft against the SOP.',
     rationale:
-      'RMD letters are your biggest single-week workload and they quote a dollar figure to a client, so the delegation decision matters more than the prompt.',
+      'RMD letters are your biggest single week of work and they quote a dollar figure to a client.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'rmd-letters',
     workflowKey: 'rmd-letter-drafting',
     hints: [
-      'What in the letter is the same for all 118, and what is unique per household?',
-      'Where in the SOP does a person have to check something before it goes out?',
-      'Rounding is a judgement call the SOP already made. Tell Claude the rule rather than checking 118 times.',
+      'Tell Claude the rounding rule once instead of checking it 118 times.',
+      'Give only household, age, account type, amount and method; never an account number.',
+      'Check every figure in the draft against the row before you call it done.',
     ],
     status: 'passed',
     estimatedMinutes: 20,
@@ -4563,18 +4569,18 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 52,
         expectationText:
-          'The draft will be fine on the explanation paragraph and I will need to fix the amount formatting and the deadline wording.',
+          'Good enough if the amount, deadline and method are right and it reads warmly.',
         expectationConfidence: 0.7,
         coldAttempt: true,
         artifact: {
           type: 'prompt_run',
           content:
-            'DELEGATION: Claude drafts the four-paragraph letter from the summary row using the template rules (round to nearest thousand, "about $X", withholding reminder, 31 December deadline). I keep: checking the amount against the Orion export, choosing the inherited-IRA variant where the row says inherited, and the advisor review before send. Claude never sees account numbers; I give it household, age, account type, amount, method.\n\nPROMPT: Draft an RMD letter for the Delgado household using our template rules. Age 76, traditional IRA, required amount 27,310, quarterly distribution method on file. Round to the nearest thousand and write it as "about $27,000". Four paragraphs: what an RMD is in one sentence; their amount and the 31 December deadline; confirm the quarterly method; withholding reminder. Warm, plain English, under one page, no headings.',
+            'Draft an RMD letter for the Delgado household using our template rules. Age 76, traditional IRA, required amount 27,310, quarterly distribution method on file. Round to the nearest thousand and write it as "about $27,000". Four paragraphs: what an RMD is in one sentence; their amount and the 31 December deadline; confirm the quarterly method; withholding reminder. Warm, plain English, under one page, no headings. You will not be given account numbers; refer to the account as the Delgado IRA.',
           output:
             'Dear Mr and Mrs Delgado,\n\nEach year after age 73 the IRS requires a minimum withdrawal from traditional retirement accounts, called a required minimum distribution.\n\nFor 2026 your required amount is about $27,000, and it must be withdrawn by 31 December.\n\nYou already receive quarterly distributions, which will satisfy this requirement with no action needed on your part.\n\nAs a reminder, federal tax withholding applies to these withdrawals; please call us if you would like to review the rate.\n\nWarm regards,',
         },
         critiqueText:
-          'Amount and deadline were right, which I did not expect. The third paragraph asserts the quarterly payments "will satisfy" the amount, which I cannot know from the row; that needs to be "are set up to cover". That is the sentence the advisor would have to catch.',
+          'Amount and deadline right. One sentence says the quarterly payments will satisfy the amount, which I cannot know from the row.',
         grade: {
           daysAgo: 52,
           scores: {
@@ -4588,7 +4594,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.85,
           feedback:
-            'The delegation note is exactly what we want: what Claude does, what you keep, what it never sees. Your critique found the one sentence that overclaims, which is the diligence skill in one move. You expected formatting problems and got a substantive one; that is normal early on and your confidence was well placed overall.',
+            'What worked: the prompt carries the template rules and gives Claude only the five facts it needs, so the letter is right on amount and deadline.\nWhat to change: the third paragraph promises the quarterly payments cover the amount, which the row does not say; change it to "are set up to cover".\nTry next: add "do not say the payments will satisfy the amount unless I tell you so" and run it again.',
         },
       },
     ],
@@ -4598,20 +4604,20 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 1,
     competencyCodes: ['L1.description', 'L1.discernment'],
-    title: 'Meeting agenda for the Hale review from the Salesforce summary',
+    title: 'Write the Hale meeting agenda from the summary',
     brief:
-      "Using only the Salesforce summary and the Orion household page for the Hale review, write the prompt that produces the suggested-agenda section of Monday's prep brief. Predict what will come back before you run it.",
+      'For your Monday meeting prep, write the prompt that produces the agenda section of the Hale brief from the Salesforce and Orion summaries.',
     rationale:
-      'You write ten of these a week. If Claude can draft the agenda section reliably, the Project you build at L2 will save you most of Monday morning.',
+      'You write ten of these a week; if Claude can draft the agenda reliably, Monday morning gets shorter.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'meeting-prep',
     workflowKey: 'monday-meeting-prep',
     hints: [
-      'You asked for "an agenda". How many items, in what order, and what makes an item belong on it?',
-      'The open item from June is not in your prompt. Where would Claude get it?',
-      'Tell Claude the RMD is due this year and the method is on file; it will not infer both from the summary.',
+      'Say how many items you want and what order they go in.',
+      'Tell Claude the beneficiary item has been open since June; it cannot work that out.',
+      'State the RMD amount and that a method is on file.',
     ],
     status: 'passed',
     estimatedMinutes: 15,
@@ -4624,7 +4630,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 47,
         expectationText:
-          'This will be good. I gave it everything from the summary; the agenda will have the right items.',
+          'Good enough if the agenda has the right items for the Hales.',
         expectationConfidence: 0.85,
         coldAttempt: true,
         artifact: {
@@ -4636,23 +4642,23 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             '1. Review portfolio performance year to date\n2. Discuss current allocation and rebalancing\n3. Review cash position\n4. Discuss Roth conversion strategy\n5. Review financial plan progress\n6. Discuss beneficiary designations\n7. Questions and next steps',
         },
         critiqueText:
-          "It is generic. Every item could be on any household's agenda. It did not flag the RMD at all and it buried the beneficiary item that has been open since June.",
+          "Every item could be on any household's agenda. No RMD line, and the June beneficiary item is buried at number six.",
         grade: {
           daysAgo: 47,
           scores: { goal: 0.5, format: 0.5, context: 0.7, vocabulary: 0.6 },
           decision: 'revise',
           critiqueQuality: 0.8,
           feedback:
-            'Your critique is right and specific: generic, RMD missing, open item buried. The prompt caused it: "write an agenda" tells Claude nothing about what belongs on this agenda. You were 85% confident and it needed revision; that gap is the calibration lesson. Revise with the number of items, the ordering rule (overdue items first), and the RMD fact stated.',
+            'What worked: you pasted the right summaries, so every fact Claude needed was there.\nWhat to change: "write an agenda" gave Claude no idea what belongs on this one, so it wrote a generic list with no RMD line and the June item at the bottom.\nTry next: add three rules to the prompt: 3–5 items, open items from last meeting first, name anything due this year.',
           teachingMoment:
-            'Pasting everything is not describing. Say what a good agenda is for this meeting: 3–5 items, open items first, anything due this year named.',
+            'Add "open items from the last meeting come first" to the prompt and run it again.',
         },
       },
       {
         attempt: 2,
         daysAgo: 44,
         expectationText:
-          'Should pass now: I named the item count, ordering and the RMD. It may still phrase the Roth item too vaguely.',
+          'Good enough if the June items are first and the RMD line is there.',
         expectationConfidence: 0.65,
         coldAttempt: false,
         artifact: {
@@ -4664,14 +4670,14 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             'Suggested agenda\n1. Open since June: update beneficiary on the Hale Roth.\n2. Open since June: revisit Roth conversion for Q4 (plan updated 12 Aug).\n3. RMD due this year: about $38,000 from the Hale IRA; monthly method on file.\n4. Cash at $41k vs $60k target; confirm the 2027 travel budget assumption.\n5. Allocation slightly overweight equities (62 vs 60); no action unless the Hales want to rebalance.',
         },
         critiqueText:
-          'This is the agenda I would have written. Item 5 volunteers "no action unless"; I would let the advisor decide that, so I would cut the second half of the line.',
+          "This is the agenda I would have written. Item 5 makes the advisor's call for them; I would cut that half-line.",
         grade: {
           daysAgo: 44,
           scores: { goal: 0.9, format: 0.85, context: 0.85, vocabulary: 0.85 },
           decision: 'pass',
           critiqueQuality: 0.8,
           feedback:
-            "The rules you added are the difference between generic and this. You also caught Claude making the advisor's call in item 5; cut it. Confidence 0.65 on a clear pass is a little cautious, but after the first attempt that is a reasonable adjustment.",
+            'What worked: the three rules turned a generic list into the agenda you would have written yourself.\nWhat to change: item 5 decides for the advisor ("no action unless"); cut everything after the semicolon.\nTry next: add "do not recommend actions; the advisor decides" so the next brief stops there on its own.',
         },
       },
     ],
@@ -4681,11 +4687,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 1,
     competencyCodes: ['L1.discernment', 'L1.diligence'],
-    title: 'Check the annual-review talking points against the source',
+    title: 'Check the Brennan review talking points',
     brief:
-      'Run your talking-points prompt for the Brennan annual review, then verify every figure in the output against the eMoney and Orion summaries and mark each as confirmed, wrong, or not in source. Record what you expected before running.',
+      'For your annual review decks, run your talking-points prompt for the Brennans and check every figure against the eMoney and Orion summaries.',
     rationale:
-      'Your last two submissions were strong on Description; this one is about the check you do before an advisor presents something Claude drafted.',
+      'Your last two tasks were strong on the prompt; this one is about the check you do before an advisor presents the result.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
@@ -4693,8 +4699,8 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'annual-review-deck',
     hints: [
       'Any figure without a source line is "not in source", even if it sounds right.',
-      'Funded ratio and probability of success are different numbers; did Claude conflate them?',
-      'What would the advisor say in the room if a client challenged the figure?',
+      'Funded ratio and probability of success are different numbers; check Claude kept them apart.',
+      'Ask yourself what the advisor would say if a client challenged the figure.',
     ],
     status: 'passed',
     estimatedMinutes: 20,
@@ -4707,7 +4713,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 38,
         expectationText:
-          'The talking points will be well organised. I expect one or two numbers to be slightly off or rounded differently from the summary.',
+          'Good enough if every figure traces back to the two summaries.',
         expectationConfidence: 0.7,
         coldAttempt: true,
         artifact: {
@@ -4718,7 +4724,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             "1. You remain fully funded for your goals, with a small cushion [funded ratio 104%].\n2. The plan's probability of success is strong and unchanged from last year [88%].\n3. Your allocation is within a couple of points of target; no changes proposed [58/38/4 vs 60/35/5].\n4. Returns this year have been solid [+5.4% YTD].\n5. Cash is running above target; we could put about $20k to work [$72k vs $50k].",
         },
         critiqueText:
-          'Confirmed: 1, 3, 4, 5. Point 2 says "unchanged from last year": not in source. I gave it this year only; it invented the comparison. Everything else traces. Point 5\'s "$20k" is arithmetic from the summary, fine.',
+          'Confirmed 1, 3, 4, 5. Point 2 says "unchanged from last year"; I only gave it this year.',
         grade: {
           daysAgo: 38,
           scores: {
@@ -4733,7 +4739,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.9,
           feedback:
-            'You traced every figure and found the one invented comparison. That is the whole of diligence. Your prediction ("one or two numbers slightly off") was close in kind if not in detail: it was an invented claim rather than a wrong number, which is the more common failure. Well calibrated.',
+            'What worked: you traced every figure to its source and caught the one comparison that came from nowhere.\nWhat to change: point 2 claims "unchanged from last year" with no last-year figure; delete the comparison or give Claude last year\'s number.\nTry next: end your prompt with "use only the figures above; do not compare to periods I have not given you".',
         },
       },
     ],
@@ -4743,20 +4749,20 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 2,
     competencyCodes: ['L2.selection', 'L2.project_design'],
-    title: 'Build the Monday meeting-prep Project',
+    title: 'Set up a Project for Monday meeting prep',
     brief:
-      "Create a Claude Project for your Monday prep briefs. Decide what goes in the instructions (the constant part) and which files to add (template, SOP excerpt, an example brief). Then run it for one household with only that week's summaries as the per-run input. Write a rationale for every inclusion and exclusion.",
+      'For your Monday meeting prep, set up a Project with your standing rules in the instructions and only the files every brief needs, then run it for one household.',
     rationale:
-      'You run Monday prep every week for three advisors; a Project means each brief starts from your rules instead of a blank page. This is your L2 passing artifact.',
+      'You run Monday prep every week for three advisors; a Project means each brief starts from your rules instead of a blank page.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'project',
     contextTag: 'meeting-prep',
     workflowKey: 'monday-meeting-prep',
     hints: [
-      'What do you retype every Monday? That is the instructions.',
-      'The SOP is four pages. Which paragraphs change how the brief is written?',
-      "Would you want last week's Hale summary in the Project when you prep next week's Nakamura meeting?",
+      'What do you retype every Monday? That goes in the instructions.',
+      'The SOP is four pages; add only the paragraphs that change how the brief is written.',
+      "Leave last week's household summaries out; next week's brief must never see them.",
     ],
     status: 'passed',
     estimatedMinutes: 40,
@@ -4769,7 +4775,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 27,
         expectationText:
-          'The Project will produce a good brief on the first run because the instructions carry the five sections. I am less sure I have left enough out; I may have added too much SOP.',
+          'Good enough if the first run gives me a brief I could send after light edits.',
         expectationConfidence: 0.75,
         coldAttempt: true,
         artifact: {
@@ -4797,7 +4803,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             "Included: the template (used every run), the three SOP paragraphs that change the writing (structure, never-list, review), and one example brief so Claude sees the register. Excluded: the rest of the SOP (timing and inputs are my job, not Claude's), all household summaries (they change weekly and mixing households is the failure I fear most), and the RMD SOP (different workflow; it would tempt Claude to write letter language into a brief).",
         },
         critiqueText:
-          'The first run was close to sendable. Two problems: the example brief anchored the output too hard (it used the same agenda phrasing), and I realised I want the "older than two meetings" flag in the instructions rather than relying on the template.',
+          'Close to sendable. The example brief made it copy the same agenda phrasing, and I want the "older than two meetings" flag in the instructions.',
         grade: {
           daysAgo: 27,
           scores: {
@@ -4813,7 +4819,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.8,
           feedback:
-            'The rationale is the best part: every exclusion has a reason a teammate could follow, and excluding household summaries for cross-contamination shows you understand what a Project is for. Your critique of the example anchoring is exactly right; consider replacing the example with two shorter fragments. Add dates to file names so stale material is visible.',
+            'What worked: the instructions carry every rule you used to retype, and keeping household summaries out means one brief can never bleed into the next.\nWhat to change: the full example brief makes every new brief echo its wording; replace it with two short fragments that show the format.\nTry next: put a date in each file name so you can see at a glance when something is stale.',
         },
       },
     ],
@@ -4823,20 +4829,20 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 2,
     competencyCodes: ['L2.selection'],
-    title: 'RMD letter Project: choose what to include',
+    title: 'Set up a Project for RMD letters',
     brief:
-      "Before the November batch, build a Project for RMD letters. The only question that matters here is inclusion: which of the template, the SOP, the IRS RMD page, last year's letters and the Orion export belong in the Project, and why not the rest?",
+      "For your RMD letters, set up a Project and decide which of the template, the SOP, the IRS page, last year's letters and the Orion export belong in it.",
     rationale:
-      'Your meeting-prep Project passed on selection; RMD letters are a different context with a client-facing output and a tighter boundary, so this checks the skill transfers.',
+      'RMD letters go to clients and quote a figure, so what you put in the Project matters even more than for briefs.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'project',
     contextTag: 'rmd-letters',
     workflowKey: 'rmd-letter-drafting',
     hints: [
-      'Which of these does Claude need to write a letter, as opposed to which do you need to check one?',
-      "Last year's letters contain amounts and household names. Do they belong in standing context?",
-      'The IRS page is 40 pages; which two paragraphs does the letter actually rely on?',
+      'Which of these does Claude need to write a letter, and which do you need to check one?',
+      "Last year's letters contain names and amounts; keep them out.",
+      'The IRS page is 40 pages; the letter relies on two paragraphs.',
     ],
     status: 'passed',
     estimatedMinutes: 30,
@@ -4849,7 +4855,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 16,
         expectationText:
-          'I will pass on inclusion. The risk is that I include the IRS material and it makes the letters technical.',
+          'Good enough if the letters come out plain and short without me trimming them.',
         expectationConfidence: 0.8,
         coldAttempt: true,
         artifact: {
@@ -4872,7 +4878,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             "Included: the template with its three variants (every run), and two paragraphs from the IRS page so the one-sentence explanation is correct this year. Excluded: the SOP (timing and review are mine), last year's letters (they contain household names and amounts, and I do not want last year's amounts anywhere near this year's letters), the full Orion export (I paste one row per run; the export is the thing that must never be uploaded).",
         },
         critiqueText:
-          'The letters came out plain and short. I noticed I had to add the "never mention the 10-year rule unless I say so" line after the first inherited-IRA run; the template alone was not enough to stop it.',
+          'Letters came out plain and short. I had to add the 10-year-rule line after the first inherited-IRA run; the template alone did not stop it.',
         grade: {
           daysAgo: 16,
           scores: {
@@ -4884,7 +4890,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.8,
           feedback:
-            'Excluding last year\'s letters for the reason you gave is the mature version of this skill: not "it is not useful" but "it is a contamination risk". Two IRS paragraphs instead of forty pages is exactly right. Pass, and your confidence matched the outcome.',
+            "What worked: two IRS paragraphs instead of forty pages, and last year's letters kept out so old amounts cannot leak into new ones.\nWhat to change: nothing structural; the 10-year-rule line you added after the first run belongs in the instructions from day one.\nTry next: run one inherited-IRA row and one already-distributed row back to back to check both variants pick correctly.",
         },
       },
     ],
@@ -4894,11 +4900,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 2,
     competencyCodes: ['L2.project_design', 'L2.selection'],
-    title: "Annual review deck Project with Hannah's outline skill",
+    title: "Set up a deck Project using Hannah's skill",
     brief:
-      "Build a Project for your annual review decks that uses Hannah's annual-review-deck-outline skill for the narrative and adds your own instructions for the parts the skill does not cover (your three advisors' preferences, the chart list). Run it for the Kowalski deck.",
+      "For your annual review decks, set up a Project that uses Hannah's deck-outline skill and adds only what it does not know: your advisors' preferences and the chart list.",
     rationale:
-      "Third context for L2. It also tests whether you can build on a teammate's skill rather than duplicating it, which is the fastest route through L3.",
+      "Building on a teammate's skill instead of copying it is the fastest route to sharing your own work later.",
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'project',
@@ -4906,9 +4912,9 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'annual-review-deck',
     skillSlug: 'annual-review-deck-outline',
     hints: [
-      'What does the skill already do that you should not repeat in the instructions?',
-      'Advisor preferences change rarely; where do they belong?',
-      'What per-run input does the Kowalski deck need beyond the two summaries?',
+      'Anything the skill already does should not be repeated in your instructions.',
+      'Advisor preferences change rarely; put them in a file.',
+      "Per run, paste only the two summaries and last year's action items.",
     ],
     status: 'passed',
     estimatedMinutes: 35,
@@ -4921,7 +4927,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 7,
         expectationText:
-          "I think this will be middling. I am not sure I have avoided duplicating the skill's instructions, and the chart list may be too detailed.",
+          'Good enough if the Kowalski outline comes out with my three advisor tweaks applied.',
         expectationConfidence: 0.7,
         coldAttempt: true,
         artifact: {
@@ -4943,7 +4949,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             "Included: only what the skill does not know (my advisors' preferences and the chart list). Excluded: the deck order, narrative voice rules and life-event handling, because the skill owns them and repeating them would drift from Hannah's version when she updates it. Excluded the template PPTX: Claude does not build the slides.",
         },
         critiqueText:
-          "Better than I expected. The output was the skill's outline plus my three adjustments, cleanly. The one thing I would change is the chart list: it lists sources per chart, which Claude does not need; I need it.",
+          "The outline came out as the skill's version plus my three adjustments. The chart list has a source column Claude does not need; I do.",
         grade: {
           daysAgo: 7,
           scores: {
@@ -4959,9 +4965,9 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.85,
           feedback:
-            'This is the L2 artifact at its best: the Project holds only what the skill cannot know, and you explained why duplicating the skill would cause drift. You were underconfident (0.7 on a 0.90); note that for calibration. The chart-list observation is right: move the source column to your own checklist.',
+            "What worked: the Project holds only what Hannah's skill cannot know, so when she updates the skill your decks improve too.\nWhat to change: the chart list carries source pages that are for you, not Claude; move that column to your own checklist.\nTry next: run the Kowalski deck once with the skill alone and once with the Project to see exactly what your additions change.",
           teachingMoment:
-            'Underconfidence is safer than overconfidence, but both cost you: a prediction you do not believe teaches you less when it comes true.',
+            'Move the source-page column out of chart-list.md into your own checklist and re-run the Kowalski deck.',
         },
       },
     ],
@@ -4971,11 +4977,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 2,
     competencyCodes: ['L2.selection', 'L2.project_design'],
-    title: 'Tighten your Monday prep Project: what to leave out',
+    title: 'Trim your Monday meeting-prep Project',
     brief:
-      "Your meeting-prep Project has grown since v1: you added the RMD SOP excerpt, two more example briefs and the advisors' calendar export. Open it, remove everything that is not used on most runs or that could contaminate a brief, and re-run for next Monday's Nakamura meeting. Submit the new file list and a rationale for each removal. Predict first: will the brief get better, worse or stay the same, and why?",
+      "For your Monday meeting prep, remove the files your Project no longer needs and run it for next Monday's Nakamura meeting.",
     rationale:
-      'You run Monday prep every week and your Project is the tool you will hand to Rajesh and Grace. Grader flagged the example briefs anchoring the output in your v1 critique; this closes that loop and gives you a fourth context for L2.selection.',
+      'Your Project has grown to seven files and the extra example briefs are making every brief sound the same.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'project',
@@ -4983,9 +4989,9 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'monday-meeting-prep',
     skillSlug: 'advisor-meeting-prep',
     hints: [
-      'List the files and ask of each: did the last three briefs use it?',
-      'Two of the examples are from the same advisor. What is the third teaching Claude that the first does not?',
-      'The calendar export has every meeting for three advisors. What is the smallest per-run input that gives Claude the attendees?',
+      'Go file by file: did the last three briefs actually use it?',
+      'Two of the examples are from the same advisor; one is enough.',
+      'The calendar export lists every meeting for three advisors; paste just the attendees for this one.',
     ],
     starter: {
       currentFiles: [
@@ -4997,6 +5003,8 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         'example-brief-ortiz.md',
         'calendar-export-sept.csv',
       ],
+      testTask:
+        'Draft the Monday prep brief for the Nakamura review on Tuesday. Summaries below.\n\n[paste the Salesforce summary, Orion household page and eMoney open items for the Nakamura household]',
     },
     status: 'active',
     estimatedMinutes: 25,
@@ -5011,11 +5019,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'priya',
     rung: 2,
     competencyCodes: ['L2.project_design'],
-    title: "Adopt advisor-meeting-prep v3 in next Monday's prep",
+    title: "Use advisor-meeting-prep v3 for Monday's briefs",
     brief:
-      "Version 3 of advisor-meeting-prep (your RMD-method change) is live. Use it for all of next Monday's briefs instead of your Project alone, then note where the skill and your Project disagree.",
+      "For your Monday meeting prep, use version 3 of advisor-meeting-prep for all of next Monday's briefs and note where it disagrees with your Project.",
     rationale:
-      'You contributed the change; using it on real briefs is how we find out whether it holds up across three advisors.',
+      'You suggested the change in version 3; using it on real briefs shows whether it holds up across three advisors.',
     kind: 'adopt',
     mode: 'in_app',
     workSurface: 'project',
@@ -5037,20 +5045,20 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'marcus',
     rung: 1,
     competencyCodes: ['L1.description', 'L1.delegation'],
-    title: 'Discovery-call summary for the Whitaker prospects',
+    title: 'Write the Whitaker discovery summary',
     brief:
-      'You had a 40-minute discovery call with the Whitakers on Tuesday. Write the prompt that turns your typed notes into the one-page discovery summary Sofia expects before a proposal. Tell Claude what the summary is for and what shape it takes; decide what you keep for yourself.',
+      'For your discovery-call summaries, write the prompt that turns your Whitaker call notes into the one-page summary Sofia expects.',
     rationale:
-      'You told Interviewer you ask Claude to "make this better" without saying what better is. This is your own call, with a reader and a format.',
+      'You said you ask Claude to "make this better"; this time say what better means and who it is for.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'discovery',
     workflowKey: 'proposal-assembly',
     hints: [
-      'Who reads this summary and what decision do they make from it?',
-      "What are the section headings Sofia's proposals start from? Give them to Claude.",
-      "Your notes include the Whitakers' approximate net worth. Fine to include; their account numbers at the old firm are not.",
+      'Say who reads the summary and what they decide from it.',
+      "Give Claude the five headings Sofia's proposals start from.",
+      'Their approximate net worth is fine to include; account numbers at the old firm are not.',
     ],
     status: 'passed',
     estimatedMinutes: 15,
@@ -5063,7 +5071,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 10,
         expectationText:
-          'Honestly not sure. I think it will be organised but might sound like a brochure.',
+          'Good enough if Sofia can decide from it whether we propose.',
         expectationConfidence: 0.5,
         coldAttempt: true,
         artifact: {
@@ -5074,7 +5082,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             'Who they are: Dr and Mr Whitaker, both 58...\nWhat matters to them: "We don\'t want to be sold anything." Retirement at 62; predictable income; being called back...\nCurrent situation: roughly $4.2M investable following the sale of a dental practice last year; two children in college...\nConcerns: tax on sale proceeds; lack of contact from current advisor...\nSuggested next step: propose; Sofia to lead given the tax question.',
         },
         critiqueText:
-          "It kept their words, which is what Sofia wants. It suggested Sofia lead, which was not in my notes; that is my call to make, not Claude's.",
+          "It kept their words, which Sofia wants. It also suggested Sofia lead, which is my call, not Claude's.",
         grade: {
           daysAgo: 10,
           scores: {
@@ -5089,7 +5097,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.75,
           feedback:
-            'Naming the reader and the decision changed everything: compare this to the "make it better" prompts from intake. You spotted Claude making a staffing recommendation you did not ask for; say in the prompt that next steps are yours to decide. Your confidence (0.5) undersold a clear pass; you know more than you think.',
+            'What worked: you told Claude who reads the summary and what she decides from it, and gave it the five headings; that is why it reads like one of Sofia\'s.\nWhat to change: Claude decided who should lead, which is not its job; say "next steps are mine to decide".\nTry next: paste your notes for the next discovery call into the same prompt and see if it needs any change.',
         },
       },
     ],
@@ -5099,20 +5107,20 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'marcus',
     rung: 1,
     competencyCodes: ['L1.description', 'L1.discernment'],
-    title: 'Explain the tier change to the Parks',
+    title: 'Draft the Park fee-change email',
     brief:
-      'The Parks are moving from tier 2 to tier 3 in January. Write the prompt for a short email explaining the change. Predict what will be good and weak before you run it.',
+      'For your fee-change emails, write the prompt for a short email telling the Parks their tier changes in January.',
     rationale:
-      'Fee comms are the most sensitive thing you write. This exercise is as much about what must not go in the email as what should.',
+      'Fee emails are the most sensitive thing you write, and what must not go in matters as much as what should.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'fee-change',
     workflowKey: 'fee-change-comms',
     hints: [
-      'Where does the wording for fee changes come from at Meridian?',
-      'Did you tell Claude what it must not do (compare to other firms, mention performance)?',
-      'What happens to this email before it is sent?',
+      'Fee wording comes from the Compliance-approved text; paste it in.',
+      'Tell Claude what it must not say: no comparisons to other firms, no performance.',
+      'Say who reviews the email before it goes out.',
     ],
     status: 'revise',
     estimatedMinutes: 15,
@@ -5124,7 +5132,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 7,
         expectationText:
-          'This will be good. Fee emails are simple and I gave it the tiers.',
+          'Good enough if it is friendly and explains the change.',
         expectationConfidence: 0.8,
         coldAttempt: true,
         artifact: {
@@ -5150,9 +5158,9 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'revise',
           critiqueQuality: 0.3,
           feedback:
-            'The output contains a comparison to other firms and a performance claim, both of which Compliance prohibits in fee communications, and it paraphrases the fee explanation rather than using the approved text. Your critique did not find any of that, and you were 80% confident. The prompt asked for "reassuring" and Claude reassured with the two arguments it is not allowed to make. Revise: use the approved explanation verbatim (Kevin\'s fee-change skill has it), state the change in one sentence, offer a call, and tell Claude what it must not say.',
+            'What worked: the tone is friendly and the tiers and date are correct.\nWhat to change: the draft compares us to other firms and mentions performance, which Compliance does not allow in fee emails, and it rewords the approved explanation instead of using it.\nTry next: paste the Compliance-approved paragraph into the prompt, add "use this text word for word", and add "do not mention other firms or performance".',
           teachingMoment:
-            'When you ask Claude to persuade, it reaches for the strongest arguments available. In regulated writing the strongest arguments are usually the forbidden ones. Constrain before you run, and critique against the rules, not against how it reads.',
+            'Paste the approved fee paragraph into your prompt and tell Claude to use it word for word.',
         },
       },
     ],
@@ -5162,22 +5170,26 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'marcus',
     rung: 1,
     competencyCodes: ['L1.description', 'L1.discernment'],
-    title: 'Henderson follow-up: describe, predict, critique',
+    title: 'Draft the Henderson follow-up email',
     brief:
-      'You met the Hendersons yesterday: inherited IRA distribution plan, agreed to move to quarterly, they will send the updated beneficiary form, they asked about 529s for the grandchildren. Write the prompt for the follow-up email yourself, without the skill. State the audience, the three-part structure Sofia uses, tone, length, and what must not appear. Predict, run, critique.',
+      'For your client follow-up emails, write the prompt for the Henderson review.',
     rationale:
-      'You write five or six of these a week and you have adopted client-followup-summary. Before you rely on the skill, you should be able to write the prompt cold, so you can tell when the skill gets it wrong.',
+      'You write five or six of these a week; writing the prompt yourself once shows you what the follow-up skill does for you.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'follow-up',
     workflowKey: 'client-followup',
-    skillSlug: 'client-followup-summary',
+    skillSlug: 'client-followup-notes',
     hints: [
-      "Sofia's three parts: what we discussed, what we agreed, what we need from you. Name them.",
-      'You did not quote a performance figure in the meeting. Tell Claude not to mention performance.',
-      'Under 200 words. Give the number; "short" means nothing.',
+      "Use Sofia's three parts: what we discussed, what we agreed, what we need from you.",
+      'Say there were no performance figures in the meeting, so Claude does not add any.',
+      'Give a length: under 200 words.',
     ],
+    starter: {
+      starterPrompt:
+        "Write the follow-up email to the Hendersons after yesterday's review.\n\nNotes: inherited IRA distribution plan; agreed to move to quarterly from January; they will send the updated beneficiary form; asked about 529s for the grandchildren.\n\n[add who reads it, the structure, the length, and what must not appear]",
+    },
     status: 'active',
     estimatedMinutes: 15,
     scheduledDaysAgo: 0,
@@ -5191,20 +5203,21 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'marcus',
     rung: 1,
     competencyCodes: ['L1.diligence'],
-    title: 'Verify the Okafor-Lang quarterly talking points',
+    title: 'Check the quarterly review talking points',
     brief:
-      'Run your talking-points prompt for a quarterly review and check every figure against the Orion summary before you call it done.',
+      'For your quarterly review talking points, run your prompt for the Okafor-Lang review and check every figure against the Orion summary.',
     rationale:
-      'Third context for L1. Diligence is the competency you have not yet shown.',
+      'A third piece of your own work, and the first where the check matters more than the prompt.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'prompt',
     contextTag: 'quarterly-review',
     hints: [
-      'Every figure needs a source line.',
-      'Did Claude compare to a period you did not give it?',
-      'Would you say this sentence in the room?',
+      'Every figure needs a line in the summary it came from.',
+      'Look for comparisons to a period you did not give Claude.',
+      'Ask: would I say this sentence in the room?',
     ],
+    starter: { workflowName: 'Quarterly review talking points' },
     status: 'queued',
     estimatedMinutes: 15,
     scheduledDaysAgo: -2,
@@ -5219,11 +5232,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'hannah',
     rung: 2,
     competencyCodes: ['L2.selection', 'L2.project_design'],
-    title: 'Deck-narrative Project: prune and document',
+    title: 'Trim your deck-narrative Project',
     brief:
-      'You built a Project for deck narratives before the program started. Prune it to what every run needs, write the rationale, and run it for the Kowalski deck.',
+      'For your annual review decks, cut your deck-narrative Project down to what every run needs and run it for the Kowalski deck.',
     rationale:
-      'You arrived with a working Project; this makes the reasoning explicit so you can turn it into a skill at L3.',
+      'You arrived with a working Project; trimming it and writing down why is the step before turning it into a skill.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'project',
@@ -5231,8 +5244,8 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'annual-review-deck',
     hints: [
       'Which files did the last five decks actually use?',
-      'Is the deck order in the instructions or implied by the examples?',
-      'Where would a teammate look to update the advisor voice guidance?',
+      'Is the slide order written down or only implied by the examples?',
+      'Where would a teammate look to change the advisor voice notes?',
     ],
     status: 'passed',
     estimatedMinutes: 30,
@@ -5245,7 +5258,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 42,
         expectationText:
-          'Should pass; I know this Project well. Grader may say my examples are too many.',
+          'Good enough if the Kowalski narratives read less templated than before.',
         expectationConfidence: 0.8,
         coldAttempt: true,
         artifact: {
@@ -5263,7 +5276,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             "Cut four of six example narratives: two are enough to set the register and six anchored the output to one household's story. Kept the deck order as a file so it is one place to change.",
         },
         critiqueText:
-          'The pruned version produced narratives that felt less templated. I still have the voice guide in both the instructions and the file; one should go.',
+          'Narratives feel less templated. The voice guide is in both the instructions and a file; one should go.',
         grade: {
           daysAgo: 42,
           scores: {
@@ -5279,7 +5292,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.85,
           feedback:
-            'You predicted the example-count feedback and pre-empted it. The remaining duplication you found yourself. Pass; the deck-order file is already the seed of a skill.',
+            'What worked: cutting four of six examples stopped every deck sounding like the same household.\nWhat to change: the voice guide is in two places; keep the file and delete it from the instructions.\nTry next: the deck-order file is already most of a skill; that is your next task.',
         },
       },
     ],
@@ -5294,11 +5307,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
       'L3.examples',
       'L3.boundary',
     ],
-    title: 'Write annual-review-deck-outline cold',
+    title: 'Write the annual review deck outline skill',
     brief:
-      'Turn your deck-narrative Project into a skill the whole planning team can use. Write the SKILL.md cold, before Coach shows you a worked example: description as a trigger, one job, inputs, steps, output format, boundary, two canonical examples, and three to five sample cases (should trigger / should not / ambiguous).',
+      'For your annual review decks, write the skill the whole planning team can use to get the outline and narrative.',
     rationale:
-      'Your Project is the best deck-narrative tool on the team and Grace and Priya have asked for it. Packaging it as a skill is your L3 artifact and the fastest way to share it.',
+      'Grace and Priya have asked for your deck Project; a skill lets them use it without copying it.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'skill',
@@ -5306,12 +5319,10 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'annual-review-deck',
     skillSlug: 'annual-review-deck-outline',
     hints: [
-      'Write the description as the sentence a planner would say when they need this. Then add the sentence for when they should not.',
-      'Your deck order is a file in the Project. It should be a referenced file in the skill too, not inline.',
-      'Two examples: one on-track household, one off-track. Not six.',
+      'Start the description with when a planner would reach for this, then say when they should not.',
+      'Put the slide order in a separate file the skill points to.',
+      'Two examples are enough: one household on track, one off track.',
     ],
-    workedExample:
-      "A worked example was revealed after the cold attempt: the advisor-meeting-prep SKILL.md (v2), annotated. Note how the description names the trigger in the planner's words and the non-triggers by skill name; how the template lives in references/; how the two examples cover the normal case and the most common exception rather than a list of edge cases.",
     status: 'passed',
     estimatedMinutes: 60,
     completedDaysAgo: 23,
@@ -5323,7 +5334,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 23,
         expectationText:
-          'I think the scope and examples will be strong because I have run this 30 times. I am least sure about the description; I may describe what it does rather than when to use it.',
+          'Good enough if a planner could run it for a new household without asking me anything.',
         expectationConfidence: 0.7,
         coldAttempt: true,
         artifact: {
@@ -5365,7 +5376,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           },
         },
         critiqueText:
-          'Reading it back: the description is a trigger, good. The deck order is implied in the steps rather than in a referenced file; that is the progressive-disclosure gap. Examples are two and canonical.',
+          'The slide order is buried in the steps rather than in its own file. Examples are two and typical.',
         grade: {
           daysAgo: 23,
           scores: {
@@ -5387,7 +5398,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.85,
           feedback:
-            'A strong cold draft (0.87). Your own critique found the only real gap, the deck order living in the steps instead of a referenced file, before the Grader did. That is what we mean by discernment at L3. Your expectation named the description as the risk and it turned out to be a strength; slightly underconfident.',
+            'What worked: the skill does one job, says plainly what it will not do (charts, quarterly reviews, life events), and the two examples show a normal deck and an off-track one.\nWhat to change: the slide order lives inside the steps; move it to a file called deck-order.md and point to it.\nTry next: ask Grace to run it on one of her households and note the first question she asks you.',
         },
       },
     ],
@@ -5397,11 +5408,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'hannah',
     rung: 3,
     competencyCodes: ['L3.trigger', 'L3.boundary', 'L3.examples'],
-    title: 'RMD letter skill, before the November batch',
+    title: 'Write the RMD letter skill',
     brief:
-      "Write rmd-letter-draft as a skill for the planning team from the RMD SOP and last year's template variants. Cold attempt; sample cases from last year's letters with all figures changed.",
+      'For your RMD letters, write the skill for the planning team before the November batch.',
     rationale:
-      'A second L3 context with a client-facing output and a tighter boundary than the deck outline. Daniel grades this one as part of his champion work.',
+      'A client-facing letter with a dollar figure is a harder skill than the deck outline, and the batch is eight weeks away.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'skill',
@@ -5409,9 +5420,9 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'rmd-letter-drafting',
     skillSlug: 'rmd-letter-draft',
     hints: [
-      'The three variants (standard, inherited, already-distributed) are a choice the skill makes in step 1, and their text is a referenced file.',
-      'What is the exact input row? Say it, so the skill can refuse anything more.',
-      'Your ambiguous case should be the inherited IRA: what should the skill do about the 10-year rule?',
+      'The three letter variants (standard, inherited, already distributed) are a choice in step 1; their text goes in a separate file.',
+      'Spell out the exact input row so the skill can refuse anything more.',
+      'Make one of your sample requests an inherited IRA and say what the skill should do about the 10-year rule.',
     ],
     status: 'submitted',
     estimatedMinutes: 60,
@@ -5423,7 +5434,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 6,
         expectationText:
-          'Pass, I think. The boundary is the strongest part because the SOP is explicit. The inherited-IRA handling may be too cautious.',
+          'Good enough if the Delgado and Ferreira letters come out right without edits.',
         expectationConfidence: 0.75,
         coldAttempt: true,
         artifact: {
@@ -5466,7 +5477,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           },
         },
         critiqueText:
-          'Trigger is clear. I am not sure the "already-distributed" variant is exercised by any sample case; that may be a coverage gap.',
+          'None of my sample requests covers the already-distributed variant; that may be a gap.',
       },
     ],
   },
@@ -5477,11 +5488,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'grace',
     rung: 2,
     competencyCodes: ['L2.selection', 'L2.project_design'],
-    title: 'CD memo Project: include and exclude',
+    title: 'Set up a Project for CD memos',
     brief:
-      'Rebuild your CD memo Project with a written rationale for every file and instruction. Run it for the Ortiz memo.',
+      'For your CD memos, rebuild your Project with a line on why each file and instruction is there, then run it for the Ortiz memo.',
     rationale:
-      'You already use a Project for CD memos; making the choices explicit is your L2 artifact.',
+      'You already use a Project for CD memos; writing down why each piece is there is what lets you hand it to someone else.',
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'project',
@@ -5489,8 +5500,8 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'cd-memo-drafting',
     hints: [
       'Which SOP paragraphs change how the memo is written?',
-      'Do previous memos belong in the Project?',
-      'What does Daniel check first when he reviews a memo?',
+      'Old memos contain household details; leave them out.',
+      'What does Daniel check first when he reviews a memo? Put that in.',
     ],
     status: 'passed',
     estimatedMinutes: 30,
@@ -5503,7 +5514,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 21,
         expectationText:
-          'Pass on the Project; the rationale may be thin because I did most of this by instinct.',
+          "Good enough if the Ortiz memo passes Daniel's review without changes.",
         expectationConfidence: 0.7,
         coldAttempt: true,
         artifact: {
@@ -5521,7 +5532,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
             "Included the template and Daniel's checklist (so the memo is written to pass review). Excluded previous memos (household data) and the full plan exports (I paste the delta).",
         },
         critiqueText:
-          "Worked. The checklist file was the best addition; the first draft passed Daniel's review unchanged.",
+          "The checklist file was the best addition; the first draft passed Daniel's review unchanged.",
         grade: {
           daysAgo: 21,
           scores: {
@@ -5537,7 +5548,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.7,
           feedback:
-            "Including the reviewer's checklist is a smart move most people miss. The rationale is brief but every decision has a reason. Pass.",
+            'What worked: putting Daniel\'s review checklist in the Project means the memo is written to pass review, and it did.\nWhat to change: the file names have no dates, so you will not notice when the template changes.\nTry next: run the next memo from a bare advisor note and see whether the "agreement not recorded" case is handled.',
         },
       },
     ],
@@ -5552,11 +5563,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
       'L3.examples',
       'L3.boundary',
     ],
-    title: 'Write cd-memo-draft cold',
+    title: 'Write the CD memo skill',
     brief:
-      'Turn your CD memo Project into a skill for the planning team. Cold attempt. Description as trigger, one job, referenced template, two examples, sample cases, boundary.',
+      "For your CD memos, write the skill the planning team can use to draft a memo from the advisor's note and the plan change.",
     rationale:
-      "Your CD memo Project passes Daniel's review first time; the team writes four memos a week. This is your first L3 attempt and it goes to Daniel for grading.",
+      "Your CD memo Project passes Daniel's review first time and the team writes four memos a week.",
     kind: 'artifact',
     mode: 'in_app',
     workSurface: 'skill',
@@ -5564,8 +5575,8 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     workflowKey: 'cd-memo-drafting',
     hints: [
       'Say when not to use it: plan updates that are not a change of direction.',
-      "Daniel's checklist is a referenced file, not a paragraph.",
-      "Your ambiguous case: an advisor note that describes a change but not the client's agreement.",
+      "Daniel's checklist goes in a separate file, not a paragraph.",
+      "Make one sample request an advisor note that describes a change but not the client's agreement.",
     ],
     status: 'submitted',
     estimatedMinutes: 60,
@@ -5577,7 +5588,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 2,
         expectationText:
-          'Probably revise. I found the description hard: I kept writing what the memo contains instead of when someone needs it.',
+          'Good enough if the Ortiz memo comes out in our five sections with the change on the first line.',
         expectationConfidence: 0.45,
         coldAttempt: true,
         artifact: {
@@ -5620,7 +5631,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           },
         },
         critiqueText:
-          "The examples are one line each, which is not really an example. The human_review value is not one of the firm's named review points. I think the description is OK in the end.",
+          'My examples are one line each, and "director_review" is not one of our named review points.',
       },
     ],
   },
@@ -5631,11 +5642,11 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'daniel',
     rung: 5,
     competencyCodes: ['L5.grading', 'L5.feedback'],
-    title: "Grade Hannah's rmd-letter-draft submission",
+    title: "Review Hannah's RMD letter skill",
     brief:
-      "Hannah has submitted rmd-letter-draft v1 cold. Grade it against the skill rubric before you look at Grader's scores, write feedback she can act on in one revision, and decide pass or revise. Then compare with Grader.",
+      "For the team's RMD letters, review Hannah's skill draft: give it a score and three lines she can act on.",
     rationale:
-      'This is in your review queue and it blocks PR #25. Your grader agreement is 0.91 over seven reviews; this is the eighth.',
+      'This is in your review queue and it blocks PR #25 before the November batch.',
     kind: 'review',
     mode: 'in_app',
     workSurface: 'review',
@@ -5643,12 +5654,12 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     skillSlug: 'rmd-letter-draft',
     starter: {
       reviewSubmissionKey: 'hannah-skill-rmd',
-      rubric: 'GRADER_RUBRIC_SKILL',
+      workflowName: 'RMD letter drafting',
     },
     hints: [
-      'Does any sample case exercise the already-distributed variant?',
-      'Is the input row defined precisely enough for the skill to refuse a statement page?',
-      'Feedback: one change per rubric criterion, smallest first.',
+      'Does any sample request cover the already-distributed case?',
+      'From how the skill describes its input, could it refuse a statement page?',
+      'Give her the smallest change first.',
     ],
     status: 'active',
     estimatedMinutes: 25,
@@ -5663,24 +5674,21 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'daniel',
     rung: 5,
     competencyCodes: ['L5.grading', 'L5.feedback'],
-    title: "Grade Grace's first L3 attempt: cd-memo-draft",
+    title: "Review Grace's CD memo skill",
     brief:
-      "Grace's cold skill draft is in your queue. She expects a revise (confidence 0.45). Grade it, and write feedback that teaches the two principles she is missing without rewriting her skill.",
+      "For the team's CD memos, review Grace's first skill draft and write feedback that tells her the two things to fix without rewriting it for her.",
     rationale:
-      'First L3 attempt from a learner you manage. The feedback you write here shapes whether she tries again this week or next month.',
+      "It is Grace's first skill; how this feedback lands decides whether she tries again this week or next month.",
     kind: 'review',
     mode: 'in_app',
     workSurface: 'review',
     contextTag: 'review-queue',
     workflowKey: 'cd-memo-drafting',
-    starter: {
-      reviewSubmissionKey: 'grace-skill-cd-memo',
-      rubric: 'GRADER_RUBRIC_SKILL',
-    },
+    starter: { reviewSubmissionKey: 'grace-skill-cd-memo' },
     hints: [
-      'Her examples are one line each. What is the smallest change that makes them canonical?',
-      'human_review says "director_review", which is not a firm review point. Which one is it?',
-      'She critiqued her own work accurately; say so first.',
+      'Her examples are one line each; what is the smallest change that makes them real examples?',
+      '"director_review" is not one of the firm\'s review points; which one is it?',
+      'She spotted both problems herself in her notes; say so first.',
     ],
     status: 'active',
     estimatedMinutes: 25,
@@ -5695,16 +5703,17 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'daniel',
     rung: 5,
     competencyCodes: ['L5.grading', 'L5.feedback', 'L5.stewardship'],
-    title: "Cross-team review: Kevin's fee-change skill v1",
+    title: "Review Kevin's fee-change letter skill",
     brief:
-      "Sofia asked for a second champion on Kevin's fee-change skill given its exposure. Grade it, and decide whether the promotion needs Compliance.",
+      "For the advisors' fee-change letters, review Kevin's skill as a second champion and decide whether Compliance needs to approve it.",
     rationale:
-      'Cross-team grading builds the consistency the L5 rubric asks for.',
+      'Sofia asked for a second pair of eyes because the letters go to clients about fees.',
     kind: 'review',
     mode: 'in_app',
     workSurface: 'review',
     contextTag: 'review-queue',
-    skillSlug: 'fee-change-client-comms',
+    skillSlug: 'fee-change-comms',
+    starter: { workflowName: 'Fee-change client comms' },
     hints: [],
     status: 'passed',
     estimatedMinutes: 25,
@@ -5717,16 +5726,16 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 15,
         expectationText:
-          'I will land close to Grader on scope and examples; I may be harsher on boundary because the output is a fee communication.',
+          "Good enough if my score lands near the grader's and Kevin gets one clear next step.",
         expectationConfidence: 0.8,
         coldAttempt: true,
         artifact: {
           type: 'review',
           content:
-            'Rubric: trigger 0.85, scope 0.9, disclosure 0.8, boundary 0.8 (declared correctly but the description should say this is Compliance-reviewed output), examples 0.85, tight 0.85, cases 0.8. Decision: pass, with the negotiated-fee exclusion added as a sample case. Promotion requires Compliance approver.\nFeedback to Kevin: The verbatim rule is the right centre; keep it. Add the negotiated-fee case. Say in the description that the output is Compliance-reviewed so approvers see it.',
+            'Scores: trigger 0.85, scope 0.9, layering 0.8, boundary 0.8 (declared correctly, but the description should say the letters are Compliance-reviewed), examples 0.85, tight 0.85, sample requests 0.8. Decision: pass, with the negotiated-fee exclusion added as a sample request. Promotion needs a Compliance approver.\nTo Kevin: What worked: the "approved text word for word" rule is exactly the right centre. What to change: add a sample request for a household on a negotiated fee. Try next: say in the description that the output is Compliance-reviewed so approvers see it.',
         },
         critiqueText:
-          'Grader gave boundary 0.85 to my 0.80 and otherwise matched. I was slightly harsher for the reason I predicted.',
+          'Grader gave boundary 0.85 to my 0.80 and otherwise matched. I was slightly harder for the reason I expected.',
         grade: {
           daysAgo: 15,
           scores: {
@@ -5743,7 +5752,7 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.9,
           feedback:
-            'Within 0.05 of Grader on every criterion, same decision, and you correctly called for a Compliance approver before Promoter did. Feedback to Kevin names the smallest changes.',
+            "What worked: your scores are within 0.05 of the grader on every line, same decision, and you asked for Compliance before Promoter did.\nWhat to change: nothing on this one; your note to Kevin already names the smallest changes.\nTry next: review Amara's exception memo skill alongside Tom so he can see how you score.",
         },
       },
     ],
@@ -5753,15 +5762,17 @@ export const DEMO_EXERCISES: DemoExercise[] = [
     personKey: 'daniel',
     rung: 5,
     competencyCodes: ['L5.grading', 'L5.feedback'],
-    title: "Review Amara's crm-note-cleanup v1 (cross-team)",
+    title: "Review Amara's exception memo skill",
     brief:
-      "Tom is new to grading; grade Amara's v1 alongside him so you can compare notes.",
-    rationale: 'Calibrating a new champion is part of stewardship.',
+      "For Client Service's rebalancing exception memos, review Amara's v1 alongside Tom so he can compare his scores with yours.",
+    rationale:
+      'Tom is new to reviewing; scoring the same skill side by side is the quickest way to get him confident.',
     kind: 'review',
     mode: 'in_app',
     workSurface: 'review',
     contextTag: 'review-queue',
-    skillSlug: 'crm-note-cleanup',
+    skillSlug: 'rebalancing-exception-memo',
+    starter: { workflowName: 'Rebalancing exception memos' },
     hints: [],
     status: 'passed',
     estimatedMinutes: 20,
@@ -5774,16 +5785,16 @@ export const DEMO_EXERCISES: DemoExercise[] = [
         attempt: 1,
         daysAgo: 10,
         expectationText:
-          'Clear pass; I expect to match Grader within 0.05 everywhere.',
+          'Good enough if Tom and I land within a few points of each other and the grader.',
         expectationConfidence: 0.9,
         coldAttempt: true,
         artifact: {
           type: 'review',
           content:
-            'Rubric: all criteria 0.85–0.9. Decision: pass. The redaction check and complaint flag are steps rather than warnings, which is what makes this safe. Feedback to Amara: none required; watch that future versions keep step 1.',
+            'Scores: all lines 0.85–0.9. Decision: pass. The account-number check and the "as reported by Operations" rule are written as steps rather than warnings, which is what makes this safe.\nTo Amara: What worked: step 1 refuses anything that looks like an account number. What to change: nothing now. Try next: keep step 1 in every future version.',
         },
         critiqueText:
-          'Matched Grader. My note about future versions turned out to matter (v2).',
+          'Matched the grader. My note about future versions turned out to matter (v2).',
         grade: {
           daysAgo: 10,
           scores: {
@@ -5797,14 +5808,14 @@ export const DEMO_EXERCISES: DemoExercise[] = [
           decision: 'pass',
           critiqueQuality: 0.85,
           feedback:
-            'Agreement 0.95. Feedback was brief because the artifact was good; that is the right call.',
+            'What worked: you matched the grader on every line and kept the note short because the skill was good.\nWhat to change: nothing here.\nTry next: when Tom scores his next skill alone, compare afterwards rather than before so he forms his own view.',
         },
       },
     ],
   },
 ];
 
-/** Templates for filler exercises for learners without hand-written history. `{workflow}` is replaced with one of the person\'s weekly workflows. */
+/** Templates for exercises for learners without hand-written history. `{workflow}` is replaced with one of the person's weekly workflows. */
 export const FILLER_EXERCISES: Record<
   number,
   {
@@ -5818,103 +5829,110 @@ export const FILLER_EXERCISES: Record<
     expectation: string;
     critique: string;
     feedback: string;
+    feedbackRevise: string;
   }[]
 > = {
   0: [
     {
-      title: 'Orientation: pick the surface for {workflow}',
+      title: 'Try one real thing: {workflow}',
       brief:
-        'Decide whether {workflow} belongs in a chat, a Project, a skill or Claude Code, say why in two sentences, and finish one real instance of it in this session. Sort these into allowed and forbidden before you start: a CRM summary export, a raw statement, a client SSN, the firm template.',
+        'For {workflow}, write what you would ask Claude and run it once on a real example.',
       rationale:
-        'Session one ends with a finished piece of your own work and the boundary in your own words.',
+        'The first session ends with one finished piece of your own work.',
       competencyCodes: ['L0.surfaces', 'L0.boundary'],
       workSurface: 'orientation',
       hints: [
-        'Is it the same shape every time? Then not a chat.',
-        'Which of the four inputs is on the forbidden list?',
-        'Finish the real instance before you refine anything.',
+        'Pick the instance you would do today anyway.',
+        'Say who the result is for and what shape you want.',
+        "Leave out account numbers, statements and anything with a client's ID on it.",
       ],
       artifactType: 'text',
-      expectation:
-        'I think I will pick the right surface; I am unsure about which data classes are allowed.',
-      critique:
-        'I chose a Project because it repeats weekly. I put the CRM export in allowed and the statement in forbidden; I was unsure about the SSN until I checked the policy.',
+      expectation: 'Good enough if I can use the result today.',
+      critique: 'Usable after a couple of edits. I had to add who it was for.',
       feedback:
-        'Surface choice and reasoning are sound. Boundary sorting correct after checking the policy, which is the right instinct.',
+        'What worked: you finished a real piece of work and kept client details out.\nWhat to change: say who the result is for at the start; the draft had to guess.\nTry next: the same task next week, with the reader named in the first line.',
+      feedbackRevise:
+        'What worked: you picked a real task and ran it.\nWhat to change: the ask had no reader and no shape, so the result was generic.\nTry next: start with "This is for [who]. I need [what], about [length]".',
     },
   ],
   1: [
     {
-      title: 'Describe {workflow} to Claude properly',
+      title: 'Write the prompt for {workflow}',
       brief:
-        'Write the prompt for one real instance of {workflow}: goal, reader, format, constraints, the context Claude needs and nothing on the forbidden list. Predict the output before running; critique it after.',
+        'For {workflow}, write the prompt you would give Claude for one real instance and run it.',
       rationale:
-        'You do {workflow} every week. This teaches Description on your own work.',
+        'You do {workflow} every week; a clear ask is the quickest win.',
       competencyCodes: ['L1.description', 'L1.discernment'],
       workSurface: 'prompt',
       hints: [
-        'Who reads the output and what do they decide from it?',
-        'Give the format a number: words, items, paragraphs.',
-        'Which of your inputs changes how the output should read? Include that one.',
-      ],
-      artifactType: 'prompt_run',
-      expectation: 'Structure will be right; tone may be too formal.',
-      critique:
-        'Structure was right. One sentence asserted something not in my inputs; I would cut it.',
-      feedback:
-        'Reader and format named; the output was usable. You found the invented sentence, which is the discernment skill.',
-    },
-    {
-      title: 'Delegate {workflow}: what Claude drafts, what you keep',
-      brief:
-        'Before running anything, split one instance of {workflow} into the parts Claude drafts and the parts you own (judgement calls, restricted inputs, review). Run the delegated part and verify every figure against its source.',
-      rationale:
-        'Delegation and diligence, on a task where the review points already exist in the SOP.',
-      competencyCodes: ['L1.delegation', 'L1.diligence'],
-      workSurface: 'prompt',
-      hints: [
-        'What is the same every time versus unique to this instance?',
-        'Where does a person have to check before anything leaves?',
-        'A figure without a source line is "not in source".',
+        'Say who reads the result and what they do with it.',
+        'Give the format a number: words, items or paragraphs.',
+        'Include the one input that changes how the result should read.',
       ],
       artifactType: 'prompt_run',
       expectation:
-        'The split is clear to me; the draft will need number checks.',
+        'Good enough if the structure is right and the tone fits the reader.',
+      critique:
+        'Structure was right. One sentence claimed something I never gave it.',
+      feedback:
+        'What worked: you named the reader and the format, so the result was usable.\nWhat to change: one sentence states a fact that was not in your inputs; cut it.\nTry next: add "use only the facts I give you" to the end of the prompt.',
+      feedbackRevise:
+        'What worked: the material Claude needed was in the prompt.\nWhat to change: the ask does not say who it is for or how long it should be, so the result is generic.\nTry next: add one line: "For [reader], [length], [tone]".',
+    },
+    {
+      title: 'Give Claude the three facts for {workflow}',
+      brief:
+        'For {workflow}, decide which parts Claude drafts and which you keep, then run the draft and check every figure against its source.',
+      rationale:
+        'The check before anything leaves is what makes a fast draft safe to send.',
+      competencyCodes: ['L1.delegation', 'L1.diligence'],
+      workSurface: 'prompt',
+      hints: [
+        'What is the same every time, and what is unique to this instance?',
+        'Where does a person have to check before anything leaves?',
+        'A figure with no source line does not go out.',
+      ],
+      artifactType: 'prompt_run',
+      expectation: 'Good enough if every figure traces to its source.',
       critique:
         'Every figure traced. Claude added a comparison I did not give it.',
       feedback:
-        'Clear split, restricted inputs kept out, figures verified. Pass.',
+        'What worked: the split is clear, client details stayed with you, and every figure was checked.\nWhat to change: the draft compares to a period you did not give it; delete that line.\nTry next: add "do not compare to periods I have not given you".',
+      feedbackRevise:
+        'What worked: the parts you handed to Claude were the right ones.\nWhat to change: two figures in the draft were not checked against the source and one is wrong.\nTry next: read the draft with the source open beside it before you call it done.',
     },
   ],
   2: [
     {
-      title: 'Project for {workflow}: include, exclude, explain',
+      title: 'Set up a Project for {workflow}',
       brief:
-        'Build a Project for {workflow}. Instructions carry the constant part; files are only what most runs use; per-run input is just the new material. Write a rationale for every inclusion and exclusion and run it once.',
+        'For {workflow}, set up a Project with your standing rules in the instructions and only the files every run needs, then run it once.',
       rationale:
         'You repeat {workflow} weekly; a Project means each run starts from your rules.',
       competencyCodes: ['L2.selection', 'L2.project_design'],
       workSurface: 'project',
       hints: [
-        'What do you retype every time? That is the instructions.',
+        'What do you retype every time? That goes in the instructions.',
         "Would you want last week's inputs in the Project this week?",
-        'Which SOP paragraphs change how the output is written?',
+        'Add only the pages of the SOP that change how the result is written.',
       ],
       artifactType: 'project',
-      expectation: 'Good on instructions; I may include too many files.',
+      expectation: 'Good enough if the first run is usable after light edits.',
       critique:
-        'First run close to usable. One example file anchored the phrasing too hard.',
+        'First run close to usable. One example file made the wording repeat.',
       feedback:
-        'Rationale defensible; exclusion of per-run data for contamination is the key insight. Consider fewer examples.',
+        'What worked: the instructions carry the rules and per-run data stays out, so runs cannot bleed into each other.\nWhat to change: one example file is making every result echo its wording; cut it to a short fragment.\nTry next: put a date in each file name so stale material shows.',
+      feedbackRevise:
+        "What worked: the instructions have the right rules.\nWhat to change: the Project holds last week's inputs and a four-page SOP; keep only what every run needs.\nTry next: remove everything you did not use in the last three runs and run it again.",
     },
   ],
   3: [
     {
-      title: 'Write a skill for {workflow} cold',
+      title: 'Write the skill for {workflow}',
       brief:
-        'Package {workflow} as a skill: description as trigger, one job, inputs, steps, output format, boundary declaration, two canonical examples, three to five sample cases. Cold attempt before the worked example.',
+        'For {workflow}, write the skill your team can use, with three sample requests it should and should not answer.',
       rationale:
-        'Your Project for {workflow} works; a skill lets the team use it and is your L3 artifact.',
+        'Your Project for {workflow} works; a skill lets the team use it too.',
       competencyCodes: [
         'L3.trigger',
         'L3.disclosure',
@@ -5923,153 +5941,157 @@ export const FILLER_EXERCISES: Record<
       ],
       workSurface: 'skill',
       hints: [
-        'Write the description as the sentence a teammate would say when they need this.',
-        'Long templates go in referenced files.',
-        'Two examples: normal case and the most common exception.',
+        'Start the description with the sentence a teammate would say when they need this.',
+        'Long templates go in a separate file the skill points to.',
+        'Two examples: the normal case and the most common exception.',
       ],
       artifactType: 'skill',
       expectation:
-        'Scope and boundary strong; description may describe rather than trigger.',
+        'Good enough if a teammate could run it without asking me anything.',
       critique:
-        'Description reads as a trigger. Template is inline and should be a file.',
+        'The description reads as a trigger. The template is inline and should be a file.',
       feedback:
-        'One job, boundary honoured, examples canonical. Move the template to references/.',
+        'What worked: one job, the boundary is respected in every step, and the examples are typical rather than odd cases.\nWhat to change: the template is inline; move it to a file the skill points to.\nTry next: ask a teammate to run one of your sample requests and note their first question.',
+      feedbackRevise:
+        'What worked: the steps are in the right order and the boundary is declared.\nWhat to change: the description lists what the skill does instead of when to use it, so it will fire on the wrong requests.\nTry next: rewrite the description as "Use when [situation]. Not for [nearby task]".',
     },
   ],
   4: [
     {
-      title: 'Map {workflow} into the schema and design its baseline',
+      title: 'Map {workflow}',
       brief:
-        'Complete the workflow map for {workflow}: every schema field, decisions with rules, exceptions with handling, actors consistent with the boundary. Then choose and justify a baseline method and capture it.',
-      rationale:
-        'L4 is shipping governed: the map and the baseline come before the skill.',
+        'For {workflow}, fill in the workflow form (inputs, steps, decisions, exceptions, systems, outputs, review points) and set its baseline.',
+      rationale: 'The map and the before-measure come before any skill ships.',
       competencyCodes: ['L4.schema', 'L4.baseline', 'L4.governance'],
       workSurface: 'workflow',
       hints: [
-        'Every judgement call needs a rule.',
-        'Time diary for frequent short tasks; interview estimate with sign-off for rare long ones.',
-        'Which steps touch restricted classes? Those are human.',
+        'Every place you make a call needs a written rule.',
+        'Time yourself for frequent short tasks; estimate with your champion for rare long ones.',
+        'Any step touching restricted data is a human step.',
       ],
       artifactType: 'workflow',
-      expectation: 'Schema complete; exposure assessment may be optimistic.',
+      expectation: 'Good enough if a new hire could run it from the map.',
       critique:
         'Two exceptions I had not written down surfaced when the champion read it.',
       feedback:
-        'Schema complete and verified; baseline method fits; exposure honestly stated.',
+        'What worked: every field is filled, the decisions have rules, and the baseline includes rework time.\nWhat to change: the compliance exposure is optimistic; the letter goes to clients, so mark it high.\nTry next: have your champion read the map and add the exceptions they ask about.',
+      feedbackRevise:
+        'What worked: inputs, steps and systems are complete.\nWhat to change: decisions and exceptions are empty, so nobody could run this from the map.\nTry next: write one rule for each place you make a call, starting with the most common.',
     },
   ],
 };
 
-/** Retrieval prompts per competency, used for revisits when no explicit prompt is given. */
+/** Short recap prompts per competency, used for revisits when no explicit prompt is given. */
 export const REVISIT_PROMPTS: Record<
   string,
   { prompt: string; answerKey: string }
 > = {
   'L0.surfaces': {
     prompt:
-      'A colleague asks Claude the same question every Monday with a new attachment each time. Which surface should they be using, and why?',
+      'A colleague asks Claude the same question every Monday with a new attachment each time. What should they set up instead, and why?',
     answerKey:
-      'A Project: repeated task with stable instructions and changing per-run input.',
+      'A Project: the task repeats, the rules stay the same, only the attachment changes.',
   },
   'L0.boundary': {
     prompt:
-      'Name two data classes that may never enter Claude at Meridian and one system that is read-only. Where must a human review before a client sees anything?',
+      'Name two things that may never be pasted into Claude at Meridian and one system it may only read from. Where must a person check before a client sees anything?',
     answerKey:
-      'Any two of client_pii_documents, account_numbers, ssn, statements_raw; Salesforce/Orion/eMoney; before_send, before_crm_entry, before_client_meeting.',
+      'Any two of client ID documents, account numbers, SSNs, raw statements; Salesforce, Orion or eMoney; before sending, before CRM entry, before a client meeting.',
   },
   'L1.delegation': {
     prompt:
-      'For your next RMD letter (or equivalent), write one sentence on what Claude drafts and one on what you keep.',
+      'For your next RMD letter (or a similar task), write one sentence on what Claude drafts and one on what you keep.',
     answerKey:
-      'Claude drafts from the summary row using template rules; the person verifies the amount, picks the variant, and the advisor reviews before send.',
+      'Claude drafts from the summary row using the template rules; the person checks the amount, picks the variant, and the advisor reviews before sending.',
   },
   'L1.description': {
     prompt:
-      'Rewrite "write an agenda for the Hale meeting" so that Claude cannot produce a generic agenda.',
+      'Rewrite "write an agenda for the Hale meeting" so Claude cannot produce a generic agenda.',
     answerKey:
-      'Names reader, item count, ordering rule (open items first), facts that must appear (RMD), and the account-reference rule.',
+      'Names the reader, the number of items, the order (open items first), the facts that must appear (RMD), and how to refer to accounts.',
   },
   'L1.discernment': {
     prompt:
-      'Before you run your next prompt, write your prediction in one line: what will be strong, what will be weak, and your confidence.',
-    answerKey: 'A concrete, falsifiable prediction with a probability.',
+      'Before you send your next Claude draft, list the two things you will check first.',
+    answerKey:
+      'Concrete checks: figures against the source, anything not in the inputs, tone for the reader.',
   },
   'L1.diligence': {
     prompt:
       'A Claude draft says "unchanged from last year". You only gave it this year\'s figures. What do you do?',
     answerKey:
-      'Mark it "not in source" and remove it; never let an unsupported comparison through review.',
+      'Delete the comparison; nothing that is not in the source goes out.',
   },
   'L2.selection': {
     prompt:
       "Should last year's client letters live in your letter Project? Answer and give the reason.",
     answerKey:
-      "No: they contain household data and amounts that could contaminate this year's letters; the template and rules suffice.",
+      "No: they contain names and amounts that could leak into this year's letters; the template and rules are enough.",
   },
   'L2.project_design': {
     prompt:
-      "What belongs in a Project's instructions versus its per-run input? One example of each from your own work.",
+      "What goes in a Project's instructions and what do you paste each time? One example of each from your own work.",
     answerKey:
-      "Instructions: constant role, format, rules. Per-run: this week's summaries.",
+      "Instructions: the role, format and rules that never change. Each time: this week's summaries.",
   },
   'L3.trigger': {
     prompt:
-      'Write the description line for a skill you use so that a nearby task would not trigger it.',
+      'Write the description line for a skill you use so that a nearby task would not set it off.',
     answerKey:
-      "States when to use in the user's words and names the non-triggers.",
+      "Says when to use it in the user's words and names the nearby tasks it is not for.",
   },
   'L3.disclosure': {
     prompt:
-      'Your skill body has grown to three pages. What do you move out and where?',
+      'Your skill file has grown to three pages. What do you move out and where?',
     answerKey:
-      'Templates, long references and rare paths go to referenced files loaded on demand; body keeps the procedure.',
+      'Templates, long reference material and rare cases go to separate files the skill points to; the main file keeps the steps.',
   },
   'L3.boundary': {
     prompt:
-      'A skill declares must_never_receive account_numbers but step 2 says "paste the full note". What is wrong and how do you fix it?',
+      'A skill says it must never receive account numbers but step 2 says "paste the full note". What is wrong and how do you fix it?',
     answerKey:
-      'Steps do not honour the declaration; add a redaction prerequisite or a stop check in step 1.',
+      "The steps break the skill's own rule; add a redaction step first or a check in step 1 that stops on anything like an account number.",
   },
   'L3.examples': {
     prompt: 'How many examples does a skill need, and what should the two be?',
     answerKey:
-      'Two or three canonical ones: the normal case and the most common exception; not a list of edge cases.',
+      'Two or three: the normal case and the most common exception; not a list of odd cases.',
   },
   'L4.schema': {
     prompt:
-      'Name the two schema fields most often left empty and why they matter when an agent runs the workflow.',
+      'Name the two parts of a workflow map most often left empty and why they matter when someone else runs the workflow.',
     answerKey:
-      'Decisions and exceptions; without rules the agent cannot ask the clarifying question a new hire would.',
+      'Decisions and exceptions; without written rules the next person cannot ask the question a new hire would.',
   },
   'L4.baseline': {
     prompt:
-      'Why is a baseline captured before the skill ships, and what must it include besides first-pass time?',
+      'Why do you time the task before the skill ships, and what must the timing include besides the first pass?',
     answerKey:
-      'So the after-measure is comparable; it must include rework and the method with sign-off.',
+      'So the after-measure can be compared; it must include rework and say how it was measured and who signed it off.',
   },
   'L4.governance': {
     prompt:
-      'A skill touches no restricted input classes but its output is a fee letter. Is it high exposure? Who approves?',
+      'A skill takes no restricted data but its output is a fee letter to clients. Does it need extra approval? From whom?',
     answerKey:
-      'Yes, because of who reads the output; champion plus Compliance.',
+      'Yes, because of who reads the output; the champion plus Compliance.',
   },
   'L5.grading': {
     prompt:
-      'You score a criterion 0.7 and Grader scores 0.9. What do you do before deciding?',
+      'You score a line 0.7 and the grader scores it 0.9. What do you do before deciding?',
     answerKey:
-      'Re-read the rubric text for that criterion and argue from it; disagreement is fine if grounded.',
+      'Re-read the rubric line and argue from it; disagreeing is fine when you can point to the text.',
   },
   'L5.feedback': {
     prompt:
-      'Write one line of feedback on a weak description that teaches the principle without rewriting it.',
+      'Write one line of feedback on a weak skill description that tells the author what to change without rewriting it for them.',
     answerKey:
-      'Points at the line, names the criterion, gives the smallest change, states why.',
+      'Points at the line, says what to change, and says why in one clause.',
   },
   'L5.stewardship': {
     prompt:
       'Two skills fire on the same phrase. What are your options and which do you pick first?',
     answerKey:
-      'Merge, differentiate by audience, or deprecate one with a successor; deprecate the narrower one first.',
+      'Merge them, give each a different audience, or retire one and point to the other; retire the narrower one first.',
   },
 };
 
@@ -6089,7 +6111,7 @@ export const DEMO_REVISITS: DemoRevisit[] = [
     intervalStep: 1,
     dueDaysAgo: 0,
     prompt:
-      'Your Nakamura brief is about to run. Write the prediction line: strong, weak, confidence.',
+      'Your Nakamura brief is about to run. Name the two things you will check first when it comes back.',
     answerKey: REVISIT_PROMPTS['L1.discernment'].answerKey,
   },
   {
@@ -6108,7 +6130,7 @@ export const DEMO_REVISITS: DemoRevisit[] = [
     doneDaysAgo: 30,
     score: 0.85,
     response:
-      'Reader Lang; 3–5 items; open items first marked with the meeting; RMD named with amount and method; household + type.',
+      'For Lang; 3–5 items; open items first, marked with the meeting they came from; RMD named with amount and method; accounts as household + type.',
     feedback: 'All five rules present.',
     prompt: REVISIT_PROMPTS['L1.description'].prompt,
     answerKey: REVISIT_PROMPTS['L1.description'].answerKey,
@@ -6120,8 +6142,8 @@ export const DEMO_REVISITS: DemoRevisit[] = [
     dueDaysAgo: 23,
     doneDaysAgo: 22,
     score: 0.9,
-    response: 'Same as before plus the one-line-per-item rule.',
-    feedback: 'Good; interval extended.',
+    response: 'Same as before plus one line per item.',
+    feedback: 'Good; next recap in three weeks.',
     prompt: REVISIT_PROMPTS['L1.description'].prompt,
     answerKey: REVISIT_PROMPTS['L1.description'].answerKey,
   },
@@ -6145,9 +6167,9 @@ export const DEMO_REVISITS: DemoRevisit[] = [
     dueDaysAgo: 12,
     doneDaysAgo: 12,
     score: 0.7,
-    response: 'It will be good.',
+    response: "I'll read it through.",
     feedback:
-      'Not a prediction: nothing named as weak, no probability. Reset to the two-day interval.',
+      'Too vague: name what you will check (the figures, the open items, the RMD line). Back to a two-day recap.',
     prompt: REVISIT_PROMPTS['L1.discernment'].prompt,
     answerKey: REVISIT_PROMPTS['L1.discernment'].answerKey,
   },
@@ -6183,7 +6205,7 @@ export const DEMO_REVISITS: DemoRevisit[] = [
     dueDaysAgo: 9,
     doneDaysAgo: 9,
     score: 0.85,
-    response: 'Account numbers and SSNs; Orion is read-only; before send.',
+    response: 'Account numbers and SSNs; Orion is read-only; before sending.',
     feedback: 'Correct; also before CRM entry and before client meetings.',
     prompt: REVISIT_PROMPTS['L0.boundary'].prompt,
     answerKey: REVISIT_PROMPTS['L0.boundary'].answerKey,
@@ -6197,8 +6219,8 @@ export const DEMO_REVISITS: DemoRevisit[] = [
     doneDaysAgo: 20,
     score: 0.95,
     response:
-      '"Use when a planner names a household and an upcoming meeting... Not for post-meeting notes (client-followup-summary)."',
-    feedback: 'Names trigger and non-trigger by skill.',
+      '"Use when a planner names a household and an upcoming meeting... Not for post-meeting notes (client-followup-notes)."',
+    feedback: 'Names when to use it and the nearby skill it is not for.',
     prompt: REVISIT_PROMPTS['L3.trigger'].prompt,
     answerKey: REVISIT_PROMPTS['L3.trigger'].answerKey,
   },
@@ -6234,7 +6256,8 @@ export const DEMO_REVISITS: DemoRevisit[] = [
     dueDaysAgo: 8,
     doneDaysAgo: 8,
     score: 0.88,
-    response: "Description names the planner's situation and the non-triggers.",
+    response:
+      'The description says when a planner needs it and what it is not for.',
     feedback: 'Good.',
     prompt: REVISIT_PROMPTS['L3.trigger'].prompt,
     answerKey: REVISIT_PROMPTS['L3.trigger'].answerKey,
@@ -6279,85 +6302,85 @@ export const DEMO_COACH_NOTES: DemoCoachNote[] = [
     personKey: 'priya',
     daysAgo: 30,
     tags: ['progress'],
-    note: 'Promoted to L2 on four contexts. Description and diligence are strong; discernment predictions are consistently a little underconfident (0.6–0.7 on passes). Not a problem yet; watching.',
+    note: 'Moved up to the Project step after four different tasks passed. Prompts and checking are strong; she tends to undersell her own drafts before running them.',
   },
   {
     personKey: 'priya',
     daysAgo: 12,
     tags: ['calibration'],
-    note: 'Revisit on L1.discernment scored 0.70: "It will be good" is not a prediction. Reset interval to 2 days and put a prediction prompt in front of her next-up exercise.',
+    note: 'Recap on checking drafts scored 7/10: "I\'ll read it through" is not a check. Two-day recap set; her next task asks her to name what she will look at first.',
   },
   {
     personKey: 'priya',
     daysAgo: 1,
     tags: ['progress'],
-    note: "Three L2 contexts passed (meeting-prep, rmd-letters, annual-review). Next-up targets the Project bloat she flagged herself. Fourth context would open L3 eligibility; candidate L3 artifact is the CD memo skill, or adopting Hannah's deck outline as a fork.",
+    note: 'Three Project tasks passed (meeting prep, RMD letters, annual review). Next up trims the meeting-prep Project she said had grown too big. One more workflow opens the skill step; the CD memo is the obvious candidate.',
   },
   {
     personKey: 'marcus',
     daysAgo: 7,
     tags: ['calibration', 'progress'],
-    note: 'Fee explainer: confidence 0.80, decision revise, critique found nothing. Classic overconfidence on regulated content. Teaching moment delivered; next exercise is the Henderson follow-up written cold so he can see what the skill does for him.',
+    note: 'Fee email needs another go: the draft compared us to other firms and mentioned performance, and he read it as fine. Trusts drafts without checking them against the rules. Next task is the Henderson follow-up written without the skill.',
   },
   {
     personKey: 'marcus',
     daysAgo: 10,
     tags: ['progress'],
-    note: 'First graded prompt passed at 0.79; he named the reader for the first time. Underconfident (0.5).',
+    note: 'First prompt task passed at 8/10; he named the reader for the first time. Thought it would score lower than it did.',
   },
   {
     personKey: 'rajesh',
     daysAgo: 20,
     tags: ['no_time'],
-    note: 'Two nudges, one reply: "plan season, no time until October." One passed artifact at L1 (meeting notes); nothing since day 24.',
+    note: 'Two nudges, one reply: "plan season, no time until October." One task passed (meeting notes) in week two; nothing since day 24.',
   },
   {
     personKey: 'rajesh',
     daysAgo: 8,
     tags: ['blocked', 'escalated'],
-    note: 'Third session with no artifact. Offered a five-minute exercise on the cash-flow table he is already building; declined. Escalated to Daniel: needs a manager conversation about time, not more coaching.',
+    note: 'Third session with nothing finished. Offered a five-minute task on the cash-flow table he is already building; declined. Sent to Daniel: this needs a conversation about time, not more coaching.',
   },
   {
     personKey: 'laura',
     daysAgo: 6,
     tags: ['tool_issue'],
-    note: 'Usage down sharply since the scheduling template changed on the shared drive; her prompt referenced the old file name and started producing wrong output. Fix is a Project with the template attached; queued an L1 exercise that builds it.',
+    note: 'Usage fell sharply after the scheduling template changed on the shared drive; her prompt pointed at the old file name and started producing wrong output. Fix is a Project with the template attached; a task that builds it is queued.',
   },
   {
     personKey: 'hannah',
     daysAgo: 22,
     tags: ['progress'],
-    note: 'Cold skill draft scored 0.87, L1 → L3 in 39 days. Her self-critique found the only gap before Grader did. Champion candidate for fp when Daniel steps back.',
+    note: 'First skill scored 8.7/10, and she reached the skill step in 39 days. Spotted the one gap in her own draft before the grader did. Champion candidate for Planning when Daniel steps back.',
   },
   {
     personKey: 'owen',
     daysAgo: 45,
     tags: ['blocked'],
-    note: 'No activity since week 2; Daniel confirms parental leave. Marked inactive; re-onboard on return.',
+    note: 'No activity since week 2; Daniel confirms parental leave. Marked inactive; start again on return.',
   },
   {
     personKey: 'grace',
     daysAgo: 2,
     tags: ['progress', 'calibration'],
-    note: 'First L3 attempt submitted with confidence 0.45 and an accurate self-critique (thin examples, wrong review point). Whatever Daniel decides, her judgement is ahead of her artifact, which is the right way round.',
+    note: 'First skill submitted. She expects it to need another go and her own notes name both problems (one-line examples, wrong review point). Whatever Daniel decides, she can see what is wrong with her own work, which is the harder half.',
   },
   {
     personKey: 'kevin',
     daysAgo: 6,
     tags: ['progress'],
-    note: 'Fee-change skill v2 ready; promotion waiting on Compliance. Kevin is idle at L3 while it waits; queued an L4 mapping exercise on IPS refresh so the wait is not dead time.',
+    note: 'Fee-change skill v2 is ready and waiting on Compliance. Rather than leave him idle, queued a task to map the IPS refresh workflow.',
   },
   {
     personKey: 'jonas',
     daysAgo: 4,
     tags: ['blocked', 'escalated'],
-    note: 'Interviewer session on rebalancing exceptions hit 12 turns with decisions and exceptions still empty; Jonas says the rules live in the rebalancer config and he does not own them. Escalated to Tom to bring the trading desk into the interview.',
+    note: 'Interview on rebalancing exceptions ran 12 turns with the decision rules and exceptions still empty; Jonas says the rules live in the rebalancer settings the trading desk owns. Sent to Tom to bring the trading desk in.',
   },
   {
     personKey: 'amara',
     daysAgo: 3,
     tags: ['calibration'],
-    note: 'v2 of her skill removed the redaction control. She was confident (0.85) and Grader found a high-severity issue. Her first miss; the feedback from Tom was well received.',
+    note: "v2 of her skill removed the step that keeps account numbers out. She was sure it was fine and the grader found a serious problem. Her first miss; Tom's note landed well.",
   },
 ];
 
@@ -6553,7 +6576,7 @@ export const DEMO_ESCALATIONS: DemoEscalation[] = [
     sourceAgent: 'builder',
     kind: 'escalation',
     subjectType: 'skill',
-    subjectRef: { kind: 'skill', key: 'compliance-attestation-summary' },
+    subjectRef: { kind: 'skill', key: 'attestation-summary' },
     reason:
       'Builder confidence 0.42: attestation export format unconfirmed in the interview and exceptions reference staff by id; drafted with a de-identification step but unsure it is sufficient for the CCO.',
     assigneeKey: 'zain',
@@ -6579,7 +6602,7 @@ export const DEMO_ESCALATIONS: DemoEscalation[] = [
     subjectType: 'promotion_request',
     subjectRef: { kind: 'promotion', key: 'pr-fee-v2' },
     reason:
-      'High exposure: fee-change-client-comms v2 produces client fee communications. Champion approved; Compliance approval required before merge.',
+      'High exposure: fee-change-comms v2 produces client fee communications. Champion approved; Compliance approval required before merge.',
     assigneeKey: 'elena',
     state: 'open',
     slaDueDaysAgo: 1,
@@ -6627,14 +6650,14 @@ export const DEMO_ESCALATIONS: DemoEscalation[] = [
     sourceAgent: 'grader',
     kind: 'escalation',
     subjectType: 'skill',
-    subjectRef: { kind: 'skill', key: 'crm-note-cleanup' },
+    subjectRef: { kind: 'skill', key: 'rebalancing-exception-memo' },
     reason:
-      'Security review on v2: high severity. Instructs pasting full Salesforce note bodies and removes the redaction check; steps no longer honour the boundary declaration.',
+      'Security review on v2: high severity. Instructs pasting raw rebalancer output, which carries account numbers, and removes the step-1 check; steps no longer honour the boundary declaration.',
     assigneeKey: 'tom',
     state: 'resolved',
     slaDueDaysAgo: 2,
     resolution:
-      'Promotion sent back with note; Amara reverting to macro-first flow.',
+      'Promotion sent back with note; Amara restoring the stripped-export step.',
     resolvedDaysAgo: 3,
     createdDaysAgo: 3,
   },
@@ -6698,7 +6721,7 @@ export const DEMO_READOUTS = [
       returnUsdAtLoadedRate: 21460,
     },
     narrative:
-      "Over the six weeks of Wave 1, weekly active on real work across the twelve Financial Planning and Wealth Advisor seats rose from 33% at the scoping call to 67% in the final week [1], clearing the 60% target. Four skills were promoted through the governed queue, each with a boundary declaration, a Grader pass and a named approver [2]; the two most used, advisor-meeting-prep and client-followup-summary, now account for the majority of skill activations in the org [3]. Baselines were captured for ten of the twelve workflows learners named at intake (83%) [4]. Against those baselines, participants returned 2.1 hours per person per week net of rework in the final measurement period, 148 hours across the wave [5]; rework fell from 48 to 33 minutes per week on measured workflows, which is the figure that distinguishes hours back from hours moved [5]. Two learners stalled, one for leave and one for workload, and both are recorded with reasons rather than counted as attrition [6]. At the client's loaded rate of $145 per hour the return in the wave was $21,460 against $50,000 of program fees; the return compounds as skills stay in use after the wave while the fee does not, and the Wave 2 measurement period will report the run-rate [7].",
+      "Over the six weeks of Wave 1, weekly active on real work across the twelve Financial Planning and Wealth Advisor seats rose from 33% at the scoping call to 67% in the final week [1], clearing the 60% target. Four skills were promoted through the governed queue, each with a boundary declaration, a Grader pass and a named approver [2]; the two most used, advisor-meeting-prep and client-followup-notes, now account for the majority of skill activations in the org [3]. Baselines were captured for ten of the twelve workflows learners named at intake (83%) [4]. Against those baselines, participants returned 2.1 hours per person per week net of rework in the final measurement period, 148 hours across the wave [5]; rework fell from 48 to 33 minutes per week on measured workflows, which is the figure that distinguishes hours back from hours moved [5]. Two learners stalled, one for leave and one for workload, and both are recorded with reasons rather than counted as attrition [6]. At the client's loaded rate of $145 per hour the return in the wave was $21,460 against $50,000 of program fees; the return compounds as skills stay in use after the wave while the fee does not, and the Wave 2 measurement period will report the run-rate [7].",
     footnotes: [
       {
         ref: '[1]',
@@ -6855,7 +6878,7 @@ export const DEMO_AUDIT: {
     action: 'promotion.approved',
     subjectType: 'promotion_request',
     subjectRef: { kind: 'promotion', key: 'pr-followup-v4' },
-    meta: { skill: 'client-followup-summary', version: 4, gradeScore: 0.89 },
+    meta: { skill: 'client-followup-notes', version: 4, gradeScore: 0.89 },
     daysAgo: 11,
   },
   {
@@ -6864,8 +6887,8 @@ export const DEMO_AUDIT: {
     subjectType: 'promotion_request',
     subjectRef: { kind: 'promotion', key: 'pr-followup-v4' },
     meta: {
-      skill: 'client-followup-summary',
-      tag: 'client-followup-summary@v4',
+      skill: 'client-followup-notes',
+      tag: 'client-followup-notes@v4',
       prNumber: 19,
     },
     daysAgo: 11,
@@ -6895,15 +6918,19 @@ export const DEMO_AUDIT: {
     action: 'promotion.sent_back',
     subjectType: 'promotion_request',
     subjectRef: { kind: 'promotion', key: 'pr-crm-v2' },
-    meta: { skill: 'crm-note-cleanup', version: 2, securityFindings: 1 },
+    meta: {
+      skill: 'rebalancing-exception-memo',
+      version: 2,
+      securityFindings: 1,
+    },
     daysAgo: 3,
   },
   {
-    actorKey: 'daniel',
+    actorKey: 'sofia',
     action: 'skill.deprecated',
     subjectType: 'skill',
-    subjectRef: { kind: 'skill', key: 'meeting-recap-email' },
-    meta: { successor: 'client-followup-summary', reason: 'duplicate trigger' },
+    subjectRef: { kind: 'skill', key: 'crm-note-cleanup' },
+    meta: { successor: 'client-followup-notes', reason: 'duplicate trigger' },
     daysAgo: 20,
   },
   {
@@ -7029,7 +7056,7 @@ export const DEMO_INTERVIEWS: DemoInterview[] = [
       {
         role: 'interviewer',
         content:
-          'That is exactly what L2 teaches, and your Monday briefs are the perfect case for it. Last question: on a scale of one to five, how comfortable are you with Claude today?',
+          'That is exactly what the Project step teaches, and your Monday briefs are the perfect case for it. Last question: on a scale of one to five, how comfortable are you with Claude today?',
       },
       {
         role: 'user',
@@ -7284,7 +7311,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     task: 'grader.submission',
     personKey: 'marcus',
     input: { exercise: 'marcus-fee-explainer' },
-    output: { score: 0.5, decision: 'revise', teachingMoment: true },
+    output: { score: 0.5, decision: 'revise', tryNext: true },
     daysAgo: 7,
   },
   {
@@ -7299,7 +7326,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     agent: 'grader',
     task: 'grader.skill',
     personKey: 'amara',
-    input: { skill: 'crm-note-cleanup', version: 2 },
+    input: { skill: 'rebalancing-exception-memo', version: 2 },
     output: { score: 0.76, decision: 'revise', securityFindings: 1 },
     daysAgo: 3,
   },
@@ -7307,7 +7334,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     agent: 'grader',
     task: 'grader.skill',
     personKey: 'kevin',
-    input: { skill: 'fee-change-client-comms', version: 2 },
+    input: { skill: 'fee-change-comms', version: 2 },
     output: { score: 0.88, decision: 'pass' },
     daysAgo: 9,
   },
@@ -7323,7 +7350,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     agent: 'grader',
     task: 'grader.security-review',
     personKey: 'amara',
-    input: { skill: 'crm-note-cleanup', version: 2 },
+    input: { skill: 'rebalancing-exception-memo', version: 2 },
     output: { findings: [{ severity: 'high' }] },
     daysAgo: 3,
     model: 'claude-sonnet-5',
@@ -7335,7 +7362,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     input: {
       rung: 2,
       contextsPassed: ['meeting-prep', 'rmd-letters', 'annual-review'],
-      flags: ['project-bloat'],
+      flags: ['project-too-big'],
     },
     output: {
       title: 'Tighten your Monday prep Project: what to leave out',
@@ -7348,7 +7375,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     task: 'coach.next-exercise',
     personKey: 'marcus',
     input: { rung: 1, lastDecision: 'revise' },
-    output: { title: 'Henderson follow-up: describe, predict, critique' },
+    output: { title: 'Draft the Henderson follow-up email' },
     daysAgo: 2,
   },
   {
@@ -7357,7 +7384,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     personKey: 'marcus',
     input: { exercise: 'marcus-henderson-followup', hintIndex: 0 },
     output: {
-      hint: "Sofia's three parts: what we discussed, what we agreed, what we need from you. Name them.",
+      hint: "Use Sofia's three parts: what we discussed, what we agreed, what we need from you.",
     },
     daysAgo: 1,
     model: 'claude-sonnet-5',
@@ -7393,9 +7420,11 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     personKey: 'marcus',
     input: {
       exercise: 'marcus-fee-explainer',
-      issue: 'forbidden arguments in fee comms',
+      issue: 'fee email compared us to other firms and mentioned performance',
     },
-    output: { lesson: 'Constrain before you run; critique against the rules.' },
+    output: {
+      lesson: 'Paste the approved fee paragraph and say what must not appear.',
+    },
     daysAgo: 7,
   },
   {
@@ -7426,7 +7455,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     personKey: 'tom',
     input: { workflow: 'compliance-attestation-summaries' },
     output: {
-      skill: 'compliance-attestation-summary',
+      skill: 'attestation-summary',
       confidence: 0.42,
       escalated: true,
     },
@@ -7468,7 +7497,7 @@ export const DEMO_AGENT_RUNS: DemoAgentRun[] = [
     agent: 'promoter',
     task: 'promoter.package',
     personKey: 'kevin',
-    input: { skill: 'fee-change-client-comms', version: 2 },
+    input: { skill: 'fee-change-comms', version: 2 },
     output: {
       prNumber: 23,
       highExposure: true,

@@ -99,8 +99,8 @@ export function ScribeCard({ envelope, api, shell }: CardProps<InterviewView>) {
           {flags.length > 0 ? (
             <div className="mt-2 flex flex-col gap-1">
               {flags.map((f, i) => {
-                const o = typeof f === 'string' ? { message: f } : (f as { field?: string; message: string });
-                return <div key={i} className="text-[11.5px] flex gap-1.5 items-start"><Pill tone="revise">check</Pill><span style={{ color: 'var(--fg-2)' }}>{o.field ? `${titleCase(o.field)}: ` : ''}{o.message}</span></div>;
+                const o = typeof f === 'string' ? { message: f } : (f as { field?: string; issue?: string; message?: string });
+                return <div key={i} className="text-[11.5px] flex gap-1.5 items-start"><Pill tone="revise">check</Pill><span style={{ color: 'var(--fg-2)' }}>{o.field ? `${titleCase(o.field)}: ` : ''}{o.issue ?? o.message ?? ''}</span></div>;
               })}
             </div>
           ) : null}

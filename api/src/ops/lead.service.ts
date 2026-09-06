@@ -241,7 +241,9 @@ export class LeadService {
             ? { id: p.teamId, name: f.teamName.get(p.teamId) ?? '' }
             : null,
           person: personRef(p, f),
-          metric: s.reason?.includes('activity dropped') ? 'activityDrop' : 'stalledDays',
+          metric: s.reason?.includes('activity dropped')
+            ? 'activityDrop'
+            : 'stalledDays',
           value: s.stalledDays,
           threshold: f.stalledAfterDays,
           reason: s.reason,

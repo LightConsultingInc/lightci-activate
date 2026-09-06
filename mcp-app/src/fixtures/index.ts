@@ -113,7 +113,7 @@ export const interview: InterviewView = {
     painPoints: null,
     baselineMethod: null,
   },
-  checkerFlags: [{ field: 'runsPerWeek', message: 'Earlier you said "five or six"; recorded as 5.5. Confirm.', severity: 'info' }],
+  checkerFlags: [{ field: 'runsPerWeek', issue: 'Earlier you said "five or six"; recorded as 5.5. Confirm.' }],
   turnCount: 4,
   nextQuestion: 'What data in the brief would you never want pasted into Claude — account numbers, dates of birth, anything else?',
   result: null,
@@ -128,11 +128,11 @@ export const team: TeamView = {
     { ...daniel, lastActiveOnRealWork: '2026-09-05', hoursBackPerWeek: 3.6, baselineMinutesPerWeek: 300, stalled: false, stalledDays: 0, revisitsOverdue: 0, activeDays30: 24, masteryAvg: 0.9 },
   ],
   backlogTop: [
-    { id: 'w-2', name: 'RMD season letters', teamId: 't-fp', teamName: 'Financial Planning', owner: priya, status: 'in_build', completeness: 0.9, championVerified: true, score: { composite: 0.88 }, nextWave: true, baselineMinutesPerWeek: 300, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
-    { id: 'w-3', name: 'Annual review deck', teamId: 't-fp', teamName: 'Financial Planning', owner: marcus, status: 'candidate', completeness: 0.6, championVerified: false, score: { composite: 0.74 }, nextWave: true, baselineMinutesPerWeek: 200, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
-    { id: 'w-4', name: 'Beneficiary change confirmations', teamId: 't-fp', teamName: 'Financial Planning', owner: null, status: 'candidate', completeness: 0.3, championVerified: false, score: { composite: 0.61 }, nextWave: false, baselineMinutesPerWeek: 90, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
-    { id: 'w-1', name: 'Client meeting preparation', teamId: 't-fp', teamName: 'Financial Planning', owner: daniel, status: 'shipped', completeness: 1, championVerified: true, score: { composite: 0.82 }, nextWave: false, baselineMinutesPerWeek: 240, measuredMinutesPerWeek: 95, hoursBackPerWeek: 2.4 },
-    { id: 'w-5', name: 'Quarterly performance commentary', teamId: 't-fp', teamName: 'Financial Planning', owner: null, status: 'candidate', completeness: 0.2, championVerified: false, score: { composite: 0.52 }, nextWave: false, baselineMinutesPerWeek: 120, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
+    { id: 'w-2', name: 'RMD season letters', teamId: 't-fp', teamName: 'Financial Planning', owner: priya, status: 'in_build', completeness: 0.9, championVerified: true, score: { composite: 88 }, nextWave: true, baselineMinutesPerWeek: 300, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
+    { id: 'w-3', name: 'Annual review deck', teamId: 't-fp', teamName: 'Financial Planning', owner: marcus, status: 'candidate', completeness: 0.6, championVerified: false, score: { composite: 74 }, nextWave: true, baselineMinutesPerWeek: 200, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
+    { id: 'w-4', name: 'Beneficiary change confirmations', teamId: 't-fp', teamName: 'Financial Planning', owner: null, status: 'candidate', completeness: 0.3, championVerified: false, score: { composite: 61 }, nextWave: false, baselineMinutesPerWeek: 90, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
+    { id: 'w-1', name: 'Client meeting preparation', teamId: 't-fp', teamName: 'Financial Planning', owner: daniel, status: 'shipped', completeness: 1, championVerified: true, score: { composite: 82 }, nextWave: false, baselineMinutesPerWeek: 240, measuredMinutesPerWeek: 95, hoursBackPerWeek: 2.4 },
+    { id: 'w-5', name: 'Quarterly performance commentary', teamId: 't-fp', teamName: 'Financial Planning', owner: null, status: 'candidate', completeness: 0.2, championVerified: false, score: { composite: 52 }, nextWave: false, baselineMinutesPerWeek: 120, measuredMinutesPerWeek: null, hoursBackPerWeek: null },
   ],
   reviewQueue: [
     {

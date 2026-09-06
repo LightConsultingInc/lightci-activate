@@ -375,7 +375,12 @@ describe('REST-shape fidelity (live audit regressions)', () => {
           skill: { name: 'RMD letter draft' },
           version: 1,
           requestedBy: { name: 'Hannah Whitfield' },
-          diffSummary: { filesChanged: 3, additions: 96, deletions: 0, summary: 'New skill.' },
+          diffSummary: {
+            filesChanged: 3,
+            additions: 96,
+            deletions: 0,
+            summary: 'New skill.',
+          },
           approvals: [],
           requiredApproverRoles: ['champion'],
           decision: 'pending',
@@ -392,15 +397,21 @@ describe('REST-shape fidelity (live audit regressions)', () => {
       status: 'active',
       completeness: 0.69,
       turnCount: 1,
-      checkerFlags: [{ field: 'decisions', issue: 'No judgement rules captured yet' }],
+      checkerFlags: [
+        { field: 'decisions', issue: 'No judgement rules captured yet' },
+      ],
     });
-    expect(text).toContain('Checker flags: decisions: No judgement rules captured yet');
+    expect(text).toContain(
+      'Checker flags: decisions: No judgement rules captured yet',
+    );
     expect(text).not.toContain('{"field"');
   });
 
   it('team backlog composite is 0..100', () => {
     const text = renderTeam({
-      backlogTop: [{ name: 'Annual review deck assembly', score: { composite: 83 } }],
+      backlogTop: [
+        { name: 'Annual review deck assembly', score: { composite: 83 } },
+      ],
     });
     expect(text).toContain('Annual review deck assembly (83/100)');
     expect(text).not.toContain('8300%');
@@ -409,15 +420,31 @@ describe('REST-shape fidelity (live audit regressions)', () => {
   it('submit_skill maps sample cases and boundary onto the REST entity shapes', () => {
     expect(
       toRestSampleCases([
-        { input: ' Write the commentary ', expected: 'should_trigger', note: 'explicit ask' },
+        {
+          input: ' Write the commentary ',
+          expected: 'should_trigger',
+          note: 'explicit ask',
+        },
         { input: 'Draft the RMD letter', expected: 'should_not_trigger' },
-        { input: 'How did Hale do?', expected: 'ambiguous', note: 'no numbers' },
+        {
+          input: 'How did Hale do?',
+          expected: 'ambiguous',
+          note: 'no numbers',
+        },
         { input: '   ', expected: 'should_trigger' },
       ]),
     ).toEqual([
-      { input: 'Write the commentary', shouldTrigger: 'yes', expected: 'explicit ask' },
+      {
+        input: 'Write the commentary',
+        shouldTrigger: 'yes',
+        expected: 'explicit ask',
+      },
       { input: 'Draft the RMD letter', shouldTrigger: 'no', expected: '' },
-      { input: 'How did Hale do?', shouldTrigger: 'ambiguous', expected: 'no numbers' },
+      {
+        input: 'How did Hale do?',
+        shouldTrigger: 'ambiguous',
+        expected: 'no numbers',
+      },
     ]);
     expect(
       toRestBoundary({
@@ -431,22 +458,34 @@ describe('REST-shape fidelity (live audit regressions)', () => {
       mustNeverReceive: ['account_numbers'],
       humanReview: ['before_send'],
     });
-    expect(toRestBoundary(undefined)).toEqual({ mayRead: [], mustNeverReceive: [], humanReview: [] });
+    expect(toRestBoundary(undefined)).toEqual({
+      mayRead: [],
+      mustNeverReceive: [],
+      humanReview: [],
+    });
   });
 
   it('submit_artifact maps kind → REST artifact.type', () => {
-    expect(toRestArtifact({ kind: 'prompt', title: 'Follow-up', content: 'Draft…' })).toEqual({
+    expect(
+      toRestArtifact({ kind: 'prompt', title: 'Follow-up', content: 'Draft…' }),
+    ).toEqual({
       kind: 'prompt',
       title: 'Follow-up',
       type: 'prompt_run',
       content: 'Draft…',
     });
-    expect(toRestArtifact({ kind: 'link', url: 'https://x.test/doc' })).toMatchObject({
+    expect(
+      toRestArtifact({ kind: 'link', url: 'https://x.test/doc' }),
+    ).toMatchObject({
       type: 'text',
       content: 'Link: https://x.test/doc',
       url: 'https://x.test/doc',
     });
-    expect(toRestArtifact({ type: 'review', content: 'notes' }).type).toBe('review');
-    expect(toRestArtifact({ kind: 'document', content: 'x' }).type).toBe('text');
+    expect(toRestArtifact({ type: 'review', content: 'notes' }).type).toBe(
+      'review',
+    );
+    expect(toRestArtifact({ kind: 'document', content: 'x' }).type).toBe(
+      'text',
+    );
   });
 });

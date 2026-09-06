@@ -179,7 +179,9 @@ export class EscalationsController {
 
   private async load(orgId: string | null, id: string) {
     // Leads may act without an org selected; everyone else must match the org scope.
-    const e = await this.escalations.findOne(orgId ? { where: { id, orgId } } : { where: { id } });
+    const e = await this.escalations.findOne(
+      orgId ? { where: { id, orgId } } : { where: { id } },
+    );
     if (!e) throw new NotFoundException('Escalation not found');
     return e;
   }

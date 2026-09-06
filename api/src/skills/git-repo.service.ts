@@ -114,6 +114,14 @@ export class GitRepoService implements OnModuleInit {
     if (this.resolved && this.path && isGitRepo(this.path)) return Promise.resolve(true);
     return this.locked(async () => {
       await this.resolveLocation();
+      // A nested work dir can be wiped at runtime (the demo seed reset does this): mirror it again.
+      if (this.mode === 'nested' && this.workDir && !existsSync(this.workDir) && this.sourcePath) {
+        cpSync(this.sourcePath, this.workDir, {
+          recursive: true,
+          filter: (src) => !src.endsWith(`${sep}.git`) && !src.includes(`${sep}.git${sep}`),
+        });
+        this.logger.log(`Re-mirrored marketplace plain files into ${this.workDir}`);
+      }
       if (!this.path || !existsSync(this.path)) return false;
       if (isGitRepo(this.path)) return true;
       try {

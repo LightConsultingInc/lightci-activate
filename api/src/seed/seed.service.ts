@@ -1,4 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { rmSync } from 'fs';
+import { resolve } from 'path';
 import {
   DataSource,
   EntityManager,
@@ -694,9 +696,9 @@ export function buildSeedPlan(
       name: s.name,
       triggerLine: s.triggerLine,
       plugin: s.plugin,
-      repoPath: `plugins/${s.plugin}/skills/${s.slug}/SKILL.md`,
+      repoPath: `plugins/${s.plugin}/skills/${s.slug}`, // skill directory, matching marketplace/sync
       ownerPersonId: pid(s.ownerKey),
-      teamId: teamId.get(s.teamSlug)!,
+      teamId: teamId.get(s.teamSlug) ?? null, // 'shared' plugin skills have no team
       status: s.status,
       rungRequired: s.rungRequired,
       skillMd: s.skillMd,
@@ -807,7 +809,8 @@ export function buildSeedPlan(
     }
     // Practice v2: every seeded exercise carries starter.practice for its rung/surface (docs/practice-model.md).
     const workflowName =
-      (e.workflowKey && DEMO_WORKFLOWS.find((w) => w.key === e.workflowKey)?.name) ||
+      (e.workflowKey &&
+        DEMO_WORKFLOWS.find((w) => w.key === e.workflowKey)?.name) ||
       (typeof starter.workflowName === 'string' ? starter.workflowName : null);
     if (!starter.practice)
       starter.practice = practiceOf(
@@ -1385,6 +1388,7 @@ export function generateFillerExercises(rng: Rng): DemoExercise[] {
           estimatedMinutes: r >= 3 ? 60 : r === 2 ? 35 : 15,
           generatedBy: 'coach',
           hintsRevealed: rng.int(0, 2),
+          starter: { workflowName: workflow },
         };
         const passedAt = Math.max(
           windowEnd,
@@ -1444,10 +1448,7 @@ export function generateFillerExercises(rng: Rng): DemoExercise[] {
                     0.95,
                   ) * 100,
                 ) / 100,
-              feedback:
-                decision === 'pass'
-                  ? t.feedback
-                  : `Not yet. ${t.feedback.split('.')[0]} is the part to fix; revise with the first hint in mind.`,
+              feedback: decision === 'pass' ? t.feedback : t.feedbackRevise,
             },
           };
         };
@@ -1537,6 +1538,7 @@ export function generateFillerExercises(rng: Rng): DemoExercise[] {
             mode: 'in_app',
             workSurface: next.workSurface,
             contextTag: p.contexts[0] ?? 'general',
+            starter: { workflowName: workflow },
             hints: next.hints,
             status: stalled ? 'active' : 'queued',
             estimatedMinutes: r + 1 >= 3 ? 60 : 30,
@@ -1635,6 +1637,12 @@ export class SeedService implements OnApplicationBootstrap {
       `TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`,
     );
     this.logger.warn(`Truncated ${tables.length} tables for reseed.`);
+    // Drop the nested marketplace clone so stale tags are not re-imported by the next sync.
+    const workDir =
+      process.env.LIBRARY_WORK_DIR ??
+      resolve(process.cwd(), '.marketplace-work');
+    rmSync(workDir, { recursive: true, force: true });
+    this.logger.warn(`Removed marketplace work dir ${workDir}.`);
     await this.run();
     return { truncated: tables, seeded: true };
   }

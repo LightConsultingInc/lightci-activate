@@ -140,6 +140,32 @@ export function boundaryBadge(
   return 'green';
 }
 
+const WRITE_VERBS =
+  '(write|writes|written|update|updates|updated|enter|enters|entered|post|posts|posted|push|pushes|pushed|log|logs|logged|save|saves|saved)';
+const NEGATION =
+  /\b(never|not|no|nothing|none|nor|without|cannot|can't|don't|doesn't|won't|isn't|aren't|must not|do not|does not|is not|are not|rather than|instead of|by a person|by the advisor|by a human)\b/i;
+
+/**
+ * True when the text appears to write to `system`: a write verb within 40 characters before the
+ * system name, in a clause that is not negated ("never entered into Salesforce by this skill" is a
+ * boundary statement, not a write).
+ */
+export function mentionsWriteTo(text: string, system: string): boolean {
+  const rx = new RegExp(`\\b${WRITE_VERBS}[^.;\\n]{0,40}\\b${system}\\b`, 'gi');
+  for (const m of text.matchAll(rx)) {
+    const start = m.index ?? 0;
+    const clauseStart = Math.max(
+      0,
+      text.lastIndexOf('.', start),
+      text.lastIndexOf(';', start),
+      text.lastIndexOf('\n', start),
+    );
+    const clause = text.slice(clauseStart, start + m[0].length + 20);
+    if (!NEGATION.test(clause)) return true;
+  }
+  return false;
+}
+
 export interface BoundaryCheckResult extends BoundaryCheck {
   highExposure: boolean;
 }
@@ -159,10 +185,7 @@ export function checkBoundary(
   const humanReview = list(skill.boundary?.humanReview);
   const touchesEntry = humanReview.some((h) => CRM_ENTRY.test(h));
   const readOnlyMentioned = list(orgBoundary?.readOnlySystems).filter((sys) =>
-    new RegExp(
-      `\\b(write|update|enter|post|push)[^.]{0,40}\\b${sys}\\b`,
-      'i',
-    ).test(skill.skillMd ?? ''),
+    mentionsWriteTo(skill.skillMd ?? '', sys),
   );
   const humanReviewRequired =
     humanReview.length > 0 ||

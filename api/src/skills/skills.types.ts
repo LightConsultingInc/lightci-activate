@@ -73,7 +73,10 @@ export interface SkillCommentView {
 export interface PromotionView {
   id: string;
   skill: SkillCard;
+  /** The promoted draft version. Once merged, the published version is `mergedVersion` (tag `mergedTag`). */
   version: number;
+  mergedTag: string | null;
+  mergedVersion: number | null;
   requestedBy: PersonRef;
   prNumber: number | null;
   prUrl: string | null;

@@ -114,7 +114,7 @@ export const skillDetail: SkillDetail = {
   manifest: { 'activate-id': 's-1', 'activate-version': 3, 'activate-owner': 'daniel.okafor@meridianwealth.demo' },
   workflow: {
     id: 'w-1', name: 'Client meeting preparation', teamId: 't-fp', teamName: 'Financial Planning', owner: daniel, status: 'shipped',
-    completeness: 1, championVerified: true, score: { composite: 0.82 }, nextWave: false, baselineMinutesPerWeek: 240, measuredMinutesPerWeek: 95, hoursBackPerWeek: 2.4,
+    completeness: 1, championVerified: true, score: { composite: 82 }, nextWave: false, baselineMinutesPerWeek: 240, measuredMinutesPerWeek: 95, hoursBackPerWeek: 2.4,
   },
   versions: [
     { id: 'v-3', version: 3, tag: 'advisor-meeting-prep@v3', commitSha: '9f1c2ab', changelog: 'Added trust-household reference file; tightened trigger.', author: daniel, gradeScore: 0.86, approvers: [sofia], createdAt: '2026-09-01T09:00:00Z' },
@@ -141,7 +141,7 @@ export const promotions: PromotionView[] = [
     id: 'pr-1', skill: skillCards[1], version: 2, requestedBy: priya, prNumber: 41, prUrl: 'https://github.com/meridian/claude-marketplace/pull/41', branch: 'skill/rmd-letter',
     grade: { ...gradePass, id: 'g-3', score: 0.83, feedback: 'Trigger narrowed to RMD context; link-following removed. Ready.' },
     boundaryCheck: { ok: true, findings: [], notes: 'Declares dob as must-never-receive; matches org boundary.' },
-    diffSummary: '+38 −12 · Narrowed trigger to "RMD" + client name. Removed instruction to follow CRM links. Moved IRS Uniform Lifetime table to reference/irs-table.md. Added should-not-fire case for generic letters.',
+    diffSummary: { filesChanged: 3, additions: 38, deletions: 12, summary: 'Narrowed trigger to "RMD" + client name. Removed instruction to follow CRM links. Moved IRS Uniform Lifetime table to reference/irs-table.md. Added should-not-fire case for generic letters.' },
     approvals: [], requiredApproverRoles: ['champion'], decision: 'pending', highExposure: false,
     testResults: { passed: 4, failed: 0, total: 4 }, createdAt: '2026-09-05T08:30:00Z', decidedAt: null,
   },

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { useDeprecateSkill, useRequestPromotion } from "@/hooks/library/queries"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useDeprecateSkill, useLibrary, useRequestPromotion } from "@/hooks/library/queries"
 import { PromotionCard } from "../promotion-card"
 import { SkillActions, describeError } from "../skill-actions"
 import type { PromotionView, SkillDetail } from "@/hooks/library/types"
@@ -18,6 +19,11 @@ export function ActionBar({ skill, isOwner, isChampion }: { skill: SkillDetail; 
   const deprecate = useDeprecateSkill(skill.slug)
   const [result, setResult] = useState<PromotionView | null>(null)
   const [confirmDeprecate, setConfirmDeprecate] = useState(false)
+  const [successorId, setSuccessorId] = useState<string | null>(null)
+  // Successor candidates: every other non-deprecated skill in the org (fetched only while the dialog is open).
+  const lib = useLibrary({})
+  const successors = (lib.data?.skills ?? []).filter((s) => s.id !== skill.id && s.status !== "deprecated").sort((a, b) => a.name.localeCompare(b.name))
+  const successorName = successors.find((s) => s.id === successorId)?.name ?? null
 
   const latest = skill.grades?.[0] ?? null
   const pending = skill.promotion && skill.promotion.decision === "pending" ? skill.promotion : null
@@ -34,7 +40,7 @@ export function ActionBar({ skill, isOwner, isChampion }: { skill: SkillDetail; 
       onError: (e) => toast.error("Couldn't request promotion", { description: describeError(e) }),
     })
   const onDeprecate = () =>
-    deprecate.mutate({ id: skill.id }, { onSuccess: () => { setConfirmDeprecate(false); toast.success(`${skill.name} deprecated`, { description: "It stays readable in the library; adopting is off." }) }, onError: (e) => toast.error("Couldn't deprecate", { description: describeError(e) }) })
+    deprecate.mutate({ id: skill.id, successorSkillId: successorId ?? undefined }, { onSuccess: () => { setConfirmDeprecate(false); toast.success(`${skill.name} deprecated`, { description: successorName ? `The library now points adopters to ${successorName}.` : "It stays readable in the library; adopting is off." }) }, onError: (e) => toast.error("Couldn't deprecate", { description: describeError(e) }) })
 
   return (
     <>
@@ -85,8 +91,18 @@ export function ActionBar({ skill, isOwner, isChampion }: { skill: SkillDetail; 
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Deprecate {skill.name}?</DialogTitle>
-            <DialogDescription>The plugin is removed from group assignments and the library shows a successor if one is set later. Existing adopters keep read access.</DialogDescription>
+            <DialogDescription>The plugin is removed from group assignments. Existing adopters keep read access; name a successor so the library can point them to it.</DialogDescription>
           </DialogHeader>
+          <div className="grid gap-1.5">
+            <p className="text-sm font-medium">Successor <span className="text-muted-foreground">(optional)</span></p>
+            <Select value={successorId} onValueChange={(v) => setSuccessorId((v as string | null) || null)} items={[{ value: null, label: "No successor" }, ...successors.map((s) => ({ value: s.id, label: s.name }))]}>
+              <SelectTrigger className="w-full" data-testid="deprecate-successor"><SelectValue placeholder="No successor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>No successor</SelectItem>
+                {successors.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} <span className="text-muted-foreground">· {s.status.replace("_", " ")}</span></SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <DialogFooter showCloseButton>
             <Button variant="destructive" onClick={onDeprecate} disabled={deprecate.isPending} data-testid="skill-deprecate-confirm">{deprecate.isPending && <Spinner className="size-4" />} Deprecate</Button>
           </DialogFooter>

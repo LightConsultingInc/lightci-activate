@@ -90,7 +90,7 @@ export function TeamCard({ envelope, api, shell }: CardProps<TeamView>) {
                     <div className="flex items-center gap-1.5"><span className="font-medium truncate">{w.name}</span>{w.nextWave ? <Pill tone="glow">next wave</Pill> : null}</div>
                     <div className="text-[11px]" style={{ color: 'var(--fg-3)' }}>{w.status.replace(/_/g, ' ')} · {w.owner?.name ?? 'no owner'} · {w.baselineMinutesPerWeek ? `${hours(w.baselineMinutesPerWeek)}/wk at stake` : 'no baseline'}</div>
                   </span>
-                  {score !== undefined && score !== null ? <span className="shrink-0 text-[11px]" style={{ color: 'var(--fg-2)' }}>{(score * 100).toFixed(0)}</span> : null}
+                  {score !== undefined && score !== null ? <span className="shrink-0 text-[11px]" style={{ color: 'var(--fg-2)' }} title="Scorer composite, 0–100">{Math.round(score)}</span> : null}
                 </li>
               );
             })}

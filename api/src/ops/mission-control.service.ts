@@ -220,7 +220,9 @@ export class MissionControlService {
           teamId: t.id,
           teamName: t.name,
           activePct: members.length ? round(tw / members.length) : 0,
-          hoursBack: hb.measuredTasks ? round(hb.minutesBackPerWeek / 60, 1) : 0,
+          hoursBack: hb.measuredTasks
+            ? round(hb.minutesBackPerWeek / 60, 1)
+            : 0,
           hasBaseline: hb.measuredTasks > 0,
         };
       });
@@ -339,7 +341,8 @@ export class MissionControlService {
       const team = person.teamId
         ? f.teams.find((t) => t.id === person.teamId)
         : null;
-      const sameTeam = Boolean(person.teamId) && person.teamId === viewer.teamId;
+      const sameTeam =
+        Boolean(person.teamId) && person.teamId === viewer.teamId;
       const championOf = team?.championPersonId === viewer.id;
       if (person.id !== viewer.id && !sameTeam && !championOf)
         throw new ForbiddenException(
@@ -534,14 +537,19 @@ export class MissionControlService {
     const pending = f.promotions.filter(
       (p) => p.decision === 'pending' && teamSkillIds.has(p.skillId),
     );
-    const recentGrades = f.grades.filter((g) => ids.has(g.personId) && g.gradedAt >= since);
+    const recentGrades = f.grades.filter(
+      (g) => ids.has(g.personId) && g.gradedAt >= since,
+    );
     return {
       teamId,
       teamName: team.name,
       size: members.length,
       activePct: members.length ? round(wau / members.length) : 0,
       rungMix: rungDistribution(members.map((m) => f.rungs.get(m.id) ?? 0)),
-      hoursBackPerPerson: hb.measuredTasks && members.length ? round(hb.minutesBackPerWeek / 60 / members.length, 2) : 0,
+      hoursBackPerPerson:
+        hb.measuredTasks && members.length
+          ? round(hb.minutesBackPerWeek / 60 / members.length, 2)
+          : 0,
       hasBaseline: hb.measuredTasks > 0,
       skillsPublished: teamSkills.filter((s) => s.status === 'published')
         .length,
@@ -762,8 +770,7 @@ export class MissionControlService {
 
     // Older orgs have no version stamps in settings; fall back to the audit trail
     // (`policy.updated` / `boundary.updated` rows) so the version and date are still real.
-    const updates = (action: string) =>
-      log.filter((l) => l.action === action);
+    const updates = (action: string) => log.filter((l) => l.action === action);
     const policyUpdates = updates('policy.updated');
     const boundaryUpdates = updates('boundary.updated');
     return {
@@ -1047,7 +1054,12 @@ export class MissionControlService {
         };
       })
       .filter((r) => r.measured > 0)
-      .map(({ measured: _m, ...r }) => r);
+      .map((r) => ({
+        key: r.key,
+        label: r.label,
+        minutesBackPerWeek: r.minutesBackPerWeek,
+        refs: r.refs,
+      }));
 
     const monthStart = `${today.slice(0, 7)}-01`;
     const learnerExerciseMinutes = f.exercises

@@ -389,7 +389,9 @@ export function rungGains(
   const since = new Date(now.getTime() - days * DAY_MS);
   const out = new Map<string, number>();
   for (const id of personIds) {
-    const mine = placements.filter((p) => p.personId === id && p.placedAt <= now);
+    const mine = placements.filter(
+      (p) => p.personId === id && p.placedAt <= now,
+    );
     const hadPlacementAtSince = mine.some((p) => p.placedAt <= since);
     const first = mine.reduce<PlacementLite | null>(
       (best, p) => (!best || p.placedAt < best.placedAt ? p : best),
@@ -466,11 +468,17 @@ export function learners(f: Pick<OrgFacts, 'people'>): Person[] {
   return f.people.filter(isLearner);
 }
 
-export function stallEligible(input: Pick<StalledInput, 'rung' | 'status' | 'roles'>): boolean {
+export function stallEligible(
+  input: Pick<StalledInput, 'rung' | 'status' | 'roles'>,
+): boolean {
   if (input.status === 'inactive') return false;
   if ((input.rung ?? 0) >= 5) return false;
   const roles = input.roles ?? ['learner'];
-  if (!roles.includes('learner') && roles.some((r) => r === 'sponsor' || r === 'admin' || r === 'lead')) return false;
+  if (
+    !roles.includes('learner') &&
+    roles.some((r) => r === 'sponsor' || r === 'admin' || r === 'lead')
+  )
+    return false;
   return true;
 }
 
@@ -479,20 +487,52 @@ export function stallEligible(input: Pick<StalledInput, 'rung' | 'status' | 'rol
  * submission in that window OR their active-on-real-work days in the last 30 dropped by more
  * than half versus the prior 30 (only when the prior month had activity to drop from).
  */
-export function detectStalled(input: StalledInput, now: Date, stalledAfterDays: number): StalledResult {
-  const none: StalledResult = { stalled: false, stalledDays: 0, reason: null, stalledSince: null, slaDueAt: null };
-  const lastActivity = new Date(Math.max(input.lastProgressionAt.getTime(), input.lastSubmissionAt?.getTime() ?? 0));
+export function detectStalled(
+  input: StalledInput,
+  now: Date,
+  stalledAfterDays: number,
+): StalledResult {
+  const none: StalledResult = {
+    stalled: false,
+    stalledDays: 0,
+    reason: null,
+    stalledSince: null,
+    slaDueAt: null,
+  };
+  const lastActivity = new Date(
+    Math.max(
+      input.lastProgressionAt.getTime(),
+      input.lastSubmissionAt?.getTime() ?? 0,
+    ),
+  );
   const stalledDays = Math.max(0, Math.floor(daysBetween(lastActivity, now)));
   if (!stallEligible(input)) return { ...none, stalledDays };
-  const noRungPass = daysBetween(input.lastProgressionAt, now) >= stalledAfterDays;
-  const noSubmission = !input.lastSubmissionAt || daysBetween(input.lastSubmissionAt, now) >= stalledAfterDays;
-  const activityDrop = input.activeDaysPriorMonth > 0 && input.activeDaysThisMonth < input.activeDaysPriorMonth * 0.5;
+  const noRungPass =
+    daysBetween(input.lastProgressionAt, now) >= stalledAfterDays;
+  const noSubmission =
+    !input.lastSubmissionAt ||
+    daysBetween(input.lastSubmissionAt, now) >= stalledAfterDays;
+  const activityDrop =
+    input.activeDaysPriorMonth > 0 &&
+    input.activeDaysThisMonth < input.activeDaysPriorMonth * 0.5;
   const stalled = noRungPass && (noSubmission || activityDrop);
   if (!stalled) return { ...none, stalledDays };
   const tag = input.latestNoteTags.find((t) => t in STALL_REASONS);
-  const reason = tag ? STALL_REASONS[tag] : noSubmission ? `no rung passed and no submission in ${stalledDays} days` : 'no rung passed; activity dropped >50% vs prior month';
-  const stalledSince = new Date(Math.min(now.getTime(), lastActivity.getTime() + stalledAfterDays * DAY_MS));
-  return { stalled: true, stalledDays, reason, stalledSince, slaDueAt: new Date(stalledSince.getTime() + STALL_SLA_DAYS * DAY_MS) };
+  const reason = tag
+    ? STALL_REASONS[tag]
+    : noSubmission
+      ? `no rung passed and no submission in ${stalledDays} days`
+      : 'no rung passed; activity dropped >50% vs prior month';
+  const stalledSince = new Date(
+    Math.min(now.getTime(), lastActivity.getTime() + stalledAfterDays * DAY_MS),
+  );
+  return {
+    stalled: true,
+    stalledDays,
+    reason,
+    stalledSince,
+    slaDueAt: new Date(stalledSince.getTime() + STALL_SLA_DAYS * DAY_MS),
+  };
 }
 
 // ============================================================================
@@ -674,9 +714,7 @@ export function revisitCompliance(
 }
 
 /** revise ÷ pass. With no passes: 0 when nothing was graded, else the revise count itself. */
-export function reworkRate(
-  decisions: readonly ('pass' | 'revise')[],
-): number {
+export function reworkRate(decisions: readonly ('pass' | 'revise')[]): number {
   const pass = decisions.filter((d) => d === 'pass').length;
   const revise = decisions.length - pass;
   if (decisions.length === 0) return 0;
@@ -954,7 +992,9 @@ export function skillsPublishedBy(f: OrgFacts, personId: string): number {
 export function stalledFor(f: OrgFacts, person: Person): StalledResult {
   const now = f.now;
   const today = isoDay(now);
-  const mine = f.placements.filter((p) => p.personId === person.id).sort((a, b) => a.placedAt.getTime() - b.placedAt.getTime());
+  const mine = f.placements
+    .filter((p) => p.personId === person.id)
+    .sort((a, b) => a.placedAt.getTime() - b.placedAt.getTime());
   // last placement that actually raised the rung (a re-placement at the same rung is not progression)
   let lastRaise: Date | null = null;
   let prev = -1;
@@ -962,8 +1002,16 @@ export function stalledFor(f: OrgFacts, person: Person): StalledResult {
     if (p.rung > prev) lastRaise = p.placedAt;
     prev = Math.max(prev, p.rung);
   }
-  const lastProgressionAt = lastRaise ?? mine[mine.length - 1]?.placedAt ?? person.onboardedAt ?? person.createdAt;
-  const lastSubmissionAt = f.submissions.filter((s) => s.personId === person.id).map((s) => s.submittedAt).sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+  const lastProgressionAt =
+    lastRaise ??
+    mine[mine.length - 1]?.placedAt ??
+    person.onboardedAt ??
+    person.createdAt;
+  const lastSubmissionAt =
+    f.submissions
+      .filter((s) => s.personId === person.id)
+      .map((s) => s.submittedAt)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
   const monthAgo = isoDay(new Date(now.getTime() - 30 * DAY_MS));
   const twoMonthsAgo = isoDay(new Date(now.getTime() - 60 * DAY_MS));
   const tags = f.notes.find((n) => n.personId === person.id)?.tags ?? [];
@@ -971,8 +1019,18 @@ export function stalledFor(f: OrgFacts, person: Person): StalledResult {
     {
       lastProgressionAt,
       lastSubmissionAt,
-      activeDaysThisMonth: activeDaysCount(f.activeDays, person.id, addDaysIso(monthAgo, 1), today),
-      activeDaysPriorMonth: activeDaysCount(f.activeDays, person.id, addDaysIso(twoMonthsAgo, 1), monthAgo),
+      activeDaysThisMonth: activeDaysCount(
+        f.activeDays,
+        person.id,
+        addDaysIso(monthAgo, 1),
+        today,
+      ),
+      activeDaysPriorMonth: activeDaysCount(
+        f.activeDays,
+        person.id,
+        addDaysIso(twoMonthsAgo, 1),
+        monthAgo,
+      ),
       latestNoteTags: tags,
       rung: f.rungs.get(person.id) ?? 0,
       status: person.status,

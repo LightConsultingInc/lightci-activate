@@ -148,6 +148,7 @@ export interface WorkflowSummary {
   status: string;
   completeness?: number;
   championVerified?: boolean;
+  /** Scorer composite normalised 0..100 (not a fraction). */
   score?: { composite?: number; [k: string]: unknown } | number | null;
   nextWave?: boolean;
   linkedSkills?: SkillCard[];
@@ -155,6 +156,13 @@ export interface WorkflowSummary {
   measuredMinutesPerWeek?: number | null;
   hoursBackPerWeek?: number | null;
   updatedAt?: string;
+}
+
+export interface DiffSummary {
+  filesChanged?: number;
+  additions?: number;
+  deletions?: number;
+  summary?: string;
 }
 
 export interface PromotionView {
@@ -167,7 +175,8 @@ export interface PromotionView {
   branch?: string;
   grade: GradeView | null;
   boundaryCheck: { ok?: boolean; passed?: boolean; findings?: string[]; notes?: string; [k: string]: unknown } | null;
-  diffSummary: string | null;
+  /** REST shape is `{ filesChanged, additions, deletions, summary }`; older fixtures used a plain string. */
+  diffSummary: DiffSummary | string | null;
   approvals: { person?: PersonRef; role?: string; at?: string; note?: string }[];
   requiredApproverRoles: string[];
   decision: 'pending' | 'approved' | 'sent_back' | 'merged' | string;
@@ -235,7 +244,8 @@ export interface InterviewView {
   completeness: number;
   transcript: { role: 'user' | 'assistant' | 'interviewer' | string; content: string; at?: string }[];
   scribe: Record<string, unknown>;
-  checkerFlags?: { field?: string; message: string; severity?: string }[] | string[];
+  /** REST shape is `{ field, issue }`; `message` kept for older payloads. */
+  checkerFlags?: { field?: string; issue?: string; message?: string; severity?: string }[] | string[];
   turnCount: number;
   nextQuestion: string;
   result?: unknown;

@@ -22,7 +22,7 @@ import { LineDiff } from "./line-diff"
 import { PersonChip } from "./person-chip"
 import { DecisionChip, PrRef } from "./promotion-card"
 import { describeError } from "./skill-actions"
-import type { PromotionDetail } from "@/hooks/library/types"
+import type { PromotionDetail, PromotionView } from "@/hooks/library/types"
 
 /** One-screen approval: everything an approver needs to say yes or send back without leaving the page. */
 export function ApprovalPanel({ id }: { id: string }) {
@@ -42,10 +42,12 @@ function ApprovalBody({ p }: { p: PromotionDetail }) {
   const canDecide = p.decision === "pending" && p.requiredApproverRoles.some((r) => (myRoles.includes(r) || hasRole(me, "admin")) && !approvedRoles.has(r))
   const isRequester = me.user?.id === p.requestedBy.id
   const bc = p.boundaryCheck
-  const bcState = !bc.ok && bc.touchesRestrictedClasses.length ? "restricted" : !bc.ok && bc.missingDeclarations.length ? "missing" : bc.humanReviewRequired ? "review" : "ok"
-  const tag = p.tag ?? (p.decision === "merged" ? `${p.skill.slug}@v${p.version}` : null)
+  const bcState = !bc.ok && bc.touchesRestrictedClasses.length ? "restricted" : !bc.ok && bc.missingDeclarations.length ? "missing" : !bc.ok ? "writes" : bc.humanReviewRequired ? "review" : "ok"
+  // The merge tags a new version (N+1 of the promoted draft); the skill card carries the published version.
+  const publishedTag = (v: PromotionView) => v.mergedTag ?? `${v.skill.slug}@v${v.mergedVersion ?? v.skill.version}`
+  const tag = p.decision === "merged" ? publishedTag(p) : null
 
-  const onApprove = () => decide.mutate({ action: "approve", note: note.trim() || undefined }, { onSuccess: (d) => toast.success(d.decision === "merged" ? `Merged and published as ${p.skill.slug}@v${p.version}` : "Approved", { description: d.decision === "merged" ? "Auto-sync will pull it into Claude Enterprise; Activate confirms when the plugin appears." : `Still needs: ${d.requiredApproverRoles.filter((r) => !d.approvals.some((a) => a.role === r && a.decision === "approve")).join(", ")}` }), onError: (e) => toast.error("Couldn't approve", { description: describeError(e) }) })
+  const onApprove = () => decide.mutate({ action: "approve", note: note.trim() || undefined }, { onSuccess: (d) => toast.success(d.decision === "merged" ? `Merged and published as ${publishedTag(d)}` : "Approved", { description: d.decision === "merged" ? "Auto-sync will pull it into Claude Enterprise; Activate confirms when the plugin appears." : `Still needs: ${d.requiredApproverRoles.filter((r) => !d.approvals.some((a) => a.role === r && a.decision === "approve")).join(", ")}` }), onError: (e) => toast.error("Couldn't approve", { description: describeError(e) }) })
   const onSendBack = () => decide.mutate({ action: "send-back", note: note.trim() }, { onSuccess: () => { setSendBack(false); toast.success("Sent back with your note") }, onError: (e) => toast.error("Couldn't send back", { description: describeError(e) }) })
 
   return (
@@ -69,7 +71,7 @@ function ApprovalBody({ p }: { p: PromotionDetail }) {
               <PrRef p={p} />
               {p.branch && <span className="font-mono text-xs text-muted-foreground">{p.branch}</span>}
             </div>
-            <h1 className="font-display mt-3 text-3xl font-medium leading-tight">{p.skill.name} <span className="font-mono text-lg text-muted-foreground">v{p.version}</span></h1>
+            <h1 className="font-display mt-3 text-3xl font-medium leading-tight">{p.skill.name} <span className="font-mono text-lg text-muted-foreground">v{p.version}{p.decision === "merged" && (p.mergedVersion ?? p.skill.version) !== p.version ? ` → published v${p.mergedVersion ?? p.skill.version}` : ""}</span></h1>
             <p className="mt-1 text-muted-foreground">{p.skill.triggerLine}</p>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
               <span className="inline-flex items-center gap-2 text-muted-foreground">Requested by <PersonChip person={p.requestedBy} size="xs" /></span>
@@ -88,8 +90,8 @@ function ApprovalBody({ p }: { p: PromotionDetail }) {
       </Paper>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Section title="Boundary check" icon={bcState === "ok" ? <ShieldCheck className="size-4 text-pass" /> : <ShieldAlert className="size-4 text-fail" />} testId="boundary-check" tone={bcState === "ok" ? "pass" : bcState === "review" ? "revise" : "fail"}>
-          <p className="font-medium">{{ ok: "OK: within the org boundary", restricted: "Restricted classes touched", missing: "Missing declarations", review: "Human review required" }[bcState]}</p>
+        <Section title="Boundary check" icon={bcState === "ok" || bcState === "review" ? <ShieldCheck className="size-4 text-pass" /> : <ShieldAlert className="size-4 text-fail" />} testId="boundary-check" tone={bcState === "ok" ? "pass" : bcState === "review" ? "revise" : "fail"}>
+          <p className="font-medium">{{ ok: "OK: within the org boundary", restricted: "Restricted classes touched", missing: "Missing declarations", writes: "Flagged: may write to a read-only system", review: "Human review required" }[bcState]}</p>
           {bc.touchesRestrictedClasses.length > 0 && <p className="mt-1 text-xs">Touches: <span className="font-mono">{bc.touchesRestrictedClasses.join(", ")}</span></p>}
           {bc.missingDeclarations.length > 0 && <p className="mt-1 text-xs">Undeclared: <span className="font-mono">{bc.missingDeclarations.join(", ")}</span></p>}
           {bc.humanReviewRequired && <p className="mt-1 text-xs">Output must be reviewed by a named person before it leaves the firm.</p>}
