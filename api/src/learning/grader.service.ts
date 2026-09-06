@@ -15,6 +15,7 @@ import { CoachNote } from './entities/coach-note.entity';
 import type { RubricCriterion } from './entities/competency.entity';
 import { Exercise } from './entities/exercise.entity';
 import { Grade, type RubricScore } from './entities/grade.entity';
+import type { RubricScoreWithSelfCheck } from './mappers';
 import { Submission } from './entities/submission.entity';
 import { MasteryService } from './mastery.service';
 import { GRADER_SKILL_SYSTEM, GRADER_SYSTEM, boundaryText } from './prompts';
@@ -156,14 +157,15 @@ export class GraderService {
               '# Firm compliance boundary',
               boundaryText(boundary),
               '',
-              `# Learner's pre-run expectation (confidence ${Math.round(submission.expectationConfidence * 100)}% of passing)`,
+              `# Learner's one-line guess of what they would get back (they rated the chance of passing at ${Math.round(submission.expectationConfidence * 100)}%)`,
               submission.expectationText,
               '',
-              '# Artifact',
+              '# Work',
               artifactText,
               '',
-              "# Learner's post-run critique",
+              "# Learner's self-check (rubric items ticked / left unticked, with any note)",
               submission.critiqueText ?? '(none)',
+              `Parsed ticks: ${JSON.stringify(parseSelfCheck(submission.critiqueText ?? '', rubric))}`,
             ].join('\n'),
           },
         ],
@@ -176,18 +178,28 @@ export class GraderService {
           critiqueText: submission.critiqueText ?? '',
           expectationText: submission.expectationText,
           isSkill: artifactType === 'skill',
+          selfCheck: parseSelfCheck(submission.critiqueText ?? '', rubric),
         },
       },
       SubmissionGradeSchema,
     );
 
-    const rubricScores: RubricScore[] = rubric.map((c) => {
+    const parsed = parseSelfCheck(submission.critiqueText ?? '', rubric);
+    const rubricScores: RubricScoreWithSelfCheck[] = rubric.map((c) => {
       const s = out.rubric.find((r) => r.criterion === c.criterion);
+      const score = clamp01(s?.score ?? 0);
+      const agreement = out.selfCheckAgreement.find((a) => a.criterion === c.criterion);
+      const learner = agreement?.learner ?? parsed[c.criterion] ?? true;
       return {
         criterion: c.criterion,
         label: c.label,
-        score: clamp01(s?.score ?? 0),
+        score,
         note: s?.note ?? 'Not addressed by the grader.',
+        selfCheck: {
+          item: agreement?.item?.trim() || c.label,
+          learner,
+          grader: agreement?.grader ?? score >= 0.75,
+        },
       };
     });
     const score = this.weightedScore(rubric, rubricScores);
@@ -567,6 +579,54 @@ export class GraderService {
 
 function clamp01(x: number): number {
   return Math.min(1, Math.max(0, Number.isFinite(x) ? x : 0));
+}
+
+/**
+ * Parse the learner's self-check text into ticks per rubric criterion. Accepts "[x] label" / "[ ] label",
+ * "✓ label" / "✗ label", "ticked: a; b" / "unticked: c", or a JSON object/array of {criterion|item, checked}.
+ * Items are matched to criteria by key or by label words; unmatched criteria are left undefined.
+ */
+export function parseSelfCheck(text: string, rubric: { criterion: string; label: string }[]): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  if (!text.trim()) return out;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const assign = (item: string, checked: boolean) => {
+    const n = norm(item);
+    if (!n) return;
+    const hit = rubric.find((c) => c.criterion.toLowerCase() === item.trim().toLowerCase()) ?? rubric.find((c) => norm(c.label) === n) ?? rubric.find((c) => n.includes(norm(c.label)) || norm(c.label).includes(n));
+    if (hit) out[hit.criterion] = checked;
+  };
+  try {
+    const json = JSON.parse(text) as unknown;
+    const rows = Array.isArray(json) ? json : json && typeof json === 'object' ? Object.entries(json as Record<string, unknown>).map(([k, v]) => ({ item: k, checked: v })) : [];
+    for (const r of rows as { criterion?: string; item?: string; label?: string; checked?: unknown; ticked?: unknown }[]) {
+      if (!r || typeof r !== 'object') continue;
+      const checked = Boolean(r.checked ?? r.ticked);
+      assign(String(r.criterion ?? r.item ?? r.label ?? ''), checked);
+    }
+    if (Object.keys(out).length) return out;
+  } catch {
+    /* not JSON */
+  }
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    let m = /^[-*]?\s*\[(x|X| )\]\s*(.+)$/.exec(line);
+    if (m) {
+      assign(m[2], m[1] !== ' ');
+      continue;
+    }
+    m = /^(✓|✔|☑|✗|✘|☐|✕)\s*(.+)$/.exec(line);
+    if (m) {
+      assign(m[2], /[✓✔☑]/.test(m[1]));
+      continue;
+    }
+    m = /^(ticked|checked|unticked|unchecked|not ticked|missed)\s*:\s*(.+)$/i.exec(line);
+    if (m) {
+      const checked = /^(ticked|checked)$/i.test(m[1]);
+      for (const item of m[2].split(/[;,]/)) assign(item, checked);
+    }
+  }
+  return out;
 }
 
 function escapeRegExp(s: string): string {

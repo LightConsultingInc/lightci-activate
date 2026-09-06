@@ -117,6 +117,8 @@ export interface GradeView {
   critiqueQuality: number | null;
   expectationAccuracy: number | null;
   securityFindings: { severity: 'low' | 'medium' | 'high'; finding: string }[];
+  /** Per rubric item: what the learner ticked in their self-check vs what the Grader would tick. Present for submission grades. */
+  selfCheckAgreement?: { item: string; learner: boolean; grader: boolean }[];
   gradedAt: string;
   gradedBy: 'grader' | PersonRef;
 }

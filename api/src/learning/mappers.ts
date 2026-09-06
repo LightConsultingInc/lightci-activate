@@ -1,6 +1,6 @@
 import { COMPETENCY_BY_CODE } from './competency-catalog';
 import type { Exercise } from './entities/exercise.entity';
-import type { Grade } from './entities/grade.entity';
+import type { Grade, RubricScore } from './entities/grade.entity';
 import type { Revisit } from './entities/revisit.entity';
 import type { Submission } from './entities/submission.entity';
 import type {
@@ -51,10 +51,29 @@ export function toRevisitSummary(
   };
 }
 
+/** Extra JSON carried on each rubric row when the learner's self-check was compared (no schema change). */
+export type RubricScoreWithSelfCheck = RubricScore & {
+  selfCheck?: { item: string; learner: boolean; grader: boolean };
+};
+
+export function selfCheckAgreementOf(
+  rubric: RubricScore[],
+): GradeView['selfCheckAgreement'] {
+  const rows = (rubric as RubricScoreWithSelfCheck[]).filter((r) => r.selfCheck);
+  return rows.length
+    ? rows.map((r) => ({
+        item: r.selfCheck!.item,
+        learner: r.selfCheck!.learner,
+        grader: r.selfCheck!.grader,
+      }))
+    : undefined;
+}
+
 export function toGradeView(
   g: Grade,
   gradedBy: PersonRef | null = null,
 ): GradeView {
+  const selfCheckAgreement = selfCheckAgreementOf(g.rubric ?? []);
   return {
     id: g.id,
     score: g.score,
@@ -65,6 +84,8 @@ export function toGradeView(
     critiqueQuality: g.critiqueQuality,
     expectationAccuracy: g.expectationAccuracy,
     securityFindings: g.securityFindings ?? [],
+    ...(selfCheckAgreement ? { selfCheckAgreement } : {}),
+    ...(selfCheckAgreement ? { selfCheckAgreement } : {}),
     gradedAt: iso(g.gradedAt) ?? new Date().toISOString(),
     gradedBy: g.gradedByPersonId && gradedBy ? gradedBy : 'grader',
   };

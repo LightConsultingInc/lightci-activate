@@ -267,7 +267,7 @@ export class LearningController {
 
   @Post('exercises/:id/expect')
   @ApiOperation({
-    summary: 'Store the pre-run expectation draft (required before /run).',
+    summary: 'Store the learner\'s one-line guess of what will come back (required before /run).',
   })
   async expect(
     @CurrentUser() user: Person,
@@ -292,7 +292,7 @@ export class LearningController {
   @Post('exercises/:id/run')
   @ApiOperation({
     summary:
-      'Run Claude inside the work surface (Coach task coach.run). 409 until an expectation is stated.',
+      'Run Claude inside the work surface (Coach task coach.run). 409 until the one-line guess is stored.',
   })
   async run(
     @CurrentUser() user: Person,
@@ -305,7 +305,7 @@ export class LearningController {
       { expectationText?: string } | undefined;
     if (!draft?.expectationText?.trim()) {
       throw new ConflictException(
-        'State your expectation first: call POST /exercises/:id/expect with what you think a good output will look like and how confident you are (0..1). Predicting before you run is the habit this exercise is graded on.',
+        'Add your one-line guess first: call POST /exercises/:id/expect with what you think will come back and how likely you think it is to pass (0..1). Guessing before you run is part of how this exercise is scored.',
       );
     }
     return this.coach.run(exercise, user, orgId, {
@@ -318,7 +318,7 @@ export class LearningController {
   @Post('exercises/:id/submit')
   @ApiOperation({
     summary:
-      'Submit the artifact with expectation and critique; grades, updates mastery, schedules revisits, may promote and queue the next exercise.',
+      'Check in the work with the one-line guess and the self-check; grades, updates mastery, schedules revisits, may promote and queue the next exercise.',
   })
   async submit(
     @CurrentUser() user: Person,
@@ -329,11 +329,11 @@ export class LearningController {
     const exercise = await this.loadExercise(id, user, orgId, 'edit');
     if (!dto.expectationText?.trim())
       throw new BadRequestException(
-        'expectationText is required: write down what you expected before you judge the result.',
+        'expectationText is required: add your one-line guess of what would come back before you check it in.',
       );
     if (!dto.critiqueText?.trim())
       throw new BadRequestException(
-        'critiqueText is required: critique the output before you submit it.',
+        'critiqueText is required: complete the self-check (the items you tick or leave unticked, plus any note) before you check it in.',
       );
     if (
       !dto.artifact ||
@@ -348,7 +348,7 @@ export class LearningController {
       );
     if (exercise.status === 'passed')
       throw new ConflictException(
-        'This exercise has already passed. Your next exercise is waiting on the ladder.',
+        'This one has already passed. Your next exercise is waiting for you.',
       );
 
     const prior = await this.submissions.count({

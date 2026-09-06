@@ -5,7 +5,8 @@ import type { CoachNote } from './entities/coach-note.entity';
 import type { Exercise } from './entities/exercise.entity';
 import type { Grade } from './entities/grade.entity';
 import type { Submission } from './entities/submission.entity';
-import { GraderService, SKILL_PASS_THRESHOLD } from './grader.service';
+import { GraderService, SKILL_PASS_THRESHOLD, parseSelfCheck } from './grader.service';
+import { toGradeView } from './mappers';
 import { MasteryService } from './mastery.service';
 import { FakeRepo, fakeAi } from './testing/fake-repo';
 
@@ -75,8 +76,7 @@ describe('GraderService.gradeSubmission (mock path)', () => {
       expectationText: 'A tight three-section draft with placeholders',
       expectationConfidence: 0.8,
       artifact: strongArtifact,
-      critiqueText:
-        'The draft buried the decision in section two and invented a figure where I asked for a placeholder; the format constraint held.',
+      critiqueText: '[x] Goal and audience clear\n[ ] Format and constraints specified\n[x] Relevant context included\nNote: the draft invented a figure where I asked for a placeholder.',
       coldAttempt: true,
     } as Submission;
     const grade = await svc.gradeSubmission(
@@ -100,7 +100,13 @@ describe('GraderService.gradeSubmission (mock path)', () => {
     expect(grade.critiqueQuality).toBe(0.72);
     expect(grade.expectationAccuracy).toBeCloseTo(1 - 0.04, 3);
     expect(grade.teachingMoment).toBeTruthy();
-    expect(grade.feedback).toContain('You expected');
+    expect(grade.feedback).toContain('Your guess was');
+    expect(grade.feedback).not.toMatch(/expectation|critique|calibration|brier/i);
+    expect(grade.teachingMoment).not.toMatch(/expectation|critique|calibration|brier|competency/i);
+    const view = toGradeView(grade);
+    expect(view.selfCheckAgreement).toHaveLength(grade.rubric.length);
+    expect(view.selfCheckAgreement!.every((a) => a.grader)).toBe(true);
+    expect(view.selfCheckAgreement!.find((a) => /format/i.test(a.item))!.learner).toBe(false);
     expect(grade.securityFindings).toEqual([]);
     expect(grade.graderVersion).toBe('grader-v1');
     expect(grades.rows).toHaveLength(1);
@@ -150,6 +156,17 @@ describe('GraderService.gradeSubmission (mock path)', () => {
       'text',
     );
     expect(rubric.reduce((s, c) => s + c.weight, 0)).toBeCloseTo(1, 6);
+  });
+});
+
+describe('parseSelfCheck', () => {
+  const rubric = [{ criterion: 'a.goal', label: 'Goal and audience clear' }, { criterion: 'a.format', label: 'Format and constraints specified' }, { criterion: 'a.context', label: 'Relevant context included' }];
+  it('reads checkbox, tick-mark, ticked/unticked and JSON forms', () => {
+    expect(parseSelfCheck('[x] Goal and audience clear\n[ ] Format and constraints specified', rubric)).toEqual({ 'a.goal': true, 'a.format': false });
+    expect(parseSelfCheck('✓ goal and audience\n✗ format', rubric)).toEqual({ 'a.goal': true, 'a.format': false });
+    expect(parseSelfCheck('ticked: goal and audience; relevant context\nunticked: format and constraints', rubric)).toEqual({ 'a.goal': true, 'a.context': true, 'a.format': false });
+    expect(parseSelfCheck(JSON.stringify([{ criterion: 'a.format', checked: false }]), rubric)).toEqual({ 'a.format': false });
+    expect(parseSelfCheck('Looks fine to me.', rubric)).toEqual({});
   });
 });
 

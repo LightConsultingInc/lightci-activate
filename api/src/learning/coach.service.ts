@@ -259,7 +259,7 @@ export class CoachService {
               '# Firm compliance boundary',
               boundaryText(org?.settings?.boundary),
               '',
-              `Produce one exercise for the ${surface} surface${rung === 3 ? ' with a complete workedExample (shown only after a cold attempt)' : ' (workedExample null)'}. Exactly three hints.`,
+              `Produce one exercise for the ${surface} surface${rung === 3 ? ' with a complete workedExample (unlocked after the first submission)' : ' (workedExample null)'}. Exactly three hints.`,
             ]
               .filter((line) => line !== '')
               .join('\n'),
@@ -321,9 +321,9 @@ export class CoachService {
     while (hints.length < 3)
       hints.push(
         [
-          'Re-read the brief and write the one sentence that defines "good" for this task.',
-          'Name the audience and format explicitly.',
-          'Fill this scaffold before running: goal → audience → format → constraints → exclusions.',
+          'Try writing the one sentence that says what "good" looks like for this task.',
+          'Try naming who will read this and what they need to decide.',
+          'Try listing goal, reader, format, limits and what to leave out before you run it.',
         ][hints.length],
       );
     const mode: Exercise['mode'] =
@@ -337,7 +337,7 @@ export class CoachService {
       personId: person.id,
       rung,
       competencyCodes: codes,
-      title: out.title.slice(0, 120),
+      title: out.title.replace(/\s+/g, ' ').trim().slice(0, 60),
       brief: out.brief,
       rationale: out.rationale,
       kind: opts.kind ?? out.kind ?? 'artifact',
@@ -505,7 +505,7 @@ export class CoachService {
     const total = exercise.hints.length;
     if (exercise.hintsRevealed >= total)
       throw new ConflictException(
-        `All ${total} hints have been revealed. Make a cold attempt; the worked example unlocks after your first submission.`,
+        `You have used all ${total} hints. Build it and check it in; a full example opens after your first result.`,
       );
     const hint = exercise.hints[exercise.hintsRevealed];
     exercise.hintsRevealed += 1;
@@ -535,12 +535,12 @@ export class CoachService {
       '',
       exercise.brief,
       '',
-      'Before you produce anything, ask me for my expectation of what a good result looks like, and wait for it. After your output, ask me to critique it in two or three sentences before we refine anything. Give hints before answers if I get stuck.',
+      'Before you produce anything, ask me for a one-line guess of what I think will come back, and wait for it. After your output, ask me to run through a short self-check (does it only use facts I gave it, is it for the right reader, is it the right shape) before we refine anything. Give me nudges before answers if I get stuck.',
       'Use placeholders for any client-specific detail; do not invent client data.',
     ].join('\n');
     const contextBundle = [
       `# Exercise context for Claude`,
-      `Competencies: ${comps.map((c) => `${c.name} — ${c.description}`).join('\n')}`,
+      `Skills this builds: ${comps.map((c) => `${c.name} — ${c.description}`).join('\n')}`,
       '',
       `# Firm boundary`,
       boundaryText(org?.settings?.boundary),
@@ -563,7 +563,7 @@ export class CoachService {
           ]
         : []),
       '# When you are done',
-      'Paste the artifact back into Activate with the expectation you stated and your critique; the Grader scores both.',
+      'Paste what you built back into Activate with your one-line guess and your self-check; the result covers both.',
     ].join('\n');
     if (exercise.status === 'queued') {
       exercise.status = 'active';
@@ -578,8 +578,8 @@ export class CoachService {
       .map((c) => COMPETENCY_BY_CODE.get(c)?.name ?? c)
       .join(' and ');
     if (submissionsCount === 0)
-      return `This one is about ${comp}. ${exercise.rationale} Sequence: write down what you expect a good result to look like and how confident you are, then run or write, then critique the output before you submit. Hints are there if you stall; ask for one at a time. ${exercise.workedExample ? 'A worked example unlocks after your first cold attempt.' : ''}`.trim();
-    return `Attempt ${submissionsCount + 1} on ${comp}. Re-read the Grader's teaching moment from your last submission and change one thing deliberately; state that change in your expectation.`;
+      return `This one sharpens ${comp.toLowerCase()}. ${exercise.rationale} Build it, jot a one-line guess of what will come back, tick the self-check, then check it in for your result. Hints are there if you stall; take one at a time. ${exercise.workedExample ? 'A full example opens after your first result.' : ''}`.trim();
+    return `Round ${submissionsCount + 1} on ${comp.toLowerCase()}. Re-read the one thing to do differently from your last result and change exactly that; say what you changed in your guess.`;
   }
 
   // ───────────────────────── skips & escalation ─────────────────────────
