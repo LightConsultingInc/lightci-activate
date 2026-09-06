@@ -4,11 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { ApiError } from "@/lib/api"
 import type { RealtimeSession, VoiceTranscriptTurn } from "./types"
 
-export type VoiceStatus = "idle" | "connecting" | "listening" | "speaking" | "ended" | "error"
+export type VoiceStatus =
+  "idle" | "connecting" | "listening" | "speaking" | "ended" | "error"
 export type VoiceErrorKind = "unavailable" | "media" | "connection"
 export type VoiceError = { kind: VoiceErrorKind; message: string }
-export type VoiceTurn = { role: "user" | "interviewer"; content: string; at: string }
-export type StartResult = { ok: true } | { ok: false; kind: VoiceErrorKind; message: string }
+export type VoiceTurn = {
+  role: "user" | "interviewer"
+  content: string
+  at: string
+}
+export type StartResult =
+  { ok: true } | { ok: false; kind: VoiceErrorKind; message: string }
 /** Who ended the call: the agent (via `finish_interview`) or the person (End call). */
 export type FinishReason = "agent" | "user"
 
@@ -51,13 +57,23 @@ type FinishState = {
 const REALTIME_CALLS_URL = "https://api.openai.com/v1/realtime/calls"
 const DEFAULT_FINISH_TOOL = "finish_interview"
 
-const freshFinish = (): FinishState => ({ active: false, callResponseId: null, spoke: false, awaitingAudioStop: false, maxTimer: null, audioTimer: null })
+const freshFinish = (): FinishState => ({
+  active: false,
+  callResponseId: null,
+  spoke: false,
+  awaitingAudioStop: false,
+  maxTimer: null,
+  audioTimer: null,
+})
 
 function mediaErrorMessage(e: unknown) {
   const name = e instanceof Error ? e.name : ""
-  if (name === "NotAllowedError" || name === "SecurityError") return "Microphone permission was denied"
-  if (name === "NotFoundError" || name === "OverconstrainedError") return "No microphone was found"
-  if (name === "NotReadableError") return "The microphone is in use by another app"
+  if (name === "NotAllowedError" || name === "SecurityError")
+    return "Microphone permission was denied"
+  if (name === "NotFoundError" || name === "OverconstrainedError")
+    return "No microphone was found"
+  if (name === "NotReadableError")
+    return "The microphone is in use by another app"
   return "Couldn't open the microphone"
 }
 
@@ -76,7 +92,13 @@ function mediaErrorMessage(e: unknown) {
  * Ending: when the agent calls the `finish_interview` tool we answer `{"ok":true}` and ask for a
  * response so it can say goodbye, wait for that goodbye (or `goodbyeMs`), flush, close, then `onFinish`.
  */
-export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 4_000, goodbyeMs = 6_000 }: Options) {
+export function useVoiceSession({
+  getSession,
+  postTurns,
+  onFinish,
+  throttleMs = 4_000,
+  goodbyeMs = 6_000,
+}: Options) {
   const [status, setStatus] = useState<VoiceStatus>("idle")
   const [error, setError] = useState<VoiceError | null>(null)
   const [muted, setMuted] = useState(false)
@@ -126,13 +148,15 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
     if (to <= from) return
     sentRef.current = to
     lastSentAt.current = Date.now()
-    const batch = turnsRef.current.slice(from, to).map(({ role, content }) => ({ role, content }))
+    const batch = turnsRef.current
+      .slice(from, to)
+      .map(({ role, content }) => ({ role, content }))
     const p = opts.current.postTurns(batch).then(
       () => setAcked((a) => Math.max(a, to)),
       () => {
         // Roll back so these turns go out with the next flush.
         sentRef.current = from
-      },
+      }
     )
     inflight.current = p
     try {
@@ -158,7 +182,7 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
       setTurns(turnsRef.current)
       scheduleFlush()
     },
-    [scheduleFlush],
+    [scheduleFlush]
   )
 
   // ─────────────────────────── connection lifecycle ───────────────────────────
@@ -212,21 +236,41 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
         setFinishing(false)
       }
     },
-    [flush, teardown],
+    [flush, teardown]
   )
 
   const onFunctionCall = useCallback(
-    (name: string | undefined, callId: string | undefined, responseId: string | undefined) => {
-      if (name !== finishToolRef.current || !callId || handledCalls.current.has(callId)) return
+    (
+      name: string | undefined,
+      callId: string | undefined,
+      responseId: string | undefined
+    ) => {
+      if (
+        name !== finishToolRef.current ||
+        !callId ||
+        handledCalls.current.has(callId)
+      )
+        return
       handledCalls.current.add(callId)
       // Acknowledge the tool so the agent can say goodbye, then wait for that goodbye (bounded).
-      send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: callId, output: JSON.stringify({ ok: true }) } })
+      send({
+        type: "conversation.item.create",
+        item: {
+          type: "function_call_output",
+          call_id: callId,
+          output: JSON.stringify({ ok: true }),
+        },
+      })
       send({ type: "response.create" })
-      fin.current = { ...freshFinish(), active: true, callResponseId: responseId ?? null }
+      fin.current = {
+        ...freshFinish(),
+        active: true,
+        callResponseId: responseId ?? null,
+      }
       fin.current.maxTimer = setTimeout(() => void finalize("agent"), goodbyeMs)
       setFinishing(true)
     },
-    [finalize, goodbyeMs],
+    [finalize, goodbyeMs]
   )
 
   /** Once the goodbye text is done (or there was none), let its audio finish, then finalize. */
@@ -238,7 +282,8 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
       return
     }
     f.awaitingAudioStop = true
-    if (!f.audioTimer) f.audioTimer = setTimeout(() => void finalize("agent"), 4_000)
+    if (!f.audioTimer)
+      f.audioTimer = setTimeout(() => void finalize("agent"), 4_000)
   }, [finalize])
 
   const handleEvent = useCallback(
@@ -261,7 +306,9 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
           break
         case "output_audio_buffer.started":
           speakingRef.current = true
-          setStatus((s) => (s === "listening" || s === "speaking" ? "speaking" : s))
+          setStatus((s) =>
+            s === "listening" || s === "speaking" ? "speaking" : s
+          )
           break
         case "output_audio_buffer.stopped":
         case "output_audio_buffer.cleared":
@@ -302,11 +349,18 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
           onFunctionCall(ev.name, ev.call_id, ev.response_id)
           break
         case "response.output_item.done":
-          if (ev.item?.type === "function_call") onFunctionCall(ev.item.name, ev.item.call_id, ev.response_id)
+          if (ev.item?.type === "function_call")
+            onFunctionCall(ev.item.name, ev.item.call_id, ev.response_id)
           break
         case "response.done":
           // The goodbye response finished. If the agent had nothing more to say, don't wait for it.
-          if (f.active && ev.response?.id && ev.response.id !== f.callResponseId && !f.spoke) finishAfterAudio()
+          if (
+            f.active &&
+            ev.response?.id &&
+            ev.response.id !== f.callResponseId &&
+            !f.spoke
+          )
+            finishAfterAudio()
           break
         case "error":
           // Realtime `error` events are usually recoverable (e.g. an overlapping response); keep the call up.
@@ -314,7 +368,7 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
           break
       }
     },
-    [finalize, finishAfterAudio, onFunctionCall, pushTurn],
+    [finalize, finishAfterAudio, onFunctionCall, pushTurn]
   )
 
   const start = useCallback(async (): Promise<StartResult> => {
@@ -328,7 +382,11 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
     setCaption("")
     setLastUserUtterance("")
     setStatus("connecting")
-    const superseded: StartResult = { ok: false, kind: "connection", message: "Superseded" }
+    const superseded: StartResult = {
+      ok: false,
+      kind: "connection",
+      message: "Superseded",
+    }
     const fail = (kind: VoiceErrorKind, message: string): StartResult => {
       if (seq === startSeq.current) {
         teardown()
@@ -338,7 +396,11 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
       return { ok: false, kind, message }
     }
 
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return fail("media", "This browser can't access a microphone")
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia
+    )
+      return fail("media", "This browser can't access a microphone")
     let mic: MediaStream
     try {
       mic = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -358,8 +420,15 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
     try {
       session = await opts.current.getSession()
     } catch (e) {
-      if (e instanceof ApiError) return fail(e.status === 501 ? "unavailable" : "connection", e.detail || e.title || "Couldn't start voice")
-      return fail("connection", e instanceof Error ? e.message : "Couldn't start voice")
+      if (e instanceof ApiError)
+        return fail(
+          e.status === 501 ? "unavailable" : "connection",
+          e.detail || e.title || "Couldn't start voice"
+        )
+      return fail(
+        "connection",
+        e instanceof Error ? e.message : "Couldn't start voice"
+      )
     }
     if (seq !== startSeq.current) return superseded
     finishToolRef.current = session.finishTool || DEFAULT_FINISH_TOOL
@@ -383,15 +452,32 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
       dc.addEventListener("open", () => {
         if (seq !== startSeq.current) return
         // User-speech transcription so both sides of the conversation reach the scribe.
-        dc.send(JSON.stringify({ type: "session.update", session: { type: "realtime", audio: { input: { transcription: { model: "gpt-4o-mini-transcribe" } } } } }))
+        dc.send(
+          JSON.stringify({
+            type: "session.update",
+            session: {
+              type: "realtime",
+              audio: {
+                input: { transcription: { model: "gpt-4o-mini-transcribe" } },
+              },
+            },
+          })
+        )
         // The agent opens (greeting + first question, or a resume acknowledgement).
         dc.send(JSON.stringify({ type: "response.create" }))
         setStatus("listening")
       })
       pc.onconnectionstatechange = () => {
         if (closingRef.current || seq !== startSeq.current) return
-        if (pc.connectionState === "failed" || pc.connectionState === "disconnected" || pc.connectionState === "closed") {
-          setError({ kind: "connection", message: "The voice connection dropped" })
+        if (
+          pc.connectionState === "failed" ||
+          pc.connectionState === "disconnected" ||
+          pc.connectionState === "closed"
+        ) {
+          setError({
+            kind: "connection",
+            message: "The voice connection dropped",
+          })
           setStatus("error")
         }
       }
@@ -403,14 +489,20 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
       const res = await fetch(url, {
         method: "POST",
         body: offer.sdp,
-        headers: { Authorization: `Bearer ${session.clientSecret}`, "Content-Type": "application/sdp" },
+        headers: {
+          Authorization: `Bearer ${session.clientSecret}`,
+          "Content-Type": "application/sdp",
+        },
       })
       if (!res.ok) throw new Error(`Realtime handshake failed (${res.status})`)
       if (seq !== startSeq.current) return superseded
       await pc.setRemoteDescription({ type: "answer", sdp: await res.text() })
       return { ok: true }
     } catch (e) {
-      return fail("connection", e instanceof Error ? e.message : "Couldn't connect to voice")
+      return fail(
+        "connection",
+        e instanceof Error ? e.message : "Couldn't connect to voice"
+      )
     }
   }, [flush, handleEvent, teardown])
 
@@ -440,8 +532,23 @@ export function useVoiceSession({ getSession, postTurns, onFinish, throttleMs = 
       teardown()
       void flush()
     },
-    [flush, teardown],
+    [flush, teardown]
   )
 
-  return { status, error, muted, userSpeaking, caption, lastUserUtterance, turns, acked, finishing, start, stop, endCall, toggleMute, flush }
+  return {
+    status,
+    error,
+    muted,
+    userSpeaking,
+    caption,
+    lastUserUtterance,
+    turns,
+    acked,
+    finishing,
+    start,
+    stop,
+    endCall,
+    toggleMute,
+    flush,
+  }
 }

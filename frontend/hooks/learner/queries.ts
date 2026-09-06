@@ -175,9 +175,9 @@ export function useRequestBuild(id: string) {
 // ─────────────────────────── Interviews ───────────────────────────
 export function useCreateInterview() {
   return useMutation({
+    // No toast: the onboarding flow renders the API `detail` in a friendly card with a retry.
     mutationFn: (body: { mode: "intake" | "champion" | "workflow"; workflowMapId?: string; teamId?: string; voice?: boolean }) =>
       api.post<InterviewView>("/api/interviews", body),
-    onError: (e) => toast.error(errorMessage(e, "Couldn't start the interview")),
   })
 }
 

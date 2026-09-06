@@ -10,7 +10,11 @@ import { ActivateLockup } from "@/components/brand/logo"
  * Onboarding lives outside the app shell: no sidebar, no topbar. A full-screen paper page with the
  * LightCI lockup top-left so the person's whole attention is on the interviewer.
  */
-export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
+export default async function OnboardingLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   await requireUser()
   let me
   try {

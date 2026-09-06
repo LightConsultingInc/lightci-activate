@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button"
 import { useConsent } from "@/hooks/learner/queries"
 import type { InputMode } from "./onboarding-flow"
 
-const COLUMNS: { icon: React.ReactNode; title: string; items: string[]; tone: "glow" | "info" | "muted" }[] = [
+const COLUMNS: {
+  icon: React.ReactNode
+  title: string
+  items: string[]
+  tone: "glow" | "info" | "muted"
+}[] = [
   {
     icon: <Sparkles className="size-4" />,
     title: "What Activate does",
@@ -45,32 +50,54 @@ const TONE = {
 } as const
 
 /** Plain-language landing: what this is, what we see, what we don't, one button into the interviewer. */
-export function ConsentStep({ onDone, name }: { onDone: (mode: InputMode) => void; name: string }) {
+export function ConsentStep({
+  onDone,
+  name,
+}: {
+  onDone: (mode: InputMode) => void
+  name: string
+}) {
   const consent = useConsent()
   const first = name.split(" ")[0]
-  const go = (mode: InputMode) => consent.mutate(undefined, { onSuccess: () => onDone(mode) })
+  const go = (mode: InputMode) =>
+    consent.mutate(undefined, { onSuccess: () => onDone(mode) })
 
   return (
     <div className="mx-auto max-w-4xl pt-6 md:pt-14" data-testid="consent-step">
       <p className="eyebrow">Welcome, {first}</p>
       <h1 className="mt-3 max-w-3xl font-display text-4xl leading-[1.08] font-medium md:text-5xl">
-        We&apos;re going to teach you to work with AI by <em className="not-italic text-glow-foreground underline decoration-glow decoration-4 underline-offset-4">doing your own work</em>.
+        We&apos;re going to teach you to work with AI by{" "}
+        <em className="text-glow-foreground not-italic underline decoration-glow decoration-4 underline-offset-4">
+          doing your own work
+        </em>
+        .
       </h1>
       <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-        You&apos;ll do real exercises from your own week, build skills you can test yourself, and get feedback as you go. No courses.
+        You&apos;ll do real exercises from your own week, build skills you can
+        test yourself, and get feedback as you go. No courses.
       </p>
 
       <div className="mt-10 grid gap-6 md:grid-cols-3">
         {COLUMNS.map((c) => (
           <section key={c.title} className="rounded-xl border bg-card p-5">
             <h2 className="flex items-center gap-2 text-sm font-medium">
-              <span className={`grid size-7 place-items-center rounded-full ${TONE[c.tone]}`}>{c.icon}</span>
+              <span
+                className={`grid size-7 place-items-center rounded-full ${TONE[c.tone]}`}
+              >
+                {c.icon}
+              </span>
               {c.title}
             </h2>
             <ul className="mt-3 space-y-2.5">
               {c.items.map((it) => (
-                <li key={it} className="flex gap-2 text-sm text-muted-foreground">
-                  <Check className={`mt-0.5 size-4 shrink-0 ${c.tone === "muted" ? "text-muted-foreground/60" : "text-pass"}`} /> {it}
+                <li
+                  key={it}
+                  className="flex gap-2 text-sm text-muted-foreground"
+                >
+                  <Check
+                    className={`mt-0.5 size-4 shrink-0 ${c.tone === "muted" ? "text-muted-foreground/60" : "text-pass"}`}
+                  />{" "}
+                  {it}
                 </li>
               ))}
             </ul>
@@ -79,8 +106,15 @@ export function ConsentStep({ onDone, name }: { onDone: (mode: InputMode) => voi
       </div>
 
       <div className="mt-10 flex flex-col items-start gap-3">
-        <Button size="lg" className="h-11 px-5 text-base" onClick={() => go("voice")} disabled={consent.isPending} data-testid="consent-accept">
-          <Mic data-icon="inline-start" /> {consent.isPending ? "One moment…" : "Start the conversation"}
+        <Button
+          size="lg"
+          className="h-11 px-5 text-base"
+          onClick={() => go("voice")}
+          disabled={consent.isPending}
+          data-testid="consent-accept"
+        >
+          <Mic data-icon="inline-start" />{" "}
+          {consent.isPending ? "One moment…" : "Start the conversation"}
         </Button>
         <button
           type="button"
@@ -92,7 +126,9 @@ export function ConsentStep({ onDone, name }: { onDone: (mode: InputMode) => voi
           <Keyboard className="size-3.5" /> Prefer to type?
         </button>
         <p className="mt-2 text-xs text-muted-foreground">
-          Starting records your consent to the above. Your firm&apos;s usage policy applies to everything you submit; leaderboards are off by default.
+          Starting records your consent to the above. Your firm&apos;s usage
+          policy applies to everything you submit; leaderboards are off by
+          default.
         </p>
       </div>
     </div>

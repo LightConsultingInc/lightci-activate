@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   AudioLines,
@@ -33,6 +32,7 @@ import {
 import {
   useVoiceSession,
   type FinishReason,
+  type StartResult,
 } from "@/hooks/learner/use-voice-session"
 import { cn } from "@/lib/utils"
 import type {
@@ -49,7 +49,12 @@ type Msg = {
   pending?: boolean
 }
 type Mode = "voice" | "chat"
-type Fallback = { kind: "unavailable" | "media" | "connection"; message: string }
+type Fallback = {
+  kind: "unavailable" | "media" | "connection"
+  message: string
+}
+
+const CONNECT_TIMEOUT_MS = 12_000
 
 /** Text-mode opener when the transcript is still empty (voice mode lets the agent open itself). */
 const OPENERS: Record<InterviewView["mode"], string> = {
@@ -69,9 +74,12 @@ const OPENERS: Record<InterviewView["mode"], string> = {
  */
 export function IntakeChat({
   interviewId,
+  initialMode = "voice",
   onComplete,
 }: {
   interviewId: string
+  /** "chat" skips the automatic voice connection (landing "Prefer to type?", or `?mode=chat`). */
+  initialMode?: Mode
   onComplete: (r: InterviewComplete) => void
 }) {
   const qc = useQueryClient()
@@ -81,10 +89,7 @@ export function IntakeChat({
   const realtime = useRealtimeSession()
   const voiceTranscript = useVoiceTranscript(interviewId)
 
-  // `?mode=chat` starts in typing mode (used by tests and by people who know they cannot talk right now).
-  const searchParams = useSearchParams()
-  const preferChat = searchParams.get("mode") === "chat"
-  const [mode, setMode] = useState<Mode>(preferChat ? "chat" : "voice")
+  const [mode, setMode] = useState<Mode>(initialMode)
   const [fallback, setFallback] = useState<Fallback | null>(null)
   const [switching, setSwitching] = useState(false)
   const [draft, setDraft] = useState("")
@@ -130,14 +135,29 @@ export function IntakeChat({
   const voice = useVoiceSession({ getSession, postTurns, onFinish })
   const { start: startSession, stop: stopSession, flush: flushVoice } = voice
 
-  /** Connect; a 501 (voice not configured) or a microphone failure falls back to typing. */
+  /**
+   * Connect. Anything that stops the call from reaching "listening" (501 voice not configured, no
+   * microphone, a failed handshake, or 12s without connecting) falls back to typing with a note, so
+   * nobody is stuck watching an orb; "Switch to voice" retries.
+   */
   const connectVoice = useCallback(async () => {
-    const r = await startSession()
-    if (!r.ok && (r.kind === "unavailable" || r.kind === "media")) {
-      setFallback({ kind: r.kind, message: r.message })
-      setMode("chat")
-    }
-  }, [startSession])
+    const timeout = new Promise<StartResult>((resolve) =>
+      setTimeout(
+        () =>
+          resolve({
+            ok: false,
+            kind: "connection",
+            message: "Voice took too long to connect",
+          }),
+        CONNECT_TIMEOUT_MS
+      )
+    )
+    const r = await Promise.race([startSession(), timeout])
+    if (r.ok || r.message === "Superseded") return
+    if (r.kind === "connection") void stopSession()
+    setFallback({ kind: r.kind, message: r.message })
+    setMode("chat")
+  }, [startSession, stopSession])
 
   const startVoice = () => {
     setFallback(null)
@@ -157,28 +177,16 @@ export function IntakeChat({
 
   // Voice by default, as soon as the interview is loaded and still open.
   useEffect(() => {
-    if (!q.data || q.data.status !== "active" || autoStarted.current || preferChat) return
+    if (
+      !q.data ||
+      q.data.status !== "active" ||
+      autoStarted.current ||
+      initialMode === "chat"
+    )
+      return
     autoStarted.current = true
     void connectVoice()
-  }, [q.data, connectVoice, preferChat])
-
-  // A connection that never reaches "listening" (or drops) falls back to typing with a note, so
-  // nobody is stuck watching an orb. "Switch to voice" retries.
-  useEffect(() => {
-    if (mode !== "voice") return
-    if (voice.status === "error") {
-      setFallback({ kind: "connection", message: voice.error?.message ?? "The voice connection dropped." })
-      setMode("chat")
-      return
-    }
-    if (voice.status !== "connecting") return
-    const t = setTimeout(() => {
-      void stopSession()
-      setFallback({ kind: "connection", message: "Voice took too long to connect." })
-      setMode("chat")
-    }, 12_000)
-    return () => clearTimeout(t)
-  }, [mode, voice.status, voice.error, stopSession])
+  }, [q.data, connectVoice, initialMode])
 
   const localTurns = useMemo(
     () => voice.turns.slice(voice.acked),
@@ -347,6 +355,12 @@ export function IntakeChat({
           <p className="border-b bg-fail-soft px-4 py-2 text-xs text-fail">
             {fallback.message}. Typing works the same way, or switch to voice
             once the microphone is available.
+          </p>
+        )}
+        {!inVoice && fallback?.kind === "connection" && (
+          <p className="border-b bg-fail-soft px-4 py-2 text-xs text-fail">
+            {fallback.message}. We&apos;ve switched to typing; use &ldquo;Switch
+            to voice&rdquo; to try the call again.
           </p>
         )}
 

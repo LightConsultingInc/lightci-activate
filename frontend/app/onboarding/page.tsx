@@ -6,9 +6,14 @@ export const metadata = { title: "Welcome" }
 /** `?mode=workflow|champion` picks the interview kind; `?mode=chat` starts the interviewer in typing mode. */
 type SP = { interview?: string; mode?: string; workflow?: string }
 
-export default async function Page({ searchParams }: { searchParams: Promise<SP> }) {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<SP>
+}) {
   const [sp, me] = await Promise.all([searchParams, getMe().catch(() => null)])
-  const mode = sp.mode === "workflow" || sp.mode === "champion" ? sp.mode : "intake"
+  const mode =
+    sp.mode === "workflow" || sp.mode === "champion" ? sp.mode : "intake"
   return (
     <OnboardingFlow
       consented={Boolean(me?.user?.consentAt)}
