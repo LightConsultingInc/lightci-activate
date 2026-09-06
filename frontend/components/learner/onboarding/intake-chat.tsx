@@ -237,6 +237,15 @@ export function IntakeChat({
     turn.mutate(content)
   }
 
+  // In chat mode the interviewer ends the interview itself (structured `finish`); place the learner after the closing line lands.
+  const finishRef = useRef<() => Promise<void>>(async () => {})
+  const interviewerFinished = Boolean(q.data?.finished) && q.data?.status === "active"
+  useEffect(() => {
+    if (mode !== "chat" || phase !== "interview" || !interviewerFinished) return
+    const t = setTimeout(() => void finishRef.current(), 1500)
+    return () => clearTimeout(t)
+  }, [mode, phase, interviewerFinished])
+
   const finishFromChat = async () => {
     setPhase("placing")
     await stopSession()
@@ -260,6 +269,8 @@ export function IntakeChat({
       />
     )
   const iv = q.data
+  finishRef.current = finishFromChat
+
   if (phase === "placing")
     return (
       <PlacingStep

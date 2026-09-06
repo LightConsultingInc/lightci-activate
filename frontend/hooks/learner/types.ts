@@ -261,6 +261,7 @@ export type IntakeProfile = {
 export type InterviewTurn = { role: "interviewer" | "user" | "scribe" | "checker"; content: string; at: string }
 
 export type InterviewView = {
+  finished?: boolean
   id: string
   mode: "intake" | "champion" | "workflow"
   status: "active" | "complete" | "abandoned"

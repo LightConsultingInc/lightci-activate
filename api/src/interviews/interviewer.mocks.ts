@@ -260,6 +260,7 @@ registerMockResponder('interviewer.turn', (call) => {
     nextQuestion: list[Math.min(turnCount, list.length - 1)],
     ...body,
     proposeFinish: body.completeness >= 0.85,
+    finish: false,
   };
 });
 

@@ -55,6 +55,8 @@ export interface InterviewView {
   nextQuestion: string;
   result: Record<string, unknown> | null;
   voice: boolean;
+  /** The interviewer decided the interview is over (text mode); the client should place the learner now. */
+  finished: boolean;
   proposeFinish: boolean;
 }
 

@@ -141,6 +141,11 @@ export function turnSchemaFor(mode: InterviewMode) {
       .describe(
         'True when the schema is complete enough to stop and the next question is a wrap-up.',
       ),
+    finish: z
+      .boolean()
+      .describe(
+        'Your decision to end the interview. Set true ONLY in the turn where nextQuestion is the closing line; the interview ends immediately after it and nothing further is asked. Otherwise false.',
+      ),
   });
 }
 export type TurnOutput = z.infer<ReturnType<typeof turnSchemaFor>>;

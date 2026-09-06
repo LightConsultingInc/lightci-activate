@@ -204,6 +204,7 @@ export class InterviewerService {
       nextQuestion,
       result: session.result,
       voice: session.voice,
+      finished: session.status === 'complete' || Boolean((session.result as Record<string, unknown> | null)?.finishedByInterviewer),
       proposeFinish:
         session.status === 'active' &&
         (session.completeness >= FINISH_COMPLETENESS ||
@@ -318,13 +319,9 @@ export class InterviewerService {
       turnSchemaFor(session.mode),
     );
     this.applyScribe(session, out);
-    const mustPropose =
-      session.completeness >= FINISH_COMPLETENESS ||
-      session.turnCount >= FINISH_TURNS;
-    const nextQuestion =
-      mustPropose && !out.proposeFinish
-        ? `${out.nextQuestion.trim()} (I think we have enough to finish whenever you are ready; is there anything I have missed?)`
-        : out.nextQuestion.trim();
+    // The model decides when the interview ends (out.finish); no text matching, no forced wrap-up suffix.
+    const nextQuestion = out.nextQuestion.trim();
+    if (out.finish) session.result = { ...(session.result ?? {}), finishedByInterviewer: true };
     session.transcript = [
       ...session.transcript,
       {

@@ -67,7 +67,7 @@ export const INTERVIEW_PLAN: Record<InterviewMode, string[]> = {
     'Workflows, ONE AT A TIME, two or three follow-ups each before moving on. Take the first thing they named and dig: is there prep before it, and what do they open first (CRM, notes, last email)? What happens right after (notes, follow-up, a system update)? Which step is the slow or annoying part? What does a good outcome look like and how would they know? Which tools are involved? Then quantify: minutes per run and runs per week. Example: "I take customer calls" → "Do you prep before those calls? What do you open first?" → "And right after a call, what do you do: notes, follow-up, CRM update?" → "Which of those is the slow part?"',
     'Adjacent workflows: from the role, name a likely workflow they have not mentioned and ask whether it is part of their week (salesperson → call prep, CRM notes, outbound sequences, proposals; analyst → data pulls, the recurring pack, review comments). Dig into each confirmed one the same way. Aim for two to four workflows in total with time estimates.',
     'How they use Claude today, THOROUGHLY: which surfaces (claude.ai chat, Projects, Claude Code, Cowork, anything else); how often; two concrete recent examples of real work; what worked and what disappointed; whether they check outputs before using them and how; comfort 1-5 with a one-line reason. Take several questions here; this section places them on the ladder.',
-    `Ending: once the items above are covered, say exactly "${CLOSING_LINE}" and call finish_interview in the same turn. Say nothing more. No summary, no "anything I missed".`,
+    `Ending: once the items above are covered, say exactly "${CLOSING_LINE}" and, in the same turn, call finish_interview (voice) or set finish=true in your structured output (text). Say nothing more. No summary, no "anything I missed".`,
   ],
   champion: [
     'Team purpose: what the team exists to do and who depends on its output.',
@@ -75,7 +75,7 @@ export const INTERVIEW_PLAN: Record<InterviewMode, string[]> = {
     'Anchor workflows, ONE AT A TIME, two or three follow-ups each: the two to six workflows that take the most team time, who does them, what they open first, which step is slow, then frequency, minutes per run, runs per week and systems. Infer likely adjacent workflows from the team purpose and ask about them.',
     'Systems the team lives in.',
     'Priorities: what would make the program a success by the end of the wave.',
-    `Ending: once the items above are covered, say exactly "${CLOSING_LINE}" and call finish_interview in the same turn. Say nothing more.`,
+    `Ending: once the items above are covered, say exactly "${CLOSING_LINE}" and, in the same turn, call finish_interview (voice) or set finish=true in your structured output (text). Say nothing more.`,
   ],
   workflow: [
     'Trigger and purpose: what starts the workflow, what the output is for and who receives it.',
@@ -83,7 +83,7 @@ export const INTERVIEW_PLAN: Record<InterviewMode, string[]> = {
     'Inputs (name, where it comes from, data class) and the steps of the last real run in order, with who or what does each (human, system, Claude).',
     'Decisions (where a judgement call is made and the rule applied) and exceptions (what goes wrong and how it is handled).',
     'Systems, what must never leave the firm, outputs and their destination, where a human must review before it goes out.',
-    `Ending: once the items above are covered, say exactly "${CLOSING_LINE}" and call finish_interview in the same turn. Say nothing more.`,
+    `Ending: once the items above are covered, say exactly "${CLOSING_LINE}" and, in the same turn, call finish_interview (voice) or set finish=true in your structured output (text). Say nothing more.`,
   ],
 };
 
