@@ -4,208 +4,223 @@ export const MODULE_L4: Module = {
   rung: 4,
   code: "L4",
   name: "Workflow",
-  tagline: "Map a whole workflow, decide where Claude fits, measure before and after, and ship it through review.",
+  tagline: "Write down how a task really happens, decide which steps a person keeps, note how long it takes today, and turn it into a skill your team can use.",
   outcomes: [
-    "Write down a real workflow: inputs, steps, decisions, exceptions, systems, outputs and where a person reviews.",
-    "Say which steps go to Claude and which stay with a person, and why.",
-    "Measure the workflow before you change it and report hours back honestly, including rework.",
+    "Write down a task you own as inputs, steps, decisions, exceptions, systems and outputs, clearly enough that a new colleague could run it.",
+    "Mark which steps a person must keep and which Claude can draft.",
+    "Note how long the task takes today so you can say honestly what you got back, and know how the skill gets reviewed and published for the team.",
   ],
   practice:
-    "Practice: you'll map one workflow you own, time it as it runs today, and take the skill it becomes through the promotion queue.",
+    "Practice: map one task you own in the workflow form (inputs, steps, decisions, exceptions, systems, outputs, review points). We draft the skill from your map and show it to you.",
   lessons: [
     {
-      slug: "l4-map-a-workflow",
+      slug: "l4-write-it-down",
       rung: 4,
-      title: "Mapping a workflow",
-      promise: "You will write down how a workflow really goes, including the decisions and exceptions the manual leaves out.",
-      minutes: 4,
+      title: "Write down how the task really happens",
+      promise: "You will turn a one-line description of a task into a map a new colleague could follow.",
+      minutes: 3,
       scene: "workflow-map",
-      body: `Before Claude can help with a whole workflow, someone has to write down how the workflow actually goes. Not the tidy version in the procedures manual. The real one.
+      body: `Writing down how a task actually happens is what lets someone else, or Claude, do it the same way. Most tasks live in one person's head as a single line, and that line hides everything that matters.
 
-A workflow map has seven parts. **Inputs**: what arrives and from where. **Steps**: what happens, in order. **Decisions**: where a person chooses between paths, and on what basis. **Exceptions**: what goes wrong often enough to matter. **Systems**: what gets read or written in your CRM, your reporting tool, your shared drive. **Outputs**: what leaves and to whom. **Human review**: where someone must look before the work moves on.
+**Before**, the task as usually described:
 
-The decisions and exceptions are where the value hides. "Check the proposal" sounds like one step until you ask what you are checking for and what you do when it fails. A new hire would ask that question. Claude cannot, so the map has to answer it.
+"Every Friday I send the weekly sales report."
 
-Activate's Interviewer walks you through this with questions, but the judgement is yours. When it plays the map back, read it as if you were handing the job to a colleague tomorrow. Anything you would add in the handover conversation belongs in the map.
+**After**, the same task as it really happens:
 
-Your champion verifies the map before it goes further. That is not bureaucracy. A map with one missing exception becomes a skill that fails quietly on exactly that case.`,
+Inputs: the export from the sales tool, last week's report.
+Steps: pull the export, drop the numbers into the template, write three lines on what changed, attach, send to the regional manager.
+Decisions: if a deal over 50k moved stage, add a line naming it.
+Exceptions: the export sometimes lands after lunch; if so, send a holding note and the full report on Monday.
+Systems: sales tool (read only), email.
+Outputs: one email with the report attached, to the manager, by 4pm.
+
+It is what you would tell a colleague covering your holiday. The test of a good map: could someone who has never done the task run it from the page without asking you a question? If they would have to ask, the answer belongs in the map.`,
       keyPoints: [
-        "Seven parts: inputs, steps, decisions, exceptions, systems, outputs, human review.",
-        "Decisions and exceptions are where the value hides; write down what you check for and what you do when it fails.",
-        "Read the map back as a handover to a colleague; your champion verifies it before it moves on.",
+        "A one-line description hides everything that matters; write the task as inputs, steps, decisions, exceptions, systems and outputs.",
+        "Write it the way you would explain it to a colleague covering your holiday.",
+        "The test: could someone who has never done it run it from the page without asking you anything?",
       ],
       example: {
-        title: "Quarterly report workflow",
-        text: "Inputs: the numbers export from your reporting tool, last quarter's deck. Steps: pull data, build outline, fill template, review. Decision: if a figure moved more than ten percent, add an explanation slide. Exception: one region's numbers arrive late. Systems: reporting tool read, CRM note written. Review: manager before it goes out.",
+        title: "Try this",
+        text: "Pick one task you do every week. Write its inputs, steps and outputs as bullet points, in the order they really happen, not the order the manual says.",
       },
       check: {
-        question: "Which part of a workflow map most often gets left out, and matters most?",
+        question: "A colleague reads your map of the weekly report and asks, \"What do I do if the export is late?\" What does that tell you?",
         options: [
-          "The name of the workflow",
-          "The decisions and exceptions",
-          "The list of systems",
-          "The outputs",
+          "They should have asked you before reading it",
+          "The map is missing an exception and it should be added",
+          "The map is fine; late exports are rare",
+          "Exceptions belong in an email, not in the map",
         ],
         answer: 1,
-        explanation: "Steps are easy to list; the decisions and exceptions are what a new hire would ask about and what a skill fails on if missing.",
+        explanation: "If someone has to ask you a question to run the task, the answer belongs in the map. A late export is an exception, so it goes under Exceptions.",
       },
       competencies: ["L4.schema"],
     },
     {
-      slug: "l4-where-claude-fits",
+      slug: "l4-decisions-and-exceptions",
       rung: 4,
-      title: "Where Claude fits and where a person must stay",
-      promise: "You will colour a workflow map into steps for Claude and steps that stay with a person, and be honest about exposure.",
-      minutes: 4,
+      title: "Decisions and exceptions are where the value hides",
+      promise: "You will spot the steps that sound like one action but hide a choice, and write the choice down.",
+      minutes: 3,
       scene: "workflow-map",
-      body: `With the map in front of you, colour it. Some steps go to Claude. Some stay with a person. Getting this split right is the whole point of L4.
+      body: `The steps you can list in a minute are not the hard part of a task. The hard part is the choices inside them, and those are what a colleague, or Claude, gets wrong if you leave them out.
 
-**Claude fits** steps that are repetitive, text-heavy and checkable: assembling the agenda from notes, drafting the first version of a proposal narrative, summarising the CRM history, formatting the report to the house template.
+**Before**, a step as it usually gets written:
 
-**A person stays** where any of these is true. The step needs restricted data, such as customer contracts or payment details. The step is a judgement about a customer's situation or money. The step writes to a system of record. The step is a review point in the firm's policy. Or the output goes directly to a customer without anyone reading it.
+"Check the proposal before it goes out."
 
-Be honest about exposure. If a step touches account numbers even briefly, say so, and route it to a person. The promotion queue will find it anyway, and a candid map is approved faster than a hopeful one.
+**After**, the same step with its decisions and exceptions:
 
-The pattern that works in most firms: Claude drafts, a person decides, Claude formats, a person sends. Each handoff is a review point and each is written into the map.
+Check the price table matches the quote in the sales tool. If any line differs, stop and fix it; do not send. If the proposal is over 100k, it also goes to the head of sales first. If the customer asked for a payment plan we do not offer, hand it to your manager rather than improvising one.
 
-Do not aim to automate the workflow. Aim to remove the parts that were never really your job.`,
+One line became four sentences, and every one is something you already do without thinking. The knowledge was there; it just was not written down.
+
+To find hidden decisions, ask of each step: "what am I looking for here, and what do I do when it is wrong?" If the answer is anything other than "nothing", you have found a decision or an exception. Write it under the step.`,
       keyPoints: [
-        "Claude fits steps that are repetitive, text-heavy and checkable.",
-        "A person stays wherever there is restricted data, a judgement about a customer, a system write, or a policy review point.",
-        "Be honest about exposure; a candid map gets approved faster than a hopeful one.",
+        "A step that sounds like one action often hides a choice: what you check for, and what you do when it fails.",
+        "Ask of every step: what am I looking for, and what do I do when it is wrong?",
+        "Exceptions are the cases that go wrong often enough to matter; write down what happens then.",
       ],
       example: {
-        title: "Proposal workflow, coloured",
-        text: "Claude: draft the narrative from anonymised discovery notes, format to the proposal template. Person: choose what to recommend, check the pricing table against the actual quote, write the CRM opportunity note, send. Four handoffs, four review points.",
+        title: "Try this",
+        text: "Take one step from a task you do, something like \"review the draft\", and write two sentences under it: what you check for, and what you do when it fails.",
       },
       check: {
-        question: "A step writes the meeting summary into your CRM as a record. Who does it?",
+        question: "Which of these turns \"check the proposal\" into something a new colleague could do?",
         options: [
-          "Claude, since it wrote the summary",
-          "A person, because it is a write to a system of record",
-          "Whoever is faster",
-          "Nobody; skip the step",
+          "Check the proposal carefully",
+          "Check the price table matches the quote; if any line differs, stop and fix it",
+          "Ask the manager to check the proposal",
+          "Skip the check if you are in a hurry",
         ],
         answer: 1,
-        explanation: "Writes to systems of record are review points that stay with a person, even when Claude drafted the text.",
+        explanation: "It says what to look for and what to do when it is wrong. \"Carefully\" and \"ask the manager\" leave the choice in someone's head.",
+      },
+      competencies: ["L4.schema"],
+    },
+    {
+      slug: "l4-which-steps-a-person-keeps",
+      rung: 4,
+      title: "Which steps a person keeps",
+      promise: "You will mark the steps in your map that must stay with a person and the ones Claude can draft.",
+      minutes: 3,
+      scene: "boundary-declaration",
+      body: `Once a task is written down, you can see which steps Claude can take a first pass at and which must stay with you. That split makes the result safe to use.
+
+**Claude can draft** a step when it is mostly writing or arranging text and you can check the result by reading it: the three lines on what changed, the filled-in template, a first-draft follow-up email.
+
+**A person keeps** a step when it:
+- approves something, such as a discount or a delivery date;
+- sends something to a customer;
+- enters something into a system of record, such as the CRM;
+- needs information that must not be shared, such as account numbers or contracts;
+- is a judgement about a person's money or situation.
+
+On the weekly report: Claude drafts the three lines on what changed. You read them against the numbers, decide whether the big deal needs a mention, and press send. You enter the final figure in the CRM.
+
+The pattern is the same almost everywhere: Claude drafts, a person decides, a person sends. Mark each handoff in your map as a review point.`,
+      keyPoints: [
+        "Claude can draft steps that are mostly text and can be checked by reading.",
+        "A person keeps approving, sending, entering into a system of record, anything with information that must not be shared, and judgements about a person's money.",
+        "Claude drafts, a person decides, a person sends; each handoff is a review point in the map.",
+      ],
+      example: {
+        title: "Try this",
+        text: "Write the five steps of your weekly report as bullet points, then mark which ones you must do yourself.",
+      },
+      check: {
+        question: "Claude has drafted the meeting summary. The next step is to save it as the record in the CRM. Who does that step?",
+        options: [
+          "Claude, since it wrote the summary",
+          "A person, because it is entering something into a system of record",
+          "Whoever is free at the time",
+          "Nobody; the draft is enough",
+        ],
+        answer: 1,
+        explanation: "Entering into a system of record is one of the steps a person keeps, even when Claude wrote the text that goes in.",
       },
       competencies: ["L4.schema", "L4.governance"],
     },
     {
-      slug: "l4-baselines",
+      slug: "l4-measure-before-you-change-it",
       rung: 4,
-      title: "Baselines: measure before you change anything",
-      promise: "You will time a workflow as it runs today, including rework, and get a second person to sign the number.",
-      minutes: 4,
+      title: "Measure it before you change it",
+      promise: "You will write a two-line note of how long a task takes today, so that later you can say honestly what you got back.",
+      minutes: 3,
       scene: "baseline-measure",
-      body: `Before you change anything, measure how long the workflow takes today. This is the step people most want to skip, and the one that makes every later claim believable.
+      body: `If you want to say a skill saved you time, you need to know how long the task took before. Two lines, written down now, are the difference between a number and a story.
 
-A baseline is simple. For the next few runs of the workflow, note how long each took, end to end, including the rework: the second pass on the deck, the corrections after review, the twenty minutes hunting for last quarter's version. Rework is part of the true cost, and it is often the part Claude removes.
+**Before** the change, the note looks like this:
 
-Pick a method that fits the work. For a weekly task, time three or four real runs. For a monthly one, reconstruct the last two from your calendar and be honest about the estimate. Write down how you measured so someone can repeat it later.
+Weekly sales report: about 90 minutes each Friday, including 20 minutes fixing figures after review.
+Measured: timed the last three Fridays (85, 95, 90).
 
-Then have your champion or the workflow owner sign the number. Not because anyone doubts you. Because in six months, when the readout says "four hours back per week", the first question will be "compared to what", and the answer has to be something two people agreed before the change.
+That is the whole thing: how long, how often, and how you measured. Include fixing and redoing time; it is part of the real cost and often the part that disappears.
 
-Capture the baseline before the skill ships. After is too late; memory shrinks the old number.
+For a weekly task, time three real runs. For a monthly one, look back at your calendar for the last two and say it is an estimate. Ask the person who owns the task to agree the number.
 
-A baseline nobody wrote down is a story. A baseline two people signed is a measurement.`,
+**After** the change, measure the same way, including the time you spend reading the draft, checking it and fixing anything wrong. If the draft takes 20 minutes instead of 90 but checking takes 40, you got back 30 minutes, not 70. A small honest number is worth more than a big hopeful one.`,
       keyPoints: [
-        "Time real runs end to end, and include the rework.",
-        "Write down how you measured so someone else can repeat it.",
-        "Capture it before anything ships and have a champion or the owner sign it.",
+        "Two lines before you change anything: how long, how often, and how you measured.",
+        "Include time spent fixing and redoing; it is part of the real cost.",
+        "Measure the same way after, including checking and fixing the draft, and report what is left.",
       ],
       example: {
-        title: "Weekly meeting-prep baseline",
-        text: "Three weeks timed: 95, 110 and 85 minutes, including 20 to 30 minutes each week fixing agenda items the CRM notes got wrong. Method: stopwatch from opening the CRM to the agenda being sent to the manager. Signed by the team champion in week four.",
+        title: "Try this",
+        text: "Write one line for a task you did this week: how many minutes it took, how often you do it, and whether that includes fixing time.",
       },
       check: {
-        question: "Why does the baseline have to be captured before the skill ships?",
+        question: "Before the skill, the report took 90 minutes. Now the draft takes 20 minutes and checking and fixing takes 40. What did you get back?",
         options: [
-          "Because the software requires it",
-          "Because memory shrinks the old number once the new way is in place",
-          "Because the skill changes the workflow name",
-          "It does not; after is fine",
+          "70 minutes",
+          "30 minutes",
+          "90 minutes",
+          "Nothing yet",
         ],
         answer: 1,
-        explanation: "Once the faster way exists, people underestimate how long the old way took; a number agreed beforehand is the only trustworthy one.",
+        explanation: "Measure the same way as before, including checking and fixing: 20 plus 40 is 60, and 90 minus 60 leaves 30 minutes.",
       },
       competencies: ["L4.baseline"],
     },
     {
-      slug: "l4-promotion-queue",
+      slug: "l4-reviewed-and-published",
       rung: 4,
-      title: "Getting a skill through the promotion queue",
-      promise: "You will know what the queue checks and arrive with a package that passes first time.",
-      minutes: 4,
+      title: "Getting the skill reviewed and published for the team",
+      promise: "You will know what happens between your draft skill and the version your whole team can use.",
+      minutes: 3,
       scene: "promotion-queue",
-      body: `A skill that only you use is a draft. A skill the team uses has been through the promotion queue. Here is what the queue checks, so you can arrive ready.
+      body: `A skill only you have helps one person. A skill in the team library helps everyone, and getting it there means one teammate reads it first, so the rest of the team can trust it without redoing your work.
 
-The path is draft, review, approved, published. You move from draft to review by requesting promotion. The request bundles four things: the skill itself, its grade from the grader, the boundary check, and your sample cases. If any is missing, the request waits.
+**Before**: a draft. It lives with you and nobody else can see it.
 
-A reviewer, usually your team's champion, reads the package on one screen. They are asking: does the trigger fire at the right moments, is the scope one job, does the boundary declaration match the firm's list, do the steps honour it, and do the sample cases behave as described. If the skill touches a restricted class, compliance reviews too.
+**After**: a published skill. It sits in the team library with a version number, who reviewed it and when. Any later change is a new version, reviewed the same way, so the team can see what changed and go back if needed.
 
-Approval is a signature. Then the skill is published to the library and assigned to the team's group in Claude. Every later change goes through the same path and gets a new version, so anyone can see what changed and roll back if needed.
+Between the two sits the review. You send the skill with the sample requests you tested it on. A reviewer on your team checks four things: does it do one job; does it start on the right requests and not others; does it keep restricted information out and the person's steps in; do the sample requests behave as described. If it touches account details or contracts, compliance reads it too.
 
-To move through quickly: write the boundary declaration first, not last. Keep the scope narrow. Make the sample cases real. Most skills that stall in review stall on the boundary, not the prose.`,
+Most skills that stall in review stall on the third question. A map that marks which steps a person keeps has already answered it.`,
       keyPoints: [
-        "Draft, review, approved, published. The request bundles the skill, its grade, the boundary check and the sample cases.",
-        "The reviewer checks trigger, scope, boundary, steps and cases on one screen; compliance joins if restricted classes are touched.",
-        "Write the boundary declaration first; that is where most skills stall.",
+        "A draft is yours alone; a published skill is in the team library with a version, a reviewer and a date.",
+        "The reviewer checks: one job, starts on the right requests, keeps restricted information out and the person's steps in, and the sample requests behave.",
+        "Every later change is a new version through the same review, so the team can see what changed and go back.",
       ],
       example: {
-        title: "Renewal reminder skill promotion",
-        text: "You request promotion with the graded skill, a green boundary check and four sample cases. The champion approves in ten minutes. Because the skill reads no restricted classes, compliance is not needed. Version one is published to your team's group that afternoon.",
+        title: "Try this",
+        text: "Write three sample requests for your skill: one it should handle, one it should not, and one that is borderline.",
       },
       check: {
-        question: "Your promotion request has the skill and its grade but no sample cases. What happens?",
+        question: "What turns a draft skill into one the whole team can use?",
         options: [
-          "It is approved anyway",
-          "It waits until the sample cases are added",
-          "The champion writes the cases for you",
-          "It is published without review",
+          "Saving it with a new name",
+          "A teammate reviews it and it is published to the team library",
+          "Using it yourself for a month",
+          "Sending it to everyone by email",
         ],
         answer: 1,
-        explanation: "The package needs all four parts; without cases the reviewer cannot judge the trigger and scope.",
+        explanation: "A draft is yours alone. It becomes the team's when a reviewer has read it and it is published to the library with a version.",
       },
       competencies: ["L4.governance"],
-    },
-    {
-      slug: "l4-hours-back",
-      rung: 4,
-      title: "Measuring hours back honestly",
-      promise: "You will measure the new workflow the same way as the baseline and report the saving net of checking and rework.",
-      minutes: 4,
-      scene: "baseline-measure",
-      body: `After the skill ships, you measure again. The number that matters is hours back, net of rework. Not hours the first draft saved, but hours saved after you did the checking and fixing that the draft still needed.
-
-Measure the same way you measured the baseline. Same runs, same start and end points, same person timing. Include the time to read the output, verify the facts, and fix what was wrong. Include any time spent redoing something because the skill got it subtly wrong and nobody noticed until later. That last kind is the most expensive and the easiest to leave out.
-
-If the honest number is small, say so. A skill that saves forty minutes a week on a task nobody enjoys is a good skill. A skill that claims four hours and delivers one poisons every number that comes after it.
-
-Write a measurement plan into the promotion package: what you will time, how often, and when you will report. Three months is a reasonable first checkpoint.
-
-Hours back is the number sponsors see and the number the programme's readouts are built on. Sponsors trust the programme exactly as much as they trust this number. Measure it as if a sceptic will read it, because one will.`,
-      keyPoints: [
-        "Measure the same way as the baseline: same runs, same start and end, same person.",
-        "Net of rework means including reading, verifying, fixing, and anything redone later.",
-        "A small honest number is worth more than a large hopeful one.",
-      ],
-      example: {
-        title: "Weekly meeting prep, after",
-        text: "Baseline averaged 97 minutes. With the skill: 35 minutes to run and read, 15 to verify against the CRM, 10 to fix two wrong agenda items. Sixty minutes net, so about 37 minutes back per week, reported as such. Not the 62 minutes the first-draft time suggested.",
-      },
-      check: {
-        question: "The skill's first draft takes 20 minutes instead of 90, but checking and fixing takes another 40. What do you report?",
-        options: [
-          "70 minutes back",
-          "30 minutes back",
-          "90 minutes back",
-          "Nothing until it improves",
-        ],
-        answer: 1,
-        explanation: "Hours back is net of checking and rework: 90 minus 60 is 30, and that is the honest number.",
-      },
-      competencies: ["L4.baseline", "L4.governance"],
     },
   ],
 }

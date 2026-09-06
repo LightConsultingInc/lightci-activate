@@ -77,11 +77,10 @@ export function LessonView({ code, slug }: { code: string; slug: string }) {
 
       <Paper className="rounded-xl border bg-card p-5" data-testid="lesson-example" data-personalised={tailored}>
         <div className="mb-1 flex items-center gap-2">
-          <p className="eyebrow">For example</p>
+          <p className="eyebrow">{example.title}</p>
           {tailored && <span className="eyebrow text-glow-foreground" data-testid="lesson-tailored">· Tailored to your work</span>}
         </div>
-        <h2 className="font-display text-xl font-medium">{example.title}</h2>
-        <MarkdownLite text={example.text} className="mt-2" />
+        <MarkdownLite text={example.text} className="mt-1 text-[1.05rem] leading-relaxed" />
       </Paper>
 
       <section className="rounded-xl border bg-card p-5" data-testid="lesson-check" data-personalised={tailored}>

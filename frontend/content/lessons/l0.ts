@@ -4,160 +4,171 @@ export const MODULE_L0: Module = {
   rung: 0,
   code: "L0",
   name: "Orientation",
-  tagline: "Where Claude lives, what can go in, and your first real piece of work.",
+  tagline: "Ask Claude for one real piece of work, and know what to paste, what to check, and where it belongs.",
   outcomes: [
-    "Pick the right place to do a task: a chat, a Project, a shared skill, or Claude Code and Cowork.",
-    "Say what can go into Claude and what never can, and where a person has to review.",
-    "Finish one real task with Claude today, with your expectation written down first.",
+    "Ask Claude for a first draft of something real, with the two or three facts it needs to do it well.",
+    "Know what is fine to paste in and what to leave out, and describe a customer without naming them.",
+    "Read a draft before it goes anywhere, and know when a repeated task belongs in a Project instead of a chat.",
   ],
   practice:
-    "Practice: you'll pick one small, real task from this week, say what you expect to get back, run it, and note what was different.",
+    "Practice: you'll write what you'd ask Claude for one real task of yours, press Run, and see what it makes. You get three short lines of feedback and a score, and you can try again.",
   lessons: [
     {
-      slug: "l0-which-surface",
+      slug: "l0-ask-like-a-brief",
       rung: 0,
-      title: "Which surface for what",
-      promise: "You will know whether a task belongs in a chat, a Project, a skill, or Claude Code and Cowork.",
-      minutes: 4,
-      scene: "surfaces",
-      body: `Claude shows up in a few places, and picking the right one saves you from fighting the tool.
+      title: "Ask the way you'd brief a colleague",
+      promise: "You will be able to ask Claude for a first draft and get something you can actually use.",
+      minutes: 3,
+      scene: "prompt-anatomy",
+      body: `Most people's first ask to Claude is one line, and the draft that comes back is generic. That is not Claude being weak; it is the ask being thin.
 
-**Chat** is for one-off work: draft this email, summarise these notes, give me three ways to say this more gently. You bring everything Claude needs in the moment, and when you are done, you are done.
+Think of Claude as a capable colleague who joined this morning. If you said "write a follow-up email" to them, they would have to guess who it is for and what it should say. Claude guesses too.
 
-**Projects** are for work you repeat. A Project holds instructions and reference files that stay put, so every week you open the same one and only add what changed this week. If you have typed the same background twice, it belongs in a Project.
+**A thin ask:** "Write a follow-up email after a customer meeting."
 
-**Skills** are recipes the team shares. Someone writes the steps once, and Claude picks the recipe up on its own when a request matches. You will write one at L3; for now, just know they exist in the library.
+**A better ask:** "Write a short follow-up email to a customer we met this morning. We agreed to send revised pricing by Friday and to book a demo for their operations team. Friendly, plain, under 100 words."
 
-**Claude Code and Cowork** are for multi-step work across files and systems: go through this folder of exported reports and build me a summary table. They act, rather than just answer. Most people will not need them in the first month.
+The second names who is reading, what was agreed, and how long it should be. That is usually enough for a draft you can send with small changes.
 
-The rule of thumb: one-off means Chat, repeated means Project, shared means Skill, many steps across files means Code or Cowork. When you are not sure, start in Chat and notice whether you come back to it.`,
+You do not need special wording. Say what you would say to a colleague, plus the two or three facts they would need to start. If the draft comes back wrong, say what is wrong and ask again, the way you would with a person.`,
       keyPoints: [
-        "One-off work goes in a chat; work you repeat goes in a Project.",
-        "A skill is a shared recipe Claude picks up on its own when a request matches.",
-        "Claude Code and Cowork act across files and systems; most people do not need them at first.",
+        "A one-line ask gets a generic draft; two or three facts get a usable one.",
+        "Say who will read it, what it must contain or what was agreed, and how long it should be.",
+        "If the draft is off, say what is wrong and ask again, like you would with a colleague.",
       ],
       example: {
-        title: "Weekly customer-meeting prep",
-        text: "Someone drafts one follow-up email in a chat. She preps her weekly customer meetings with the same structure every time, so that becomes a Project. Her whole team preps meetings the same way, so at L3 it becomes a skill in the library.",
+        title: "Try this",
+        text: "Paste an email you wrote this week (take out any names) into Claude and ask for a version half the length. Read both and notice what it cut.",
       },
       check: {
-        question: "You write the same cover note for a recurring monthly report, with the same house rules each time. Where should it live?",
-        options: ["A fresh chat each time", "A Project", "Claude Code", "It should not use Claude"],
-        answer: 1,
-        explanation: "The task repeats and the background stays stable, which is exactly what a Project holds for you.",
-      },
-      competencies: ["L0.surfaces"],
-    },
-    {
-      slug: "l0-policy-boundary",
-      rung: 0,
-      title: "Your firm's policy and the boundary",
-      promise: "You will be able to say what goes into Claude, what never does, and where a person must review.",
-      minutes: 4,
-      scene: "policy-boundary",
-      body: `Your firm has a usage policy. It is shorter than you think, and most of it comes down to one line: some kinds of information go into Claude, and some never do.
-
-**What can go in**: your own notes and drafts, internal templates, public material, meeting agendas, anonymised summaries, and anything already approved for internal sharing. This is the bulk of your work.
-
-**What never goes in**: customer identifiers and account numbers, contracts and financial documents a customer sent you, anything shared with you in confidence, and anything on the firm's restricted list. The test is simple. If you would not paste it into an email to a colleague at another firm, do not paste it into Claude.
-
-Between those two sits **human review**. Some outputs are fine to draft with Claude but must be read by a person before they go anywhere: anything a customer will receive, anything that becomes a record in your CRM, anything with numbers in it. The policy names these points. Learn where they are.
-
-The boundary is not a limit on how useful Claude can be. It shapes how you use it: describe the situation, not the person. "A long-standing customer whose contract renews in December and who has asked for shorter, plainer emails" gives Claude everything it needs. The name gives it nothing.`,
-      keyPoints: [
-        "Your own notes, templates and anonymised summaries go in; customer identifiers, contracts and restricted documents never do.",
-        "Anything a customer receives or that becomes a record gets read by a person first.",
-        "Describe the situation, not the person: Claude needs the facts of the case, never the name.",
-      ],
-      example: {
-        title: "A renewal reminder email",
-        text: "Instead of pasting the customer's contract, you write: \"Customer has been with us five years, renews in December, prefers plain language, has asked us to keep emails short.\" Claude drafts the email. You read it before it goes anywhere near the send button.",
-      },
-      check: {
-        question: "Which of these can go into Claude under a typical firm policy?",
+        question: "You need a first draft of a cover note for a proposal. Which ask will get you the most usable draft?",
         options: [
-          "A scanned copy of the customer's signed contract",
-          "The customer's account number so the email can reference it",
-          "Your own bullet notes from the meeting, with names removed",
-          "A spreadsheet of customer payment details, for context",
+          "\"Write a proposal cover note.\"",
+          "\"Write a cover note for a proposal. Please make it good.\"",
+          "\"Write a one-paragraph cover note for a proposal to a customer we met last week. They care about switching with no downtime. Warm, plain, under 120 words.\"",
+          "\"Write a cover note using the best professional template.\"",
         ],
         answer: 2,
-        explanation: "Your own anonymised notes are yours to share; contracts, account numbers and payment details are restricted classes.",
+        explanation: "It says who is reading, what they care about, and how long it should be. The others leave Claude guessing.",
+      },
+      competencies: ["L1.description"],
+    },
+    {
+      slug: "l0-what-not-to-paste",
+      rung: 0,
+      title: "What not to paste in",
+      promise: "You will know what to leave out when you paste, and how to describe a customer without naming them.",
+      minutes: 3,
+      scene: "policy-boundary",
+      body: `Claude is most useful when you give it real material, so you need to know what is fine to paste and what is not.
+
+**Fine to paste:** your own notes and drafts, meeting agendas, internal templates, anything already public, and summaries with the names taken out.
+
+**Never paste:** customer names next to account or contract details, documents a customer sent you, payment details, and anything shared with you in confidence.
+
+If you are unsure, ask yourself: would I paste this into an email to someone at another company? If not, do not paste it into Claude.
+
+This is less limiting than it sounds, because Claude does not need the person. It needs the situation.
+
+**Instead of pasting the contract:** "Customer has been with us five years, renews in December, prefers plain language, and has asked us to keep emails short. Draft a renewal reminder."
+
+That one sentence gives Claude everything it needs for the email. The name, the account number and the contract itself would add nothing to the draft. And whatever comes back, you read it before it reaches the customer.`,
+      keyPoints: [
+        "Your own notes, drafts, templates and public material are fine; customer documents, account and payment details are not.",
+        "The test: would you paste it into an email to someone at another company?",
+        "Describe the situation, not the person. The facts of the case are what Claude needs, never the name.",
+      ],
+      example: {
+        title: "Try this",
+        text: "Take your notes from your last customer meeting, cross out the names and any account numbers, paste what is left into Claude and ask for a five-line summary.",
+      },
+      check: {
+        question: "You want Claude to draft a reminder about a customer's overdue invoice. Which of these should you give it?",
+        options: [
+          "The invoice PDF the customer received, so the numbers are right",
+          "The customer's account number and contact details",
+          "\"A customer is three weeks overdue on a mid-sized invoice, has always paid on time before, and we want to stay friendly. Draft a reminder.\"",
+          "The full email thread with the customer, unchanged",
+        ],
+        answer: 2,
+        explanation: "Describe the situation. The invoice, account details and email thread are the customer's material, and the draft does not need them.",
       },
       competencies: ["L0.boundary"],
     },
     {
-      slug: "l0-four-d",
+      slug: "l0-read-before-it-goes",
       rung: 0,
-      title: "The 4D frame in one picture",
-      promise: "You will recognise the four habits every later lesson builds on: delegate, describe, discern, be diligent.",
-      minutes: 4,
-      scene: "four-d",
-      body: `Anthropic describes working well with AI as four habits. You will see them at every rung, so here is the whole picture once.
-
-**Delegation** is deciding what to hand over and what to keep. Not every task belongs with Claude, and inside one task some parts are yours: the judgement call, the customer relationship, the final say.
-
-**Description** is telling Claude what you want clearly enough that it can do the work. Who is this for, what should it contain, what should it look like, what must it avoid.
-
-**Discernment** is reading the output the way you would read a junior colleague's draft: is it right, is anything missing, does it sound like us. This is the habit most people skip, and it is where the value lives.
-
-**Diligence** is owning the result. You checked the facts, you respected the review points, and your name is on it. Claude drafted; you decided.
-
-The four form a loop. Poor delegation makes description hard. Poor description makes discernment slow. Skipping discernment makes diligence impossible. When something goes wrong with an output, one of the four is usually where the problem started, and naming which one tells you what to fix.`,
-      keyPoints: [
-        "Delegation: decide what to hand over and what stays yours.",
-        "Description and Discernment: say clearly what you want, then read the result like a colleague's draft.",
-        "Diligence: you own what goes out, so you check it and respect the review points.",
-      ],
-      example: {
-        title: "A quarterly report deck",
-        text: "Delegation: Claude drafts the background slide; you write the recommendation. Description: \"eight slides, house template, no customer names.\" Discernment: you spot that a chart label is wrong. Diligence: fixed before the deck goes to the customer.",
-      },
-      check: {
-        question: "A draft came back fluent and plausible, and you sent it without reading it closely. Which habit was skipped?",
-        options: ["Delegation", "Description", "Discernment", "Diligence"],
-        answer: 2,
-        explanation: "Discernment is the careful read of the output; skipping it is the most common and most costly miss.",
-      },
-      competencies: ["L1.delegation", "L1.discernment"],
-    },
-    {
-      slug: "l0-first-real-work",
-      rung: 0,
-      title: "Your first real piece of work today",
-      promise: "You will finish one small, real task with Claude today, with your expectation written down before you run it.",
+      title: "Read it before it goes anywhere",
+      promise: "You will catch the mistakes a fluent draft hides before anyone else sees them.",
       minutes: 3,
-      scene: "predict-then-see",
-      body: `You finish this module by doing one real piece of work with Claude today. Not a demo. Something already on your list.
+      scene: "check-output",
+      body: `Claude's drafts read well. That is the risk: a fluent draft is easy to send without really reading, and the mistake is usually something small it did not know.
 
-Pick a task that is small, yours, and low-stakes: a first draft of a follow-up email, a summary of your own meeting notes, an agenda for next week. Check it against the boundary from the last lesson. If it needs customer names or account details, choose something else.
+Read Claude's draft the way you would read a new colleague's: quickly, but with your own knowledge switched on. Is anything wrong? Is anything missing? Would we say it that way?
 
-Before you run it, write one sentence about what you expect to get back. "A polite, slightly generic email that will need our usual sign-off." This takes ten seconds and it is the most important habit in the whole programme. It turns reading the output from passive to active: you are checking a guess, not just skimming.
+**Sent as it came:** You ask for a follow-up to Tuesday's meeting. The draft is polite and well-shaped. You send it. It never mentions that you agreed to move the delivery date, because you never told Claude that, and the customer emails back confused.
 
-Then run it, read the output, and write one more sentence: what was better than you expected, what was worse, what you changed. That is the whole exercise.
+**Read first:** Same draft. You read it once, notice the missing date, add one line, and send. Thirty seconds.
 
-You are not being graded on the output today. L0 asks only that you finish something real, notice the gap between what you expected and what arrived, and use the right surface for it. Everything after this builds on that small loop.`,
+Three things are worth a look every time: numbers and dates, names and titles, and anything Claude could not have known about your situation.
+
+Claude drafted; you decided. Anything a customer receives, anything with a number in it, and anything that becomes a record gets read by a person first. That person is you.`,
       keyPoints: [
-        "Choose something small, real and already on your list, and check it against the boundary.",
-        "Write one sentence about what you expect before you run it.",
-        "Afterwards, write one sentence on what was better, worse, and what you changed.",
+        "A fluent draft is the easiest one to send unread. Read it like a colleague's draft.",
+        "Check numbers and dates, names and titles, and anything Claude could not have known.",
+        "Anything a customer receives or that has a number in it gets read by a person first.",
       ],
       example: {
-        title: "A meeting follow-up",
-        text: "You pick the follow-up note from Tuesday's customer meeting. Expectation: \"It will be too formal and forget to mention the timeline change we agreed.\" Result: tone was fine, and it did forget the timeline change. You add one line and send it. Done in eleven minutes.",
+        title: "Try this",
+        text: "Ask Claude to summarise your notes from your last meeting in five bullets. Read them and find one thing it missed or got slightly wrong.",
       },
       check: {
-        question: "What does L0 actually ask you to do to finish it?",
+        question: "Claude's draft of your monthly report summary reads smoothly and sounds like you. What do you do before sending it?",
         options: [
-          "Pass a quiz on Claude features",
-          "Write a perfect prompt",
-          "Finish one real task, with your expectation noted first and a short reflection after",
-          "Build a Project",
+          "Send it; it sounds right.",
+          "Ask Claude to confirm it is accurate.",
+          "Read it once for numbers, names and anything it could not have known, then fix what you find.",
+          "Run it through Claude a second time to be safe.",
         ],
         answer: 2,
-        explanation: "L0 is completion only: one real finished piece of work, with the predict-then-look loop around it.",
+        explanation: "Fluent is not the same as right. The check is your own read, especially of numbers, names and what Claude could not have known.",
       },
-      competencies: ["L0.surfaces", "L0.boundary"],
+      competencies: ["L1.discernment", "L1.diligence"],
+    },
+    {
+      slug: "l0-chat-or-project",
+      rung: 0,
+      title: "A chat or a Project",
+      promise: "You will know when a task belongs in a fresh chat and when it belongs in a Project.",
+      minutes: 3,
+      scene: "surfaces",
+      body: `Most of your work with Claude happens in a chat: ask, read, done. But if you find yourself typing the same background every time, there is a better home for it.
+
+**A chat** is for one-off work. Draft this email, summarise these notes, give me three gentler ways to say this. You bring what Claude needs, and when you are finished, you are finished.
+
+**A Project** is for work you repeat. It keeps your instructions and reference files in one place, so each time you open it you only add what changed.
+
+**Every month, in a fresh chat:** "Write the cover note for our monthly sales report. One paragraph, lead with the total, mention the top three accounts, our usual sign-off, no exclamation marks." Then you paste last month's note so it matches.
+
+**In a Project:** those rules and last month's note live in the Project. Each month you type: "Here are this month's numbers. Write the cover note."
+
+The rule of thumb: one-off means chat, repeated means Project. If you have typed the same background twice, it belongs in a Project.`,
+      keyPoints: [
+        "One-off work goes in a chat; work you repeat goes in a Project.",
+        "A Project holds the instructions and files that stay the same, so each time you add only what changed.",
+        "If you have typed the same background twice, it belongs in a Project.",
+      ],
+      example: {
+        title: "Try this",
+        text: "In a fresh chat, ask Claude for an agenda for your next team meeting. Notice what background you had to type in. That is what would live in a Project if you did this every week.",
+      },
+      check: {
+        question: "You write the same cover note for a recurring monthly report, with the same house rules each time. Where should it live?",
+        options: ["A fresh chat each time", "A Project", "A new document each time, without Claude", "An email to yourself"],
+        answer: 1,
+        explanation: "The task repeats and the background stays the same, which is exactly what a Project holds for you.",
+      },
+      competencies: ["L0.surfaces"],
     },
   ],
 }
