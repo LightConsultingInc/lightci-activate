@@ -29,7 +29,7 @@ test.describe("onboarding intake", () => {
 
   test("renders the interview stage and three turns raise scribe completeness", async ({ page }) => {
     const created = page.waitForResponse((r) => r.url().includes("/api/interviews") && r.request().method() === "POST" && r.ok())
-    await page.goto("/onboarding")
+    await page.goto("/onboarding?mode=chat")
     const flow = page.getByTestId("onboarding-flow")
     await expect(flow).toBeVisible()
     await expect(page.getByTestId("onboarding-stages")).toContainText("Consent")
@@ -64,7 +64,7 @@ test.describe("onboarding intake", () => {
   })
 
   test("voice toggle either connects or reports voice unavailable", async ({ page }) => {
-    await page.goto(`/onboarding?interview=${interviewId}`)
+    await page.goto(`/onboarding?interview=${interviewId}&mode=chat`)
     const chat = page.getByTestId("intake-chat")
     await expect(chat).toBeVisible()
     const toggle = page.getByTestId("voice-toggle")
@@ -87,11 +87,9 @@ test.describe("onboarding intake", () => {
       )
       .not.toBe("idle")
 
-    // Whatever happened, typing still works and the toggle can be switched back off.
-    if (await toggle.isEnabled()) {
-      if ((await toggle.getAttribute("aria-checked")) === "true" || (await toggle.getAttribute("data-checked")) != null) await toggle.click()
-    }
-    await expect(page.getByTestId("intake-input")).toBeEnabled()
+    // Whatever happened, "Prefer to type" brings the shared transcript and the input back.
+    if (!(await page.getByTestId("intake-input").isVisible())) await toggle.click()
+    await expect(page.getByTestId("intake-input")).toBeEnabled({ timeout: 20_000 })
   })
 
   test("finishing places the learner and offers a first exercise", async ({ page }) => {
@@ -138,5 +136,23 @@ test.describe("onboarding intake", () => {
     await page.goto("/")
     await expect(page.getByTestId("ladder-view")).toBeVisible()
     await expect(page.getByTestId("ladder-header")).toContainText(`L${r.placement!.rung} `)
+  })
+})
+
+test.describe("onboarding voice default", () => {
+  test.use({ role: "learner" })
+  test("voice is attempted first and falls back to typing when no microphone is available", async ({ page }) => {
+    await page.goto("/onboarding")
+    await expect(page.getByTestId("onboarding-flow")).toBeVisible()
+    // Voice is attempted first: the orb is the stage. If the environment has no microphone we fall back to chat.
+    const orb = page.getByTestId("voice-orb")
+    const chatInput = page.getByTestId("intake-input")
+    await expect(orb.or(chatInput)).toBeVisible({ timeout: 20_000 })
+    if (await orb.isVisible()) {
+      await expect(page.getByTestId("intake-chat").getByTestId("chat-interviewer")).toHaveCount(0)
+      await page.getByTestId("voice-toggle").click() // "Prefer to type"
+    }
+    await expect(chatInput).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId("voice-toggle")).toBeVisible()
   })
 })

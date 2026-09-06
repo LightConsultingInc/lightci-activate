@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   AudioLines,
@@ -48,7 +49,7 @@ type Msg = {
   pending?: boolean
 }
 type Mode = "voice" | "chat"
-type Fallback = { kind: "unavailable" | "media"; message: string }
+type Fallback = { kind: "unavailable" | "media" | "connection"; message: string }
 
 /** Text-mode opener when the transcript is still empty (voice mode lets the agent open itself). */
 const OPENERS: Record<InterviewView["mode"], string> = {
@@ -80,7 +81,10 @@ export function IntakeChat({
   const realtime = useRealtimeSession()
   const voiceTranscript = useVoiceTranscript(interviewId)
 
-  const [mode, setMode] = useState<Mode>("voice")
+  // `?mode=chat` starts in typing mode (used by tests and by people who know they cannot talk right now).
+  const searchParams = useSearchParams()
+  const preferChat = searchParams.get("mode") === "chat"
+  const [mode, setMode] = useState<Mode>(preferChat ? "chat" : "voice")
   const [fallback, setFallback] = useState<Fallback | null>(null)
   const [switching, setSwitching] = useState(false)
   const [draft, setDraft] = useState("")
@@ -153,10 +157,28 @@ export function IntakeChat({
 
   // Voice by default, as soon as the interview is loaded and still open.
   useEffect(() => {
-    if (!q.data || q.data.status !== "active" || autoStarted.current) return
+    if (!q.data || q.data.status !== "active" || autoStarted.current || preferChat) return
     autoStarted.current = true
     void connectVoice()
-  }, [q.data, connectVoice])
+  }, [q.data, connectVoice, preferChat])
+
+  // A connection that never reaches "listening" (or drops) falls back to typing with a note, so
+  // nobody is stuck watching an orb. "Switch to voice" retries.
+  useEffect(() => {
+    if (mode !== "voice") return
+    if (voice.status === "error") {
+      setFallback({ kind: "connection", message: voice.error?.message ?? "The voice connection dropped." })
+      setMode("chat")
+      return
+    }
+    if (voice.status !== "connecting") return
+    const t = setTimeout(() => {
+      void stopSession()
+      setFallback({ kind: "connection", message: "Voice took too long to connect." })
+      setMode("chat")
+    }, 12_000)
+    return () => clearTimeout(t)
+  }, [mode, voice.status, voice.error, stopSession])
 
   const localTurns = useMemo(
     () => voice.turns.slice(voice.acked),
