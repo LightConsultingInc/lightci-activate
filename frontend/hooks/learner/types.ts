@@ -280,4 +280,8 @@ export type InterviewComplete = {
   exercises: ExerciseSummary[]
 }
 
-export type RealtimeSession = { clientSecret: string; model: string; expiresAt: string; instructions: string }
+/** POST /api/realtime/session. `finishTool` names the function the voice agent calls to end the call (defaults to `finish_interview`). */
+export type RealtimeSession = { clientSecret: string; model: string; expiresAt: string; instructions: string; finishTool?: string }
+
+/** One spoken turn for POST /api/interviews/:id/voice-transcript. */
+export type VoiceTranscriptTurn = { role: "user" | "interviewer"; content: string }

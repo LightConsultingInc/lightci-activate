@@ -71,8 +71,8 @@ export function OnboardingFlow(p: Props) {
             <h1 className="mt-1 font-display text-3xl font-medium md:text-4xl">{p.mode === "intake" ? "A short conversation about your work" : p.mode === "workflow" ? "Map the workflow" : "Inventory the team's workflows"}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               {p.mode === "intake"
-                ? "The Interviewer asks; the scribe on the right writes down your role, your weekly workflows and how you use Claude today. When it has enough, it places you on the ladder and queues your first exercise."
-                : "The scribe fills the workflow schema as you talk. A checker flags anything that doesn't add up, and your champion verifies the final map."}
+                ? "Talk it through, or type if you'd rather. The Interviewer asks; the scribe on the right writes down your role, your weekly workflows and how you use Claude today. When it has enough, it ends the conversation, places you on the ladder and queues your first exercise."
+                : "Talk it through, or type if you'd rather. The scribe fills the workflow schema as you go. A checker flags anything that doesn't add up, and your champion verifies the final map."}
             </p>
           </div>
           {create.isError ? (

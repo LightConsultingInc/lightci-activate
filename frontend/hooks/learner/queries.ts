@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { api, ApiError } from "@/lib/api"
 import type {
   Artifact, Baseline, ExerciseDetail, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
-  Measurement, MySkills, RealtimeSession, RevisitAnswer, SkillDetail, SubmitResult, WorkflowDetail, WorkflowSchema, WorkflowSummary,
+  Measurement, MySkills, RealtimeSession, RevisitAnswer, SkillDetail, SubmitResult, VoiceTranscriptTurn, WorkflowDetail, WorkflowSchema, WorkflowSummary,
 } from "./types"
 
 export const keys = {
@@ -193,10 +193,14 @@ export function useInterviewTurn(id: string | null) {
   })
 }
 
+/**
+ * Voice path: append spoken turns; the server re-runs scribe + checker and returns the updated view.
+ * `nextQuestion` in this response is not meaningful (the Realtime agent asks its own questions).
+ */
 export function useVoiceTranscript(id: string | null) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (turns: { role: "user" | "interviewer"; content: string }[]) => api.post<InterviewView>(`/api/interviews/${id}/voice-transcript`, { turns }),
+    mutationFn: (turns: VoiceTranscriptTurn[]) => api.post<InterviewView>(`/api/interviews/${id}/voice-transcript`, { turns }),
     onSuccess: (data) => qc.setQueryData(keys.interview(id ?? "none"), data),
   })
 }
@@ -214,6 +218,7 @@ export function useCompleteInterview(id: string | null) {
   })
 }
 
+/** Mint an ephemeral Realtime client secret. 501 means voice is not configured for this workspace. */
 export function useRealtimeSession() {
   return useMutation({ mutationFn: (interviewId: string) => api.post<RealtimeSession>("/api/realtime/session", { interviewId }) })
 }

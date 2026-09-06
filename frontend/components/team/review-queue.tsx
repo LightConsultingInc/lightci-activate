@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useMemo } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowUpRight, ClipboardCheck, GitPullRequest } from "lucide-react"
@@ -26,12 +26,11 @@ export function ReviewQueue() {
   const queue = q.data?.reviewQueue
   const items = useMemo(() => queue ?? [], [queue])
   const selectedId = sp.get("submission")
-  // Remember items we have shown so a just-graded submission stays on screen after it leaves the queue.
-  const seen = useRef(new Map<string, ReviewItem>())
-  items.forEach((i) => seen.current.set(i.submission.id, i))
+  // A just-graded submission leaves the queue on refetch; pin it so the grade panel stays on screen.
+  const [pinned, setPinned] = useState<ReviewItem | null>(null)
   const selected = useMemo(
-    () => items.find((i) => i.submission.id === selectedId) ?? (selectedId ? seen.current.get(selectedId) : undefined) ?? items[0] ?? null,
-    [items, selectedId],
+    () => items.find((i) => i.submission.id === selectedId) ?? (pinned && pinned.submission.id === selectedId ? pinned : null) ?? items[0] ?? null,
+    [items, selectedId, pinned],
   )
   const promos = q.data?.promotionQueue.length ?? 0
 
@@ -63,14 +62,14 @@ export function ReviewQueue() {
               </li>
             ))}
           </ul>
-          {selected && <ReviewPane key={selected.submission.id} item={selected} />}
+          {selected && <ReviewPane key={selected.submission.id} item={selected} onGraded={() => setPinned(selected)} />}
         </div>
       )}
     </>
   )
 }
 
-function ReviewPane({ item }: { item: ReviewItem }) {
+function ReviewPane({ item, onGraded }: { item: ReviewItem; onGraded?: () => void }) {
   const { submission: s, exercise: e, person } = item
   return (
     <div className="space-y-4" data-testid="review-pane">
@@ -100,7 +99,7 @@ function ReviewPane({ item }: { item: ReviewItem }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {s.grade ? <GradeCard grade={s.grade} title="Grader's draft (reference)" compact /> : <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">The Grader has not drafted a rubric for this submission.</div>}
-        <RubricScorer submissionId={s.id} draft={s.grade} />
+        <RubricScorer submissionId={s.id} draft={s.grade} onGraded={onGraded} />
       </div>
     </div>
   )
