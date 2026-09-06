@@ -41,6 +41,7 @@ import type {
   VoiceTranscriptTurn,
 } from "@/hooks/learner/types"
 import { VoiceOrb, type OrbState } from "./voice-orb"
+import { PlacingStep } from "./placing-step"
 
 type Msg = {
   role: "interviewer" | "user"
@@ -91,6 +92,9 @@ export function IntakeChat({
 
   const [mode, setMode] = useState<Mode>(initialMode)
   const [fallback, setFallback] = useState<Fallback | null>(null)
+  /** Once the interview ends we stay on the placing screen until /complete succeeds (retry on failure). */
+  const [phase, setPhase] = useState<"interview" | "placing">("interview")
+  const [placeError, setPlaceError] = useState<unknown>(null)
   const [switching, setSwitching] = useState(false)
   const [draft, setDraft] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -112,6 +116,15 @@ export function IntakeChat({
     (turns: VoiceTranscriptTurn[]) => postTranscript(turns),
     [postTranscript]
   )
+  const runPlacement = useCallback(async () => {
+    setPlaceError(null)
+    try {
+      onCompleteRef.current(await completeAsync())
+    } catch (e) {
+      setPlaceError(e)
+    }
+  }, [completeAsync])
+
   const onFinish = useCallback(
     async (reason: FinishReason) => {
       const spoken =
@@ -122,14 +135,10 @@ export function IntakeChat({
         setMode("chat")
         return
       }
-      try {
-        onCompleteRef.current(await completeAsync())
-      } catch {
-        // Toasted by the mutation; let the person finish from chat.
-        setMode("chat")
-      }
+      setPhase("placing")
+      await runPlacement()
     },
-    [qc, interviewId, completeAsync]
+    [qc, interviewId, runPlacement]
   )
 
   const voice = useVoiceSession({ getSession, postTurns, onFinish })
@@ -229,9 +238,10 @@ export function IntakeChat({
   }
 
   const finishFromChat = async () => {
+    setPhase("placing")
     await stopSession()
     await flushVoice()
-    complete.mutate(undefined, { onSuccess: (r) => onCompleteRef.current(r) })
+    await runPlacement()
   }
 
   if (q.isPending)
@@ -250,10 +260,18 @@ export function IntakeChat({
       />
     )
   const iv = q.data
+  if (phase === "placing")
+    return (
+      <PlacingStep
+        mode={iv.mode}
+        scribe={iv.scribe}
+        error={placeError}
+        retry={() => void runPlacement()}
+      />
+    )
   const readyToFinish = iv.completeness >= 0.85 || iv.turnCount >= 14
   const inVoice = mode === "voice" && iv.status === "active"
   const live = voice.status === "listening" || voice.status === "speaking"
-  const placing = complete.isPending
   const orbState: OrbState =
     voice.status === "connecting"
       ? "connecting"
@@ -271,9 +289,7 @@ export function IntakeChat({
     inVoice && voice.status === "connecting"
       ? "Connecting…"
       : inVoice && live
-        ? voice.finishing
-          ? "Voice live · wrapping up"
-          : "Voice live"
+        ? "Voice live"
         : inVoice && voice.status === "ended"
           ? "Call ended"
           : inVoice && voice.status === "error"
@@ -319,12 +335,7 @@ export function IntakeChat({
               variant={inVoice ? "ghost" : "outline"}
               size="sm"
               onClick={() => (inVoice ? void toChat() : startVoice())}
-              disabled={
-                switching ||
-                placing ||
-                voice.finishing ||
-                iv.status !== "active"
-              }
+              disabled={switching || iv.status !== "active"}
               aria-pressed={inVoice}
               data-checked={inVoice ? "" : undefined}
               data-testid="voice-toggle"
@@ -370,38 +381,30 @@ export function IntakeChat({
             <div className="relative flex h-full flex-col items-center px-6 pt-8 pb-6">
               <VoiceOrb state={orbState} userSpeaking={voice.userSpeaking} />
               <p className="mt-4 eyebrow text-paper/60">
-                {placing
-                  ? "Placing you…"
-                  : voice.finishing
-                    ? "Wrapping up"
-                    : voice.status === "connecting"
-                      ? "Connecting to the interviewer"
-                      : voice.status === "error"
-                        ? "Voice was interrupted"
-                        : voice.status === "ended"
-                          ? "Call ended"
-                          : voice.muted
-                            ? "Muted"
-                            : voice.status === "speaking"
-                              ? "The interviewer is speaking"
-                              : voice.userSpeaking
-                                ? "Hearing you"
-                                : "Listening"}
+                {voice.status === "connecting"
+                  ? "Connecting to the interviewer"
+                  : voice.status === "error"
+                    ? "Voice was interrupted"
+                    : voice.status === "ended"
+                      ? "Call ended"
+                      : voice.muted
+                        ? "Muted"
+                        : voice.status === "speaking"
+                          ? "The interviewer is speaking"
+                          : voice.userSpeaking
+                            ? "Hearing you"
+                            : "Listening"}
               </p>
               <p className="mt-1 text-xs text-paper/60">
-                {placing
-                  ? "Reading the transcript and choosing your first exercise."
-                  : voice.finishing
-                    ? "The interviewer is saying goodbye; your placement follows."
-                    : voice.status === "connecting"
-                      ? "Allow the microphone if your browser asks."
-                      : voice.status === "error"
-                        ? (voice.error?.message ?? "The connection dropped.")
-                        : voice.status === "ended"
-                          ? "Thanks for talking it through."
-                          : voice.muted
-                            ? "Unmute when you're ready to continue."
-                            : "Speak naturally; the scribe on the right writes as you go."}
+                {voice.status === "connecting"
+                  ? "Allow the microphone if your browser asks."
+                  : voice.status === "error"
+                    ? (voice.error?.message ?? "The connection dropped.")
+                    : voice.status === "ended"
+                      ? "Thanks for talking it through."
+                      : voice.muted
+                        ? "Unmute when you're ready to continue."
+                        : "Speak naturally; the scribe on the right writes as you go."}
               </p>
 
               {/* One live caption: the sentence being spoken now (deltas appended), kept until the next response. */}
@@ -462,7 +465,6 @@ export function IntakeChat({
                       aria-label={
                         voice.muted ? "Unmute microphone" : "Mute microphone"
                       }
-                      disabled={voice.finishing}
                       data-testid="voice-mute"
                     >
                       {voice.muted ? <MicOff /> : <Mic />}
@@ -474,7 +476,6 @@ export function IntakeChat({
                       onClick={() => void voice.endCall()}
                       aria-label="End call and finish the interview"
                       title="End call"
-                      disabled={voice.finishing}
                       data-testid="voice-end"
                     >
                       <PhoneOff />
@@ -562,7 +563,7 @@ export function IntakeChat({
                 }}
                 placeholder="Type your answer. Enter to send, Shift+Enter for a new line."
                 className="max-h-40 min-h-11"
-                disabled={turn.isPending || placing || iv.status !== "active"}
+                disabled={turn.isPending || iv.status !== "active"}
                 data-testid="intake-input"
               />
               <Button
@@ -588,26 +589,20 @@ export function IntakeChat({
                 size="sm"
                 onClick={() => void finishFromChat()}
                 disabled={
-                  placing ||
-                  turn.isPending ||
-                  iv.turnCount === 0 ||
-                  iv.status !== "active"
+                  turn.isPending || iv.turnCount === 0 || iv.status !== "active"
                 }
                 data-testid="complete-button"
               >
-                <CheckCircle2 data-icon="inline-start" />{" "}
-                {placing ? "Placing you…" : "Finish interview"}
+                <CheckCircle2 data-icon="inline-start" /> Finish interview
               </Button>
             </div>
           </footer>
         )}
         {inVoice && (
           <footer className="border-t px-4 py-2 text-[11px] text-muted-foreground">
-            {voice.finishing || placing
-              ? "Hold on; the interviewer is closing the conversation."
-              : readyToFinish
-                ? "The interviewer has enough to place you and will wrap up shortly."
-                : "The interviewer ends the call when it has what it needs. Hang up any time with the red button."}
+            {readyToFinish
+              ? "The interviewer has enough to place you and will wrap up shortly."
+              : "The interviewer ends the call when it has what it needs. Hang up any time with the red button."}
           </footer>
         )}
       </section>

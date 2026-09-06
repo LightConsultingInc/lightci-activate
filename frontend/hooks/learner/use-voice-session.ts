@@ -23,12 +23,10 @@ type Options = {
   getSession: () => Promise<RealtimeSession>
   /** Persists spoken turns (POST /interviews/:id/voice-transcript). Rejections are retried on the next flush. */
   postTurns: (turns: VoiceTranscriptTurn[]) => Promise<unknown>
-  /** Runs after the goodbye has played and the transcript is flushed; the caller completes the interview. */
+  /** Runs once the call is closed and the transcript flushed; the caller completes the interview. */
   onFinish: (reason: FinishReason) => Promise<void> | void
   /** At most one transcript request per this many ms while live. */
   throttleMs?: number
-  /** Longest we wait for the agent's goodbye after `finish_interview`. */
-  goodbyeMs?: number
 }
 
 type RealtimeEvent = {
@@ -37,34 +35,13 @@ type RealtimeEvent = {
   delta?: string
   name?: string
   call_id?: string
-  arguments?: string
   response_id?: string
   item?: { type?: string; name?: string; call_id?: string }
-  response?: { id?: string }
   error?: { message?: string }
-}
-
-type FinishState = {
-  active: boolean
-  callResponseId: string | null
-  spoke: boolean
-  /** Goodbye text is complete (or there was none); only its audio may still be playing. */
-  awaitingAudioStop: boolean
-  maxTimer: ReturnType<typeof setTimeout> | null
-  audioTimer: ReturnType<typeof setTimeout> | null
 }
 
 const REALTIME_CALLS_URL = "https://api.openai.com/v1/realtime/calls"
 const DEFAULT_FINISH_TOOL = "finish_interview"
-
-const freshFinish = (): FinishState => ({
-  active: false,
-  callResponseId: null,
-  spoke: false,
-  awaitingAudioStop: false,
-  maxTimer: null,
-  audioTimer: null,
-})
 
 function mediaErrorMessage(e: unknown) {
   const name = e instanceof Error ? e.name : ""
@@ -89,15 +66,15 @@ function mediaErrorMessage(e: unknown) {
  * `postTurns` at most once per `throttleMs`, on `flush()`, and before finishing. Only unsent
  * turns are sent (index tracked); `acked` marks how many the server has confirmed.
  *
- * Ending: when the agent calls the `finish_interview` tool we answer `{"ok":true}` and ask for a
- * response so it can say goodbye, wait for that goodbye (or `goodbyeMs`), flush, close, then `onFinish`.
+ * Ending: the agent says its closing line and then calls `finish_interview`. The moment that call
+ * arrives we cut the call (audio muted and stopped, channel and connection closed, mic released),
+ * flush the transcript and hand off to `onFinish`, which completes the interview.
  */
 export function useVoiceSession({
   getSession,
   postTurns,
   onFinish,
   throttleMs = 4_000,
-  goodbyeMs = 6_000,
 }: Options) {
   const [status, setStatus] = useState<VoiceStatus>("idle")
   const [error, setError] = useState<VoiceError | null>(null)
@@ -107,15 +84,14 @@ export function useVoiceSession({
   const [caption, setCaption] = useState("")
   /** The person's last transcribed utterance. */
   const [lastUserUtterance, setLastUserUtterance] = useState("")
-  const captionResponse = useRef<string | null>(null)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
   const [acked, setAcked] = useState(0)
-  const [finishing, setFinishing] = useState(false)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const dcRef = useRef<RTCDataChannel | null>(null)
   const micRef = useRef<MediaStream | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const captionResponse = useRef<string | null>(null)
 
   const turnsRef = useRef<VoiceTurn[]>([])
   const sentRef = useRef(0)
@@ -125,11 +101,9 @@ export function useVoiceSession({
 
   const closingRef = useRef(false)
   const finalizedRef = useRef(false)
-  const speakingRef = useRef(false)
   const startSeq = useRef(0)
   const finishToolRef = useRef(DEFAULT_FINISH_TOOL)
   const handledCalls = useRef(new Set<string>())
-  const fin = useRef<FinishState>(freshFinish())
 
   const opts = useRef({ getSession, postTurns, onFinish })
   useEffect(() => {
@@ -186,65 +160,44 @@ export function useVoiceSession({
   )
 
   // ─────────────────────────── connection lifecycle ───────────────────────────
-  const clearFinishTimers = () => {
-    if (fin.current.maxTimer) clearTimeout(fin.current.maxTimer)
-    if (fin.current.audioTimer) clearTimeout(fin.current.audioTimer)
-    fin.current.maxTimer = null
-    fin.current.audioTimer = null
-  }
-
+  /** Cut everything synchronously: silence and drop the remote audio, close channel + connection, release the mic. */
   const teardown = useCallback(() => {
     closingRef.current = true
-    clearFinishTimers()
-    fin.current = freshFinish()
-    dcRef.current?.close()
-    pcRef.current?.getSenders().forEach((s) => s.track?.stop())
-    pcRef.current?.close()
-    micRef.current?.getTracks().forEach((t) => t.stop())
     if (audioRef.current) {
+      audioRef.current.muted = true
+      audioRef.current.pause()
       audioRef.current.srcObject = null
       audioRef.current.remove()
     }
+    dcRef.current?.close()
+    pcRef.current?.getReceivers().forEach((r) => r.track?.stop())
+    pcRef.current?.getSenders().forEach((s) => s.track?.stop())
+    pcRef.current?.close()
+    micRef.current?.getTracks().forEach((t) => t.stop())
     dcRef.current = null
     pcRef.current = null
     micRef.current = null
     audioRef.current = null
-    speakingRef.current = false
     captionResponse.current = null
     setUserSpeaking(false)
     setMuted(false)
   }, [])
 
-  const send = (msg: unknown) => {
-    const dc = dcRef.current
-    if (dc && dc.readyState === "open") dc.send(JSON.stringify(msg))
-  }
-
-  /** Flush → close → `ended` → hand off to the caller (which completes the interview). */
+  /** Close → `ended` → flush → hand off to the caller (which completes the interview). */
   const finalize = useCallback(
     async (reason: FinishReason) => {
       if (finalizedRef.current) return
       finalizedRef.current = true
-      clearFinishTimers()
-      setFinishing(true)
-      await flush()
       teardown()
       setStatus("ended")
-      try {
-        await opts.current.onFinish(reason)
-      } finally {
-        setFinishing(false)
-      }
+      await flush()
+      await opts.current.onFinish(reason)
     },
     [flush, teardown]
   )
 
   const onFunctionCall = useCallback(
-    (
-      name: string | undefined,
-      callId: string | undefined,
-      responseId: string | undefined
-    ) => {
+    (name: string | undefined, callId: string | undefined) => {
       if (
         name !== finishToolRef.current ||
         !callId ||
@@ -252,39 +205,11 @@ export function useVoiceSession({
       )
         return
       handledCalls.current.add(callId)
-      // Acknowledge the tool so the agent can say goodbye, then wait for that goodbye (bounded).
-      send({
-        type: "conversation.item.create",
-        item: {
-          type: "function_call_output",
-          call_id: callId,
-          output: JSON.stringify({ ok: true }),
-        },
-      })
-      send({ type: "response.create" })
-      fin.current = {
-        ...freshFinish(),
-        active: true,
-        callResponseId: responseId ?? null,
-      }
-      fin.current.maxTimer = setTimeout(() => void finalize("agent"), goodbyeMs)
-      setFinishing(true)
-    },
-    [finalize, goodbyeMs]
-  )
-
-  /** Once the goodbye text is done (or there was none), let its audio finish, then finalize. */
-  const finishAfterAudio = useCallback(() => {
-    const f = fin.current
-    if (!f.active) return
-    if (!speakingRef.current) {
+      // The agent has already said its closing line; cut the call now.
       void finalize("agent")
-      return
-    }
-    f.awaitingAudioStop = true
-    if (!f.audioTimer)
-      f.audioTimer = setTimeout(() => void finalize("agent"), 4_000)
-  }, [finalize])
+    },
+    [finalize]
+  )
 
   const handleEvent = useCallback(
     (raw: string) => {
@@ -294,7 +219,7 @@ export function useVoiceSession({
       } catch {
         return
       }
-      const f = fin.current
+      if (closingRef.current) return
       switch (ev.type) {
         case "input_audio_buffer.speech_started":
           // The person talking over the agent interrupts it (server VAD clears the output buffer).
@@ -305,20 +230,16 @@ export function useVoiceSession({
           setUserSpeaking(false)
           break
         case "output_audio_buffer.started":
-          speakingRef.current = true
           setStatus((s) =>
             s === "listening" || s === "speaking" ? "speaking" : s
           )
           break
         case "output_audio_buffer.stopped":
         case "output_audio_buffer.cleared":
-          speakingRef.current = false
           setStatus((s) => (s === "speaking" ? "listening" : s))
-          if (f.active && f.awaitingAudioStop) void finalize("agent")
           break
         case "response.output_audio_transcript.delta":
         case "response.audio_transcript.delta":
-          if (f.active) f.spoke = true
           setStatus((s) => (s === "listening" ? "speaking" : s))
           if (captionResponse.current !== (ev.response_id ?? null)) {
             // A new response: replace the previous sentence rather than appending to it.
@@ -342,25 +263,14 @@ export function useVoiceSession({
             captionResponse.current = ev.response_id ?? captionResponse.current
             pushTurn("interviewer", content)
           }
-          if (f.active) finishAfterAudio()
           break
         }
         case "response.function_call_arguments.done":
-          onFunctionCall(ev.name, ev.call_id, ev.response_id)
+          onFunctionCall(ev.name, ev.call_id)
           break
         case "response.output_item.done":
           if (ev.item?.type === "function_call")
-            onFunctionCall(ev.item.name, ev.item.call_id, ev.response_id)
-          break
-        case "response.done":
-          // The goodbye response finished. If the agent had nothing more to say, don't wait for it.
-          if (
-            f.active &&
-            ev.response?.id &&
-            ev.response.id !== f.callResponseId &&
-            !f.spoke
-          )
-            finishAfterAudio()
+            onFunctionCall(ev.item.name, ev.item.call_id)
           break
         case "error":
           // Realtime `error` events are usually recoverable (e.g. an overlapping response); keep the call up.
@@ -368,7 +278,7 @@ export function useVoiceSession({
           break
       }
     },
-    [finalize, finishAfterAudio, onFunctionCall, pushTurn]
+    [onFunctionCall, pushTurn]
   )
 
   const start = useCallback(async (): Promise<StartResult> => {
@@ -378,7 +288,6 @@ export function useVoiceSession({
     finalizedRef.current = false
     handledCalls.current.clear()
     setError(null)
-    setFinishing(false)
     setCaption("")
     setLastUserUtterance("")
     setStatus("connecting")
@@ -510,12 +419,11 @@ export function useVoiceSession({
   const stop = useCallback(async () => {
     startSeq.current++
     teardown()
-    setFinishing(false)
     setStatus("idle")
     await flush()
   }, [flush, teardown])
 
-  /** The person hung up: flush, close and hand off (the caller decides whether to complete). */
+  /** The person hung up: cut, flush and hand off (the caller decides whether to complete). */
   const endCall = useCallback(() => finalize("user"), [finalize])
 
   const toggleMute = useCallback(() => {
@@ -544,7 +452,6 @@ export function useVoiceSession({
     lastUserUtterance,
     turns,
     acked,
-    finishing,
     start,
     stop,
     endCall,
