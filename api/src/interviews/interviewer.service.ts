@@ -97,6 +97,8 @@ export class InterviewerService {
     @InjectRepository(Person) private readonly people: Repository<Person>,
     @InjectRepository(Exercise)
     private readonly exercises: Repository<Exercise>,
+    @InjectRepository(Baseline)
+    private readonly baselines: Repository<Baseline>,
     @InjectRepository(Team) private readonly teams: Repository<Team>,
     private readonly ai: AiService,
     private readonly coach: CoachService,
