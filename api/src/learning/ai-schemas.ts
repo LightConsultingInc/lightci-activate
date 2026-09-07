@@ -57,18 +57,16 @@ export const NextExerciseSchema = z.object({
     .string()
     .nullable()
     .describe(
-      'project surface: a Project instructions skeleton for this workflow. Null otherwise.',
+      'Always null: the learner writes the Project instructions themselves.',
     ),
   prefillFiles: z
     .array(z.object({ name: z.string(), content: z.string() }))
-    .describe(
-      'project surface: 1–2 short example files the Project would hold (templates, SOP excerpts) with placeholders. Empty otherwise.',
-    ),
+    .describe('Always empty: the learner adds the Project files themselves.'),
   prefillTestTask: z
     .string()
     .nullable()
     .describe(
-      'project surface: the one test task Run will send to the Project ("Draft the brief for next Monday\'s [client] meeting from the notes below."). Null otherwise.',
+      'project surface: the one message a teammate would type inside this Project to test it, concrete and complete, about a plainly made-up account (no real names, no brackets). Null for other surfaces.',
     ),
   prefillSkillMd: z
     .string()

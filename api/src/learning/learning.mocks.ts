@@ -49,7 +49,8 @@ function mockFirstTaskGrade(
   artifact: string,
 ): SubmissionGradeOutput {
   const usable = artifact.trim().length > 120;
-  const invented = /\$\d|\b\d{6,}\b/.test(artifact) && !/\[/.test(artifact);
+  const invented =
+    /\$\d|\b\d{6,}\b/.test(artifact) && !/stand-in/i.test(artifact);
   const scores: Record<string, number> = {
     'first.finished': usable ? 0.9 : 0.5,
     'first.own_facts': invented ? 0.4 : 0.9,
@@ -72,7 +73,7 @@ function mockFirstTaskGrade(
       : 'You made a start on real work rather than a demo.',
     change: usable
       ? invented
-        ? 'One figure crept in that you never supplied; swap it for a placeholder.'
+        ? 'One figure crept in that you never supplied; say it is a stand-in or take it out.'
         : 'Nothing major; the draft is usable as it is.'
       : 'Finish the run: paste the real inputs (or pull them through a connector) and ask for the whole thing.',
     tryNext: usable
@@ -243,9 +244,7 @@ registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
     title: `${MOCK_TITLES[surface] ?? 'Do'} ${task} for one case`.slice(0, 60),
     brief: asks[surface] ?? asks.prompt,
     workflowName: wfName,
-    prefillPrompt: isPrompt
-      ? `Help me with ${task}. Who reads it: [reader]. What I need back: [shape, length, tone]. Work from the material below; put [placeholders] where something is missing.\n\n${system ? `[Using the ${system} connector, pull this week's inputs; if you don't have it, paste them here.]` : '[Paste your inputs here.]'}`
-      : null,
+    prefillPrompt: null,
     prefillMaterial: null,
     prefillInstructions:
       surface === 'project'
@@ -309,7 +308,7 @@ registerMockResponder('coach.run.prompt#text', (call) => {
     ),
   );
   return {
-    text: `${pulled ? `Pulled 3 records from ${pulled} (sample records standing in for ${pulled}).\n\n` : ''}Here is a first draft for: "${prompt.slice(0, 160)}".${material ? ` I used the ${material.split(/\s+/).length}-word material you attached.` : ' Figures and names are placeholders because none were given.'}\n\n1. Purpose: [the goal in one line]\n2. Reader: [who this is for]\n3. Draft:\n   - Opening line with the outcome.\n   - Two supporting points with placeholders such as [client name] and [figure].\n   - A closing line with the next action.`,
+    text: `${pulled ? `Pulled 3 records from ${pulled} (sample records standing in for ${pulled}).\n\n` : ''}Here is a first draft for: "${prompt.slice(0, 160)}".${material ? ` I used the ${material.split(/\s+/).length}-word material you attached.` : ' A few details are stand-ins because none were given.'}\n\nSubject: the outcome, in one line\n\nOpening line with the outcome. Two supporting points drawn from what you gave, with a stand-in name (Dana Whitfield) and a stand-in figure (about 12 percent) where none were supplied. A closing line with the next action.\n\nStand-ins: the client name, the percentage.`,
   };
 });
 
@@ -321,13 +320,14 @@ registerMockResponder('coach.run.project#text', (call) => {
   }>(call);
   const task = (s.testTask ?? '').trim();
   const files = s.files ?? [];
+  const connectors = (s as { connectors?: string[] }).connectors ?? [];
   const rules = (s.instructions ?? '')
     .split(/[.\n]/)
     .map((x) => x.trim())
     .filter(Boolean)
     .slice(0, 2);
   return {
-    text: `Following the Project instructions${rules.length ? ` (${rules.join('; ')})` : ''}${files.length ? ` and ${files.length} file${files.length === 1 ? '' : 's'} (${files.join(', ')})` : ''}, here is the result for: "${task.slice(0, 140)}".\n\n## Summary\n[one-paragraph answer in the shape the instructions ask for]\n\n## Details\n- [point drawn from ${files[0] ?? 'the instructions'}]\n- [point with a [placeholder] where the inputs were missing]\n\n## Next steps\n- [action for the reader]`,
+    text: `Following the Project instructions${rules.length ? ` (${rules.join('; ')})` : ''}${files.length ? ` and ${files.length} file${files.length === 1 ? '' : 's'} (${files.join(', ')})` : ''}${connectors.length ? `, reading ${connectors[0]} (sample records standing in for ${connectors[0]})` : ''}, here is the result for: "${task.slice(0, 140)}".\n\n## Summary\nA one-paragraph answer in the shape the instructions ask for, using the template from ${files[0] ?? 'the instructions'}.\n\n## Details\n- A point drawn from ${files[0] ?? 'the instructions'}.\n- A point with a stand-in figure (about 40k) where the inputs were missing.\n\n## Next steps\n- One action for the reader.\n\nStand-ins: the figure.`,
   };
 });
 
@@ -364,8 +364,8 @@ registerMockResponder('coach.run.skill', (call): SkillRunOutput => {
         ? 'The request does not match the situation the trigger line names.'
         : 'The trigger line is still a template; nothing in it matches this request.',
     output: fired
-      ? `(skill fired) Following the skill's steps for: "${request.slice(0, 120)}".\n\n[Output in the skill's format, with [placeholders] for anything client-specific.]\nHanded to the named reviewer before anything leaves.`
-      : `(skill did not fire) Plain answer for: "${request.slice(0, 120)}".\n\n[A generic draft; nothing from the skill was applied.]`,
+      ? `(skill fired) Following the skill's steps for: "${request.slice(0, 120)}".\n\nOutput in the skill's format, with a stand-in name (Harbor Trust) for anything client-specific.\nHanded to the named reviewer before anything leaves.\n\nStand-ins: the client name.`
+      : `(skill did not fire) Plain answer for: "${request.slice(0, 120)}".\n\nA generic draft; nothing from the skill was applied.`,
   };
 });
 

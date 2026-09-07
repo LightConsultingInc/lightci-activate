@@ -70,6 +70,23 @@ const SURFACE_FOR_RUNG: Record<number, WorkSurface> = {
  * the learner's own context with a pre-filled input area, runs Claude per kind when the learner presses
  * Run, reveals hints one at a time, and handles skips with notes and escalation. Everything is in_app.
  */
+/** Connector names from a run body: strings, trimmed, at most 12. */
+function connectorsOf(body: Record<string, unknown>): string[] {
+  return Array.isArray(body.connectors)
+    ? (body.connectors as unknown[])
+        .map((c) => (typeof c === 'string' ? c.trim() : ''))
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+}
+
+/** The system-prompt block that makes switched-on connectors "work" in practice, or explains their absence. */
+function connectorBlockFor(connectors: string[]): string {
+  return connectors.length
+    ? `# Connected tools in this practice\nSwitched on for this chat: ${connectors.join(', ')}.\n${CONNECTOR_SIMULATION_RULES}`
+    : `# Connected tools in this practice\nNone are switched on. If the prompt asks you to pull from a tool, say in one plain sentence that it is not connected here and how to connect it in Claude (Settings › Connectors › Connect), then do the task with labelled stand-ins.`;
+}
+
 @Injectable()
 export class CoachService {
   private readonly logger = new Logger(CoachService.name);
@@ -566,10 +583,9 @@ export class CoachService {
           ...base,
           kind,
           prefill: {
-            instructions: out.prefillInstructions?.trim() || fb.instructions,
-            files: (out.prefillFiles ?? [])
-              .filter((f) => f.name?.trim())
-              .slice(0, 2),
+            // Nothing pre-written: the learner sets the instructions and files themselves.
+            instructions: '',
+            files: [],
             testTask: out.prefillTestTask?.trim() || fb.testTask,
           },
         };
@@ -779,15 +795,8 @@ export class CoachService {
       if (!prompt)
         throw new BadRequestException('prompt is required for this practice.');
       const material = str(body.material);
-      const connectors = Array.isArray(body.connectors)
-        ? (body.connectors as unknown[])
-            .map((c) => str(c))
-            .filter(Boolean)
-            .slice(0, 12)
-        : [];
-      const connectorBlock = connectors.length
-        ? `# Connected tools in this practice\nSwitched on for this chat: ${connectors.join(', ')}.\n${CONNECTOR_SIMULATION_RULES}`
-        : `# Connected tools in this practice\nNone are switched on. If the prompt asks you to pull from a tool, say in one plain sentence that it is not connected here and how to connect it in Claude (Settings › Connectors › Connect), then do the task with [slots].`;
+      const connectors = connectorsOf(body);
+      const connectorBlock = connectorBlockFor(connectors);
       const { text, runId } = await this.ai.text({
         ...common,
         task: 'coach.run.prompt',
@@ -807,6 +816,8 @@ export class CoachService {
     } else if (kind === 'project') {
       const instructions = str(body.instructions);
       const testTask = str(body.testTask);
+      const name = str(body.name);
+      const connectors = connectorsOf(body);
       const files = Array.isArray(body.files)
         ? (body.files as unknown[]).filter(
             (f): f is { name: string; content: string } =>
@@ -824,8 +835,10 @@ export class CoachService {
           'testTask is required for this practice.',
         );
       const projectBlock = [
+        `# Project${name ? `: ${name}` : ''}\nYou are answering inside this Project. Its instructions are standing rules, its files are reference material, the user message is the task.`,
         `# Project instructions\n${instructions}`,
         ...files.map((f) => `# Project file: ${f.name}\n${f.content ?? ''}`),
+        connectorBlockFor(connectors),
       ].join('\n\n');
       const { text, runId } = await this.ai.text({
         ...common,
@@ -836,11 +849,19 @@ export class CoachService {
           instructions,
           files: files.map((f) => f.name),
           testTask,
+          connectors,
           exerciseId: exercise.id,
         },
       });
       result = { kind, output: text, model, runId };
-      summary = { instructions, files, testTask, output: text };
+      summary = {
+        name,
+        instructions,
+        files,
+        testTask,
+        connectors,
+        output: text,
+      };
     } else if (kind === 'skill') {
       const skillMd = str(body.skillMd);
       const requests = Array.isArray(body.sampleRequests)

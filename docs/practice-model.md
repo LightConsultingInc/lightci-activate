@@ -19,7 +19,7 @@ Nothing else. No prediction note, no self-check list, no confidence slider, no w
 |---|---|---|---|
 | L0 Orientation | "Try one real thing: write what you'd ask Claude for *workflow*." | prompt textarea, starter text pre-filled from their workflow | runs the prompt, shows the output |
 | L1 Conversational | "For *workflow*, write the prompt." (variants: "Make this draft shorter for a customer", "Give Claude the three facts it needs") | prompt textarea + optional paste of the material | runs it, shows the output |
-| L2 Context | "Set up a Project for *workflow*." | instructions textarea + 1–2 pasted files + the test task (pre-filled) | runs the test task with the Project context, shows the output |
+| L2 Context | "Set up a Project for *workflow*." | a Claude Project page: name, Instructions (edit in place), Files (upload text files or paste, up to 4), Connected tools (the person's connectors), and the chat box holding the test message (send = Run) | answers the test message inside the Project, connectors simulated, shown as a conversation |
 | L3 Skill | "Write the skill for *workflow*." | SKILL.md editor pre-filled with a template + 3 sample requests (pre-filled, editable) | runs each sample request with the skill in context, shows fired/not-fired and the outputs |
 | L4 Workflow | "Map *workflow*." | the workflow form (inputs, steps, decisions, exceptions, systems, outputs, review points) | drafts the skill from the map, shows it |
 | L5 Champion | "Review this." | a teammate's artifact shown read-only + a score and a short feedback box | compares the learner's score and notes with the grader's |
@@ -70,3 +70,7 @@ Connectors let Claude read (and, when allowed, write to) the tools people alread
 ## Tools the learner names become connectors (2026-09-07)
 
 The practice composer offers the person's own tools as connectors. That list is computed live from three places: the intake profile and workflow maps, and the `systems` list on the person's Coach memory. When a practice is graded, the Grader returns `toolsNamed` (tools the learner named in their work) and the controller folds those, plus any switched-on connector they actually named, straight into the memory's `systems` (no version bump) and into the graded event's note. So a learner who writes "pull this from Notion" once sees Notion offered as a connector on their next exercise, and the memory synthesis keeps it.
+
+## No placeholders, anywhere (2026-09-07)
+
+Nothing the learner sees carries a bracketed placeholder. Pre-fills: the prompt box, Project instructions and Project files start empty (the only pre-filled text is the Project's test message, a concrete note about a plainly made-up account, and the attached sample material). Runs: Claude never leaves "[client name]" or "[figure]"; where a specific is missing it writes the piece with a plainly made-up stand-in and ends with one line, "Stand-ins: …", so the learner always sees a finished piece that reads like the real thing. Grader: labelled stand-ins are not invention; unlabelled made-up facts are. For a Project, the grader judges the whole thing (name, instructions, each file, connectors switched on) with the test reply as evidence.

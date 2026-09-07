@@ -75,6 +75,7 @@ class RunDto {
   @IsOptional() @IsString() instructions?: string;
   @IsOptional() @IsArray() files?: { name: string; content: string }[];
   @IsOptional() @IsString() testTask?: string;
+  @IsOptional() @IsString() name?: string;
   // skill
   @IsOptional() @IsString() skillMd?: string;
   @IsOptional() @IsArray() sampleRequests?: string[];

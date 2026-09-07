@@ -39,7 +39,7 @@ describe('learning mock responders', () => {
       "For your monday pack, write the prompt you'd give Claude.",
     );
     expect(out.workflowName).toBe('Monday pack');
-    expect(out.prefillPrompt).toContain('[');
+    expect(out.prefillPrompt).toBeNull(); // never pre-written
     expect(out.prefillSkillMd).toBeNull();
     const skill = mockResponder<any>(
       call('coach.next-exercise', {

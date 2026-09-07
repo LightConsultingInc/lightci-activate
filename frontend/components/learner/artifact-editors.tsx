@@ -1,6 +1,7 @@
 "use client"
 
-import { ArrowUp, ChevronDown, FilePlus2, FileText, Loader2, Plug, Plus, SlidersHorizontal, Trash2, X } from "lucide-react"
+import { ArrowUp, ChevronDown, FilePlus2, FileText, Loader2, Pencil, Plug, Plus, SlidersHorizontal, Trash2, Upload, X } from "lucide-react"
+import { useRef, useState } from "react"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
@@ -27,13 +28,22 @@ export type PromptSurface = {
   connectors: string[]
   output: string | null
 }
-export type ProjectSurface = { kind: "project"; instructions: string; files: { name: string; content: string }[]; testTask: string; output: string | null }
+export type ProjectSurface = {
+  kind: "project"
+  name: string
+  instructions: string
+  files: { name: string; content: string }[]
+  testTask: string
+  available: string[]
+  connectors: string[]
+  output: string | null
+}
 export type SkillSurface = { kind: "skill"; skillMd: string; sampleRequests: string[]; results: SkillRunResult[] | null }
 export type WorkflowSurface = { kind: "workflow"; schema: Partial<WorkflowSchema>; skillDraft: string | null }
 export type ReviewSurface = { kind: "review"; submissionId: string; score: number | null; notes: string }
 export type SurfaceState = PromptSurface | ProjectSurface | SkillSurface | WorkflowSurface | ReviewSurface
 
-export const MAX_PROJECT_FILES = 2
+export const MAX_PROJECT_FILES = 4
 export const SAMPLE_REQUESTS = 3
 /** What each of the three sample requests is for (L3). */
 export const SAMPLE_REQUEST_LABELS = ["Should fire", "Should not fire", "Borderline"] as const
@@ -105,14 +115,21 @@ export function initialSurface(ex: ExerciseDetail, spec: PracticeSpec = practice
       const connectors = available
       return { kind: "prompt", prompt, material, attachmentName: material ? (last ? "Attached material" : "Sample material, made up") : null, available, connectors, output: null }
     }
-    case "project":
+    case "project": {
+      const available = ex.connectors ?? []
       return {
         kind: "project",
-        instructions: last?.content ?? str(f.instructions),
-        files: (last?.files ?? fileList(f.files)).slice(0, MAX_PROJECT_FILES),
-        testTask: str(f.testTask, last?.testTask ?? ""),
+        name: last?.name ?? (spec.workflowName ? `${spec.workflowName}` : "My Project"),
+        // Nothing pre-written: the learner sets instructions and files themselves (their own last try is kept).
+        instructions: last?.content ?? "",
+        files: (last?.files ?? []).slice(0, MAX_PROJECT_FILES),
+        // A test message from before the no-placeholders rule (bracketed slots) starts empty; the learner writes a real one.
+        testTask: /\[[^\]]+\]/.test(str(f.testTask, last?.testTask ?? "")) ? "" : str(f.testTask, last?.testTask ?? ""),
+        available,
+        connectors: available,
         output: null,
       }
+    }
     case "skill":
       return { kind: "skill", skillMd: last?.content ?? str(f.skillMd, SKILL_TEMPLATE), sampleRequests: threeRequests(last?.sampleRequests ?? f.sampleRequests), results: null }
     case "workflow": {
@@ -134,7 +151,7 @@ export function initialSurface(ex: ExerciseDetail, spec: PracticeSpec = practice
 export function toRunBody(s: SurfaceState): RunBody | null {
   switch (s.kind) {
     case "prompt": return { kind: "prompt", prompt: s.prompt, material: s.material.trim() || undefined, connectors: s.connectors }
-    case "project": return { kind: "project", instructions: s.instructions, files: s.files, testTask: s.testTask }
+    case "project": return { kind: "project", name: s.name, instructions: s.instructions, files: s.files, testTask: s.testTask, connectors: s.connectors }
     case "skill": return { kind: "skill", skillMd: s.skillMd, sampleRequests: s.sampleRequests }
     case "workflow": return { kind: "workflow", schema: s.schema }
     default: return null
@@ -176,7 +193,7 @@ export function hasOutput(s: SurfaceState): boolean {
 export function toArtifact(s: SurfaceState): Artifact {
   switch (s.kind) {
     case "prompt": return { type: "prompt_run", content: s.prompt, material: s.material.trim() || undefined, connectors: s.connectors, output: s.output ?? undefined }
-    case "project": return { type: "project", content: s.instructions, files: s.files, testTask: s.testTask, output: s.output ?? undefined }
+    case "project": return { type: "project", name: s.name, content: s.instructions, files: s.files, testTask: s.testTask, connectors: s.connectors, output: s.output ?? undefined }
     case "skill": return { type: "skill", content: s.skillMd, sampleRequests: s.sampleRequests, results: s.results ?? undefined }
     case "workflow": return { type: "workflow", content: JSON.stringify(s.schema, null, 2), skillDraft: s.skillDraft ?? undefined }
     case "review": return { type: "review", content: s.notes, score10: s.score ?? undefined, submissionId: s.submissionId || undefined }
@@ -187,7 +204,10 @@ export function toArtifact(s: SurfaceState): Artifact {
 export function canRun(s: SurfaceState): { ok: boolean; reason?: string } {
   switch (s.kind) {
     case "prompt": return s.prompt.trim().length >= 10 ? { ok: true } : { ok: false, reason: "Write your prompt first." }
-    case "project": return s.instructions.trim().length >= 10 ? { ok: true } : { ok: false, reason: "Write the Project instructions first." }
+    case "project":
+      if (s.instructions.trim().length < 10) return { ok: false, reason: "Set the Project's instructions first." }
+      if (s.testTask.trim().length < 5) return { ok: false, reason: "Write the message you'll test the Project with." }
+      return { ok: true }
     case "skill":
       if (!/^---[\s\S]*?---/.test(s.skillMd.trim())) return { ok: false, reason: "Start SKILL.md with the name and description block." }
       if (s.sampleRequests.some((r) => !r.trim())) return { ok: false, reason: "Fill in all three sample requests." }
@@ -282,41 +302,147 @@ export function PromptInput({ value, onChange, disabled, rung, reminder, onRun, 
   )
 }
 
-export function ProjectInput({ value, onChange, disabled }: EditorProps<ProjectSurface>) {
+/**
+ * The Project practice looks like a Claude Project page: the name, the box that starts a chat inside it
+ * (the test message; send = Run), and the right rail with Instructions (edit in place), Files (upload text
+ * files or paste one) and Connected tools (the person's connectors, switched on). Nothing is pre-written.
+ */
+export function ProjectInput({ value, onChange, disabled, onRun, runLabel, runDisabled }: EditorProps<ProjectSurface> & { onRun?: () => void; runLabel?: string; runDisabled?: boolean }) {
+  const [editing, setEditing] = useState<"instructions" | number | null>(value.instructions.trim() ? null : "instructions")
+  const [renaming, setRenaming] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
   const files = value.files
   const setFile = (i: number, patch: Partial<{ name: string; content: string }>) => onChange({ ...value, files: files.map((f, j) => (j === i ? { ...f, ...patch } : f)) })
+  const addFile = (file: { name: string; content: string }) => {
+    if (files.length >= MAX_PROJECT_FILES) return
+    onChange({ ...value, files: [...files, file] })
+  }
+  const upload = async (list: FileList | null) => {
+    if (!list) return
+    for (const f of Array.from(list).slice(0, MAX_PROJECT_FILES - files.length)) {
+      const text = await f.text().catch(() => "")
+      addFile({ name: f.name, content: text.slice(0, 20_000) })
+    }
+  }
+  const toggle = (name: string) => onChange({ ...value, connectors: value.connectors.includes(name) ? value.connectors.filter((c) => c !== name) : [...value.connectors, name] })
+  const running = Boolean(runLabel && runLabel !== "Run" && runLabel !== "Run again")
   return (
-    <div className="space-y-5" data-testid="project-builder">
-      <Field label="Project instructions" hint="The standing brief every chat in this Project starts from.">
-        <Textarea value={value.instructions} onChange={(e) => onChange({ ...value, instructions: e.target.value })} disabled={disabled} className="min-h-40 text-[15px] leading-relaxed" data-testid="project-instructions" />
-      </Field>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs">Files ({files.length} of {MAX_PROJECT_FILES})</Label>
-          {!disabled && files.length < MAX_PROJECT_FILES && (
-            <Button type="button" variant="ghost" size="xs" onClick={() => onChange({ ...value, files: [...files, { name: `file-${files.length + 1}.md`, content: "" }] })} data-testid="project-add-file">
-              <FilePlus2 data-icon="inline-start" /> Add file
-            </Button>
+    <div className="grid gap-5 @3xl:grid-cols-[minmax(0,1fr)_260px]" data-testid="project-builder">
+      <div className="space-y-4">
+        <div>
+          <p className="eyebrow">Project</p>
+          {renaming && !disabled ? (
+            <Input autoFocus value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} onBlur={() => setRenaming(false)} onKeyDown={(e) => e.key === "Enter" && setRenaming(false)} className="mt-1 h-9 font-display text-xl" aria-label="Project name" data-testid="project-name-input" />
+          ) : (
+            <button type="button" className="mt-1 inline-flex items-center gap-2 text-left font-display text-2xl font-medium leading-tight hover:underline hover:underline-offset-4 disabled:no-underline" onClick={() => setRenaming(true)} disabled={disabled} data-testid="project-name">
+              {value.name || "Untitled Project"} {!disabled && <Pencil className="size-3.5 text-muted-foreground" />}
+            </button>
           )}
         </div>
-        {files.length === 0 && <p className="rounded-lg border border-dashed px-3 py-3 text-xs text-muted-foreground">Paste one or two things Claude should always have: a good past example, a template.</p>}
-        <ul className="grid gap-2 md:grid-cols-2">
-          {files.map((f, i) => (
-            <li key={i} className="rounded-lg border" data-testid="project-file" data-slot-label={PROJECT_FILE_LABELS[i]}>
-              <p className="eyebrow border-b px-2 py-1.5 normal-case tracking-normal" data-testid="project-file-label">{PROJECT_FILE_LABELS[i] ?? `File ${i + 1}`}</p>
-              <div className="flex items-center gap-2 border-b px-2 py-1.5">
-                <Input value={f.name} onChange={(e) => setFile(i, { name: e.target.value })} disabled={disabled} className="h-7 font-mono text-xs" aria-label="File name" data-testid="project-file-name" />
-                {!disabled && <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove file" onClick={() => onChange({ ...value, files: files.filter((_, j) => j !== i) })}><Trash2 /></Button>}
-              </div>
-              <Textarea value={f.content} onChange={(e) => setFile(i, { content: e.target.value })} disabled={disabled} className="min-h-28 rounded-t-none border-0 font-mono text-xs focus-visible:ring-0" placeholder="File content" data-testid="project-file-content" />
-            </li>
-          ))}
-        </ul>
+        <div className={cn("rounded-2xl border bg-background p-3 shadow-sm", disabled && "opacity-90")} data-testid="composer">
+          <Textarea
+            value={value.testTask}
+            onChange={(e) => onChange({ ...value, testTask: e.target.value })}
+            disabled={disabled}
+            className="min-h-28 resize-y border-0 bg-transparent px-1 py-1 text-[15px] leading-relaxed shadow-none focus-visible:ring-0"
+            placeholder="Start a chat in this project…"
+            aria-label="Your message to test the Project"
+            data-testid="project-test-task"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="grid size-8 place-items-center rounded-lg border text-muted-foreground/60" aria-hidden><Plus className="size-4" /></span>
+            <span className="grid size-8 place-items-center rounded-lg border text-muted-foreground/60" aria-hidden><SlidersHorizontal className="size-4" /></span>
+            {value.connectors.length > 0 && (
+              <span className="ml-1 hidden items-center gap-1 text-[11px] text-muted-foreground sm:inline-flex" data-testid="composer-connectors-on"><Plug className="size-3" /> {value.connectors.join(" · ")}</span>
+            )}
+            <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground">Claude Opus 5 <ChevronDown className="size-3" /></span>
+            {onRun && (
+              <Button size="sm" onClick={onRun} disabled={runDisabled} className="h-8 gap-1.5 rounded-lg px-2.5" data-testid="run-button" aria-label={runLabel ?? "Run"}>
+                {running ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
+                <span className="text-xs">{runLabel ?? "Run"}</span>
+              </Button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">This is the first message a teammate would send inside your Project. Claude answers it with your instructions, files and connectors in place.</p>
       </div>
-      <div className="rounded-lg border bg-muted/40 p-3" data-testid="project-test-task">
-        <p className="eyebrow mb-1">We&apos;ll test it with</p>
-        <p className="text-sm leading-relaxed">{value.testTask || "The test task arrives with the exercise."}</p>
-      </div>
+
+      <aside className="space-y-3 text-sm">
+        <section className="rounded-xl border bg-card p-3" data-testid="project-instructions-card">
+          <div className="flex items-center justify-between">
+            <p className="font-medium">Instructions</p>
+            {!disabled && editing !== "instructions" && (
+              <button type="button" className="inline-flex items-center gap-1 text-xs text-claude hover:underline" onClick={() => setEditing("instructions")} data-testid="project-instructions-edit"><Pencil className="size-3" /> Edit</button>
+            )}
+          </div>
+          {editing === "instructions" && !disabled ? (
+            <div className="mt-2 space-y-2">
+              <Textarea autoFocus value={value.instructions} onChange={(e) => onChange({ ...value, instructions: e.target.value })} className="min-h-40 text-[13px] leading-relaxed" placeholder="How should Claude behave in this project? Write it the way you'd brief a careful new hire." aria-label="Project instructions" data-testid="project-instructions" />
+              <div className="flex justify-end"><Button size="xs" onClick={() => setEditing(null)} disabled={value.instructions.trim().length < 10} data-testid="project-instructions-save">Save</Button></div>
+            </div>
+          ) : value.instructions.trim() ? (
+            <p className="mt-1.5 line-clamp-6 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground" data-testid="project-instructions-preview">{value.instructions}</p>
+          ) : (
+            <p className="mt-1.5 text-xs text-muted-foreground">Set project instructions: how you like this task done, written once.</p>
+          )}
+        </section>
+
+        <section className="rounded-xl border bg-card p-3" data-testid="project-files-card">
+          <p className="font-medium">Files <span className="text-xs font-normal text-muted-foreground">{files.length} of {MAX_PROJECT_FILES}</span></p>
+          {files.length === 0 && <p className="mt-1.5 text-xs text-muted-foreground">A template, a one-page summary, a good past example. Short beats long.</p>}
+          <ul className="mt-1.5 space-y-1.5">
+            {files.map((f, i) => (
+              <li key={i} className="rounded-lg border" data-testid="project-file">
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+                  {editing === i && !disabled ? (
+                    <Input value={f.name} onChange={(e) => setFile(i, { name: e.target.value })} className="h-6 text-xs" aria-label="File name" data-testid="project-file-name" />
+                  ) : (
+                    <button type="button" className="min-w-0 flex-1 truncate text-left text-xs hover:underline" onClick={() => !disabled && setEditing(i)} data-testid="project-file-open">{f.name}</button>
+                  )}
+                  <span className="text-[10px] text-muted-foreground tabular">{f.content.trim() ? `${Math.max(1, Math.round(f.content.trim().split(/\s+/).length))} words` : "empty"}</span>
+                  {!disabled && <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Remove file" onClick={() => { setEditing(null); onChange({ ...value, files: files.filter((_, j) => j !== i) }) }}><Trash2 className="size-3.5" /></button>}
+                </div>
+                {editing === i && !disabled && (
+                  <div className="border-t p-2">
+                    <Textarea value={f.content} onChange={(e) => setFile(i, { content: e.target.value })} className="min-h-32 font-mono text-xs" placeholder="Paste the file's text" aria-label="File content" data-testid="project-file-content" />
+                    <div className="mt-1.5 flex justify-end"><Button size="xs" variant="outline" onClick={() => setEditing(null)}>Done</Button></div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          {!disabled && files.length < MAX_PROJECT_FILES && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input ref={fileInput} type="file" accept=".txt,.md,.csv,.json,.html,.htm,text/*" multiple className="hidden" onChange={(e) => { void upload(e.target.files); e.target.value = "" }} data-testid="project-upload-input" />
+              <button type="button" className="inline-flex items-center gap-1 text-xs text-claude hover:underline" onClick={() => fileInput.current?.click()} data-testid="project-upload"><Upload className="size-3" /> Upload a file</button>
+              <button type="button" className="inline-flex items-center gap-1 text-xs text-claude hover:underline" onClick={() => { addFile({ name: `note-${files.length + 1}.md`, content: "" }); setEditing(files.length) }} data-testid="project-add-file"><FilePlus2 className="size-3" /> Paste text as a file</button>
+            </div>
+          )}
+          <p className="mt-2 text-[10px] text-muted-foreground">Text files here (.txt, .md, .csv). For a Word or PDF file, paste its text.</p>
+        </section>
+
+        <section className="rounded-xl border bg-card p-3" data-testid="project-connected-card">
+          <p className="font-medium">Connected</p>
+          {value.available.length === 0 ? (
+            <p className="mt-1.5 text-xs text-muted-foreground">None yet. Tools you name in your work appear here.</p>
+          ) : (
+            <ul className="mt-1.5 space-y-1">
+              {value.available.map((name) => {
+                const on = value.connectors.includes(name)
+                return (
+                  <li key={name}>
+                    <button type="button" className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-xs hover:bg-muted disabled:hover:bg-transparent" onClick={() => toggle(name)} disabled={disabled} aria-pressed={on} data-testid="project-connector" data-name={name}>
+                      <span className="inline-flex items-center gap-1.5"><Plug className="size-3 text-muted-foreground" /> {name}</span>
+                      <span className={cn("relative inline-block h-4 w-7 rounded-full", on ? "bg-claude" : "bg-foreground/15")} aria-hidden><span className={cn("absolute top-0.5 size-3 rounded-full bg-paper", on ? "left-3.5" : "left-0.5")} /></span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      </aside>
     </div>
   )
 }
@@ -421,7 +547,7 @@ function artifactLabel(t: Artifact["type"]) {
 export function PracticeInput({ value, onChange, disabled, review, rung, reminder, onRun, runLabel, runDisabled }: EditorProps<SurfaceState> & { review?: ExerciseDetail["review"]; rung?: number; reminder?: string; onRun?: () => void; runLabel?: string; runDisabled?: boolean }) {
   switch (value.kind) {
     case "prompt": return <PromptInput value={value} onChange={onChange} disabled={disabled} rung={rung} reminder={reminder} onRun={onRun} runLabel={runLabel} runDisabled={runDisabled} />
-    case "project": return <ProjectInput value={value} onChange={onChange} disabled={disabled} />
+    case "project": return <ProjectInput value={value} onChange={onChange} disabled={disabled} onRun={onRun} runLabel={runLabel} runDisabled={runDisabled} />
     case "skill": return <SkillInput value={value} onChange={onChange} disabled={disabled} />
     case "workflow": return <WorkflowInput value={value} onChange={onChange} disabled={disabled} />
     case "review": return <ReviewInput value={value} onChange={onChange} disabled={disabled} review={review} />

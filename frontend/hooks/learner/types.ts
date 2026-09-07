@@ -56,7 +56,7 @@ export type PracticeSpec = {
 /** POST /exercises/:id/run body, by kind. Review items do not run. */
 export type RunBody =
   | { kind: "prompt"; prompt: string; material?: string; connectors?: string[] }
-  | { kind: "project"; instructions: string; files: { name: string; content: string }[]; testTask: string }
+  | { kind: "project"; name?: string; instructions: string; files: { name: string; content: string }[]; testTask: string; connectors?: string[] }
   | { kind: "skill"; skillMd: string; sampleRequests: string[] }
   | { kind: "workflow"; schema: Partial<WorkflowSchema> }
 
@@ -129,8 +129,10 @@ export type Artifact = {
   output?: string
   /** prompt: the pasted or attached material, if any. */
   material?: string
-  /** prompt: the connectors that were switched on for the run. */
+  /** prompt / project: the connectors that were switched on for the run. */
   connectors?: string[]
+  /** project: the Project's name. */
+  name?: string
   files?: { name: string; content: string }[]
   /** project: the pre-filled task the Project was run against. */
   testTask?: string

@@ -743,7 +743,11 @@ export class GraderService {
   artifactText(submission: Submission): string {
     const a = submission.artifact;
     if (!a) return '';
-    const parts = [`Type: ${a.type}`, a.content];
+    const parts = [`Type: ${a.type}`];
+    if (a.name) parts.push(`Project name: ${a.name}`);
+    if (a.connectors?.length)
+      parts.push(`Connectors switched on: ${a.connectors.join(', ')}`);
+    parts.push(a.content);
     if (a.material)
       parts.push(`\n--- material the learner pasted ---\n${a.material}`);
     if (a.testTask) parts.push(`\n--- test task ---\n${a.testTask}`);

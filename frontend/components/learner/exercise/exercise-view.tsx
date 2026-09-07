@@ -147,7 +147,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
       </header>
 
       <div className={cn(showResults && "grid gap-6 lg:grid-cols-2 lg:items-start")}>
-      <section className={cn("rounded-xl border bg-card p-5 lg:order-1", locked && "opacity-90")} data-testid="work-surface" data-surface={spec.kind} data-locked={locked}>
+      <section className={cn("@container rounded-xl border bg-card p-5 lg:order-1", locked && "opacity-90")} data-testid="work-surface" data-surface={spec.kind} data-locked={locked}>
         <div className="mb-4 flex items-center justify-between">
           <p className="eyebrow">{kindLabel(spec.kind)}</p>
           {locked && <Chip tone="neutral"><Lock className="size-3" /> Sent</Chip>}
@@ -159,12 +159,12 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
           review={ex.review}
           rung={ex.rung}
           reminder={reminder}
-          onRun={surface.kind === "prompt" ? doRun : undefined}
+          onRun={surface.kind === "prompt" || surface.kind === "project" ? doRun : undefined}
           runLabel={runLabel}
           runDisabled={locked || !runnable.ok}
         />
-        {surface.kind === "prompt" && !locked && !runnable.ok && runnable.reason && <p className="mt-2 text-xs text-muted-foreground">{runnable.reason}</p>}
-        {!isReview && surface.kind !== "prompt" && (
+        {(surface.kind === "prompt" || surface.kind === "project") && !locked && !runnable.ok && runnable.reason && <p className="mt-2 text-xs text-muted-foreground">{runnable.reason}</p>}
+        {!isReview && surface.kind !== "prompt" && surface.kind !== "project" && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button size="lg" onClick={doRun} disabled={locked || !runnable.ok} data-testid="run-button">
               <Play data-icon="inline-start" /> {runLabel}

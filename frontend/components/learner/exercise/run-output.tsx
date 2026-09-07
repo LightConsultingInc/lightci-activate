@@ -33,9 +33,15 @@ export function RunOutput({ surface }: { surface: SurfaceState }) {
       )}
       {surface.kind === "project" && (
         <>
-          <Header title="What Claude made with your Project" copy={surface.output ?? ""} />
-          <div className="max-h-[32rem] overflow-y-auto p-5">
-            {surface.output ? <MarkdownLite text={surface.output} /> : <p className="text-sm text-muted-foreground italic">Claude sent nothing back. Try running again.</p>}
+          <Header title={`In Claude · ${surface.name || "your Project"}`} copy={surface.output ?? ""} />
+          <div className="max-h-[36rem] space-y-4 overflow-y-auto p-5">
+            <div className="ml-auto max-w-[85%] rounded-2xl bg-foreground/[0.06] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap" data-testid="run-your-message">{surface.testTask}</div>
+            <div className="flex gap-3" data-testid="run-claude-message">
+              <span className="mt-1.5 inline-block size-4 shrink-0 rounded-sm bg-claude" aria-hidden />
+              <div className="min-w-0 flex-1">
+                {surface.output ? <MarkdownLite text={surface.output} /> : <p className="text-sm text-muted-foreground italic">Claude sent nothing back. Try running again.</p>}
+              </div>
+            </div>
           </div>
         </>
       )}

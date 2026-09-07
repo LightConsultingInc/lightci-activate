@@ -81,7 +81,7 @@ Some outputs still get a human read before they go out: anything a customer rece
         question: "You need a summary of a 12-page customer contract. One clause contains a payment card number. What do you do?",
         options: [
           "Retype the contract as vague bullet points with all details removed",
-          "Paste the whole contract, replace the card number with a placeholder, and ask for the summary",
+          "Paste the whole contract, take the card number out, and ask for the summary",
           "Do not use Claude for anything involving contracts",
           "Paste only the first page to be safe",
         ],

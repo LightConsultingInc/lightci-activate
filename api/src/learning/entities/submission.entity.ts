@@ -7,8 +7,10 @@ import {
 } from 'typeorm';
 
 export interface Artifact {
-  /** prompt: the connectors switched on for the run (simulated in practice). */
+  /** prompt / project: the connectors switched on for the run (simulated in practice). */
   connectors?: string[];
+  /** project: the Project's name. */
+  name?: string;
   type: 'prompt_run' | 'project' | 'skill' | 'workflow' | 'text' | 'review';
   content: string; // the primary artifact text (prompt, SKILL.md, project instructions, workflow JSON, review notes)
   output?: string; // Claude's output from the last Run (prompt / project / workflow skill draft)
