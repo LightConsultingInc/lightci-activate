@@ -159,7 +159,9 @@ export class TeamService {
       stats: {
         activePct7d: roster.length ? round(active7 / roster.length) : 0,
         rungDistribution: rungDistribution(roster.map((r) => r.rung)),
-        hoursBackPerWeek: hb.measuredTasks ? round(hb.minutesBackPerWeek / 60, 1) : 0,
+        hoursBackPerWeek: hb.measuredTasks
+          ? round(hb.minutesBackPerWeek / 60, 1)
+          : 0,
         hasBaseline: hb.measuredTasks > 0,
         skillsPublished: library.filter((s) => s.status === 'published').length,
         promotionsPending: promotionQueue.length,
@@ -209,7 +211,9 @@ export class TeamService {
     return {
       ...personRef(p, f),
       lastActiveOnRealWork: lastActiveDay(f, p.id),
-      hoursBackPerWeek: hb.measuredTasks ? round(hb.minutesBackPerWeek / 60, 1) : 0,
+      hoursBackPerWeek: hb.measuredTasks
+        ? round(hb.minutesBackPerWeek / 60, 1)
+        : 0,
       baselineMinutesPerWeek: baseline,
       hasBaseline: f.baselines.some((b) => b.personId === p.id),
       hasMeasurement: hb.measuredTasks > 0,
@@ -226,7 +230,9 @@ export class TeamService {
         addDaysIso(today, -29),
         today,
       ),
-      masteryAvg: latestMastery.size ? round(mean([...latestMastery.values()])) : 0,
+      masteryAvg: latestMastery.size
+        ? round(mean([...latestMastery.values()]))
+        : 0,
       hasMastery: latestMastery.size > 0,
     };
   }

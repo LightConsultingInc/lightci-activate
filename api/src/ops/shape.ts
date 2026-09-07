@@ -276,7 +276,9 @@ export function workflowSummary(
       .map((s) => skillCard(s, f, viewerId)),
     baselineMinutesPerWeek: baseline,
     measuredMinutesPerWeek: hb.measuredTasks ? hb.currentMinutesPerWeek : 0,
-    hoursBackPerWeek: hb.measuredTasks ? Math.round((hb.minutesBackPerWeek / 60) * 10) / 10 : 0,
+    hoursBackPerWeek: hb.measuredTasks
+      ? Math.round((hb.minutesBackPerWeek / 60) * 10) / 10
+      : 0,
     hasBaseline: f.baselines.some((b) => b.workflowMapId === w.id),
     hasMeasurement: hb.measuredTasks > 0,
     updatedAt: w.updatedAt,

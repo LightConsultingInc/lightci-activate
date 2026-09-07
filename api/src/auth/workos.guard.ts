@@ -112,8 +112,15 @@ export class WorkosGuard implements CanActivate {
       )
         await this.people.touch(existing);
       // A person provisioned before their company existed (or after a demo reset) is linked as soon as the org row appears.
-      if (!existing.orgId && payload.org_id && !existing.roles.includes('lead')) {
-        const linked = await this.people.linkToWorkosOrg(existing, payload.org_id);
+      if (
+        !existing.orgId &&
+        payload.org_id &&
+        !existing.roles.includes('lead')
+      ) {
+        const linked = await this.people.linkToWorkosOrg(
+          existing,
+          payload.org_id,
+        );
         if (linked) return linked;
       }
       return existing;

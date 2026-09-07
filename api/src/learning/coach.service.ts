@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository, type FindOptionsWhere } from 'typeorm';
 import { AiService } from '../ai/ai.service';
@@ -9,7 +14,11 @@ import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
 import { Team } from '../orgs/entities/team.entity';
 import { WorkflowMap } from '../workflows/entities/workflow-map.entity';
-import { NextExerciseSchema, SkillRunSchema, type NextExerciseOutput } from './ai-schemas';
+import {
+  NextExerciseSchema,
+  SkillRunSchema,
+  type NextExerciseOutput,
+} from './ai-schemas';
 import {
   COMPETENCY_BY_CODE,
   COMPETENCY_CATALOG,
@@ -26,7 +35,11 @@ import type {
   RunBody,
   RunResult,
 } from './learning.types';
-import { PRACTICE_KIND_FOR_SURFACE, practiceOf, skillTemplate } from './mappers';
+import {
+  PRACTICE_KIND_FOR_SURFACE,
+  practiceOf,
+  skillTemplate,
+} from './mappers';
 import { MasteryService } from './mastery.service';
 import { MemoryService } from './memory.service';
 import {
@@ -148,7 +161,8 @@ export class CoachService {
   ): Promise<Exercise> {
     const report = await this.mastery.report(person.id);
     const rung = report.rung;
-    if (rung === 0 && !opts.kind && !opts.skillId) return this.generateFirstRealTask(person, orgId);
+    if (rung === 0 && !opts.kind && !opts.skillId)
+      return this.generateFirstRealTask(person, orgId);
     const memory = await this.memory.get(person.id, orgId);
     const unlocked = report.competencies.filter((c) => c.status !== 'locked');
     const target = this.pickTarget(
@@ -265,7 +279,9 @@ export class CoachService {
                 : '',
               '',
               '# What Coach remembers about this learner (use it: target the struggles, build on the strengths, honour the preferences)',
-              memory.summary ? `Summary: ${memory.summary}` : 'Summary: (nothing yet)',
+              memory.summary
+                ? `Summary: ${memory.summary}`
+                : 'Summary: (nothing yet)',
               `Strengths: ${memory.strengths.join('; ') || '(none recorded)'}`,
               `Struggles: ${memory.struggles.join('; ') || '(none recorded)'}`,
               `Preferences: ${memory.preferences.join('; ') || '(none recorded)'}`,
@@ -304,7 +320,9 @@ export class CoachService {
       opts,
     );
     const workflow =
-      workflows.find((w) => w.id === draft.workflowMapId) ?? workflows[0] ?? null;
+      workflows.find((w) => w.id === draft.workflowMapId) ??
+      workflows[0] ??
+      null;
     draft.starter = {
       ...(draft.starter ?? {}),
       practice: await this.practiceFor(out, draft, workflow, person),
@@ -333,18 +351,42 @@ export class CoachService {
    * Rung 0 practice is one real task: a starter prompt already filled with the learner's role and their
    * most frequent workflow's inputs and outputs, run in the app; no policy quiz and no reading surface.
    */
-  async generateFirstRealTask(person: Person, orgId: string | null): Promise<Exercise> {
+  async generateFirstRealTask(
+    person: Person,
+    orgId: string | null,
+  ): Promise<Exercise> {
     const [layers, maps] = await Promise.all([
       this.layersFor(person, orgId),
-      orgId ? this.workflows.find({ where: [{ ownerPersonId: person.id, orgId }, ...(person.teamId ? [{ teamId: person.teamId, orgId }] : [])], order: { updatedAt: 'DESC' }, take: 8 }) : Promise.resolve<WorkflowMap[]>([]),
+      orgId
+        ? this.workflows.find({
+            where: [
+              { ownerPersonId: person.id, orgId },
+              ...(person.teamId ? [{ teamId: person.teamId, orgId }] : []),
+            ],
+            order: { updatedAt: 'DESC' },
+            take: 8,
+          })
+        : Promise.resolve<WorkflowMap[]>([]),
     ]);
-    const situation = buildSituation(person, layers.find((l) => l.layer === 'person') ?? null, maps.filter((m) => m.ownerPersonId === person.id).concat(maps.filter((m) => m.ownerPersonId !== person.id)));
+    const situation = buildSituation(
+      person,
+      layers.find((l) => l.layer === 'person') ?? null,
+      maps
+        .filter((m) => m.ownerPersonId === person.id)
+        .concat(maps.filter((m) => m.ownerPersonId !== person.id)),
+    );
     const wf = situation?.workflows[0] ?? null;
     const task = wf?.name ?? 'the task you do most';
     const role = situation?.role ?? person.title ?? 'professional';
-    const inputs = wf?.inputs?.length ? wf.inputs.join(', ') : 'the notes I paste below';
-    const outputs = wf?.outputs?.length ? wf.outputs.join(', ') : 'a finished draft I can use as it is';
-    const systems = wf?.systems?.length ? ` We normally work in ${wf.systems.join(' and ')}.` : '';
+    const inputs = wf?.inputs?.length
+      ? wf.inputs.join(', ')
+      : 'the notes I paste below';
+    const outputs = wf?.outputs?.length
+      ? wf.outputs.join(', ')
+      : 'a finished draft I can use as it is';
+    const systems = wf?.systems?.length
+      ? ` We normally work in ${wf.systems.join(' and ')}.`
+      : '';
     const starterPrompt = [
       `I am a ${role}. Help me with ${task}.${systems}`,
       `Inputs I will give you: ${inputs}.`,
@@ -353,7 +395,9 @@ export class CoachService {
       '',
       '[Paste your inputs here. No client names or account details.]',
     ].join('\n');
-    const cadence = wf?.runsPerWeek ? `${wf.runsPerWeek} time${wf.runsPerWeek === 1 ? '' : 's'} a week` : 'more than anything else';
+    const cadence = wf?.runsPerWeek
+      ? `${wf.runsPerWeek} time${wf.runsPerWeek === 1 ? '' : 's'} a week`
+      : 'more than anything else';
     const brief = `Try one real thing: write what you'd ask Claude for ${task}, then press Run.`;
     const practice: Practice = {
       ask: brief,
@@ -388,7 +432,9 @@ export class CoachService {
       hintsRevealed: 0,
     });
     const saved = await this.exercises.save(exercise);
-    this.logger.log(`Coach set the first real task "${saved.title}" for ${person.id}`);
+    this.logger.log(
+      `Coach set the first real task "${saved.title}" for ${person.id}`,
+    );
     return saved;
   }
 
@@ -459,43 +505,72 @@ export class CoachService {
     workflow: WorkflowMap | null,
     person: Person,
   ): Promise<Practice> {
-    const surface: WorkSurface = draft.workSurface ?? out.workSurface ?? 'prompt';
+    const surface: WorkSurface =
+      draft.workSurface ?? out.workSurface ?? 'prompt';
     const kind: PracticeKind = PRACTICE_KIND_FOR_SURFACE[surface] ?? 'prompt';
-    const workflowName = (out.workflowName ?? '').trim() || workflow?.name || 'your weekly task';
+    const workflowName =
+      (out.workflowName ?? '').trim() || workflow?.name || 'your weekly task';
     const ask = draft.brief ?? out.brief;
     const title = draft.title ?? out.title;
     const base = { ask, workflowName };
-    const legacy = (ws: WorkSurface) => practiceOf({ brief: ask, title, workSurface: ws, starter: { workflowName } }).prefill;
+    const legacy = (ws: WorkSurface) =>
+      practiceOf({
+        brief: ask,
+        title,
+        workSurface: ws,
+        starter: { workflowName },
+      }).prefill;
     switch (kind) {
       case 'prompt':
         return {
           ...base,
           kind,
           prefill: {
-            prompt: out.prefillPrompt?.trim() || (legacy('prompt') as { prompt: string }).prompt,
-            ...(out.prefillMaterial?.trim() ? { material: out.prefillMaterial.trim() } : {}),
+            prompt:
+              out.prefillPrompt?.trim() ||
+              (legacy('prompt') as { prompt: string }).prompt,
+            ...(out.prefillMaterial?.trim()
+              ? { material: out.prefillMaterial.trim() }
+              : {}),
           },
         };
       case 'project': {
-        const fb = legacy('project') as { instructions: string; files: { name: string; content: string }[]; testTask: string };
+        const fb = legacy('project') as {
+          instructions: string;
+          files: { name: string; content: string }[];
+          testTask: string;
+        };
         return {
           ...base,
           kind,
           prefill: {
             instructions: out.prefillInstructions?.trim() || fb.instructions,
-            files: (out.prefillFiles ?? []).filter((f) => f.name?.trim()).slice(0, 2),
+            files: (out.prefillFiles ?? [])
+              .filter((f) => f.name?.trim())
+              .slice(0, 2),
             testTask: out.prefillTestTask?.trim() || fb.testTask,
           },
         };
       }
       case 'skill': {
-        const reqs = (out.prefillSampleRequests ?? []).map((r) => r.trim()).filter(Boolean);
-        const defaults = legacy('skill') as { sampleRequests: [string, string, string] };
-        const three = [...reqs, ...defaults.sampleRequests].slice(0, 3) as [string, string, string];
+        const reqs = (out.prefillSampleRequests ?? [])
+          .map((r) => r.trim())
+          .filter(Boolean);
+        const defaults = legacy('skill') as {
+          sampleRequests: [string, string, string];
+        };
+        const three = [...reqs, ...defaults.sampleRequests].slice(0, 3) as [
+          string,
+          string,
+          string,
+        ];
         return {
           ...base,
           kind,
-          prefill: { skillMd: out.prefillSkillMd?.trim() || skillTemplate(workflowName), sampleRequests: three },
+          prefill: {
+            skillMd: out.prefillSkillMd?.trim() || skillTemplate(workflowName),
+            sampleRequests: three,
+          },
         };
       }
       case 'workflow':
@@ -512,20 +587,26 @@ export class CoachService {
   }
 
   /** A teammate's latest submission (graded preferred, pending otherwise) for the review kind; null when none. */
-  private async teammateSubmissionForReview(person: Person): Promise<string | null> {
+  private async teammateSubmissionForReview(
+    person: Person,
+  ): Promise<string | null> {
     const candidates = await this.exercises.find({
       where: { status: In(['passed', 'revise', 'submitted', 'graded']) },
       order: { createdAt: 'DESC' },
       take: 40,
     });
-    const others = candidates.filter((e) => e.personId !== person.id && e.workSurface !== 'review');
+    const others = candidates.filter(
+      (e) => e.personId !== person.id && e.workSurface !== 'review',
+    );
     if (others.length === 0) return null;
     const subs = await this.submissions.find({
       where: { exerciseId: In(others.map((e) => e.id)) },
       order: { submittedAt: 'DESC' },
     });
     if (subs.length === 0) return null;
-    const graded = await this.grades.find({ where: { submissionId: In(subs.map((s) => s.id)) } });
+    const graded = await this.grades.find({
+      where: { submissionId: In(subs.map((s) => s.id)) },
+    });
     const gradedIds = new Set(graded.map((g) => g.submissionId));
     return (subs.find((s) => gradedIds.has(s.id)) ?? subs[0]).id;
   }
@@ -612,7 +693,9 @@ export class CoachService {
     const practice = practiceOf(exercise);
     const kind = practice.kind;
     if (kind === 'review')
-      throw new ConflictException('Review practice has no Run step: read the work, give it a score out of 10 and your notes, then submit.');
+      throw new ConflictException(
+        'Review practice has no Run step: read the work, give it a score out of 10 and your notes, then submit.',
+      );
     const [org, layers] = await Promise.all([
       orgId ? this.orgs.findOne({ where: { id: orgId } }) : null,
       this.layersFor(person, orgId),
@@ -625,19 +708,30 @@ export class CoachService {
         : '',
     ].join('\n');
     const model = this.ai.provider === 'mock' ? 'mock' : this.ai.defaultModel;
-    const common = { agent: 'coach', orgId, personId: person.id, effort: 'medium' as const };
+    const common = {
+      agent: 'coach',
+      orgId,
+      personId: person.id,
+      effort: 'medium' as const,
+    };
     let result: RunResult;
     let summary: Record<string, unknown>;
 
     if (kind === 'prompt') {
       const prompt = str(body.prompt);
-      if (!prompt) throw new BadRequestException('prompt is required for this practice.');
+      if (!prompt)
+        throw new BadRequestException('prompt is required for this practice.');
       const material = str(body.material);
       const { text, runId } = await this.ai.text({
         ...common,
         task: 'coach.run.prompt',
         system: `${COACH_RUN_SYSTEM}\n\n${firmContext}`,
-        messages: [{ role: 'user', content: material ? `${prompt}\n\n---\n\n${material}` : prompt }],
+        messages: [
+          {
+            role: 'user',
+            content: material ? `${prompt}\n\n---\n\n${material}` : prompt,
+          },
+        ],
         mockSeed: { prompt, material, exerciseId: exercise.id },
       });
       result = { kind, output: text, model, runId };
@@ -646,10 +740,21 @@ export class CoachService {
       const instructions = str(body.instructions);
       const testTask = str(body.testTask);
       const files = Array.isArray(body.files)
-        ? (body.files as unknown[]).filter((f): f is { name: string; content: string } => !!f && typeof f === 'object' && typeof (f as { name?: unknown }).name === 'string')
+        ? (body.files as unknown[]).filter(
+            (f): f is { name: string; content: string } =>
+              !!f &&
+              typeof f === 'object' &&
+              typeof (f as { name?: unknown }).name === 'string',
+          )
         : [];
-      if (!instructions) throw new BadRequestException('instructions are required for this practice.');
-      if (!testTask) throw new BadRequestException('testTask is required for this practice.');
+      if (!instructions)
+        throw new BadRequestException(
+          'instructions are required for this practice.',
+        );
+      if (!testTask)
+        throw new BadRequestException(
+          'testTask is required for this practice.',
+        );
       const projectBlock = [
         `# Project instructions\n${instructions}`,
         ...files.map((f) => `# Project file: ${f.name}\n${f.content ?? ''}`),
@@ -659,17 +764,29 @@ export class CoachService {
         task: 'coach.run.project',
         system: `${COACH_RUN_SYSTEM}\n\n${firmContext}\n\n${projectBlock}`,
         messages: [{ role: 'user', content: testTask }],
-        mockSeed: { instructions, files: files.map((f) => f.name), testTask, exerciseId: exercise.id },
+        mockSeed: {
+          instructions,
+          files: files.map((f) => f.name),
+          testTask,
+          exerciseId: exercise.id,
+        },
       });
       result = { kind, output: text, model, runId };
       summary = { instructions, files, testTask, output: text };
     } else if (kind === 'skill') {
       const skillMd = str(body.skillMd);
       const requests = Array.isArray(body.sampleRequests)
-        ? (body.sampleRequests as unknown[]).map((r) => str(r)).filter(Boolean).slice(0, 5)
+        ? (body.sampleRequests as unknown[])
+            .map((r) => str(r))
+            .filter(Boolean)
+            .slice(0, 5)
         : [];
-      if (!skillMd) throw new BadRequestException('skillMd is required for this practice.');
-      if (requests.length === 0) throw new BadRequestException('At least one sample request is required.');
+      if (!skillMd)
+        throw new BadRequestException('skillMd is required for this practice.');
+      if (requests.length === 0)
+        throw new BadRequestException(
+          'At least one sample request is required.',
+        );
       const results: { request: string; fired: boolean; output: string }[] = [];
       for (const request of requests) {
         const out = await this.ai.structured(
@@ -678,7 +795,10 @@ export class CoachService {
             task: 'coach.run.skill',
             system: `${COACH_SKILL_RUN_SYSTEM}\n\n${firmContext}`,
             messages: [
-              { role: 'user', content: `# SKILL.md\n${skillMd}\n\n# Request from a teammate\n${request}` },
+              {
+                role: 'user',
+                content: `# SKILL.md\n${skillMd}\n\n# Request from a teammate\n${request}`,
+              },
             ],
             mockSeed: { skillMd, request, exerciseId: exercise.id },
           },
@@ -689,24 +809,50 @@ export class CoachService {
       result = { kind, results, model, runId: `skill-run-${Date.now()}` };
       summary = { skillMd, results };
     } else {
-      const schema = body.schema && typeof body.schema === 'object' ? (body.schema as Record<string, unknown>) : null;
-      if (!schema || Object.keys(schema).length === 0) throw new BadRequestException('schema (the workflow map) is required for this practice.');
+      const schema =
+        body.schema && typeof body.schema === 'object'
+          ? (body.schema as Record<string, unknown>)
+          : null;
+      if (!schema || Object.keys(schema).length === 0)
+        throw new BadRequestException(
+          'schema (the workflow map) is required for this practice.',
+        );
       const { text, runId } = await this.ai.text({
         ...common,
         task: 'coach.run.workflow',
         system: `${COACH_WORKFLOW_DRAFT_SYSTEM}\n\n${firmContext}`,
-        messages: [{ role: 'user', content: `# Workflow map (${practice.workflowName})\n${JSON.stringify(schema, null, 2)}` }],
-        mockSeed: { schema, workflowName: practice.workflowName, exerciseId: exercise.id },
+        messages: [
+          {
+            role: 'user',
+            content: `# Workflow map (${practice.workflowName})\n${JSON.stringify(schema, null, 2)}`,
+          },
+        ],
+        mockSeed: {
+          schema,
+          workflowName: practice.workflowName,
+          exerciseId: exercise.id,
+        },
       });
       result = { kind, skillDraft: text, model, runId };
       summary = { schema, skillDraft: text };
     }
 
-    const runs = Array.isArray(exercise.starter.runs) ? (exercise.starter.runs as unknown[]) : [];
+    const runs = Array.isArray(exercise.starter.runs)
+      ? (exercise.starter.runs as unknown[])
+      : [];
     exercise.starter = {
       ...exercise.starter,
-      lastRun: { kind, ...summary, runId: result.runId, model, at: new Date().toISOString() },
-      runs: [...runs.slice(-4), { runId: result.runId, kind, at: new Date().toISOString() }],
+      lastRun: {
+        kind,
+        ...summary,
+        runId: result.runId,
+        model,
+        at: new Date().toISOString(),
+      },
+      runs: [
+        ...runs.slice(-4),
+        { runId: result.runId, kind, at: new Date().toISOString() },
+      ],
     };
     if (exercise.status === 'queued') exercise.status = 'active';
     await this.exercises.save(exercise);
@@ -809,7 +955,11 @@ export class CoachService {
     await this.memory.record(person.id, orgId, {
       kind: 'exercise_skipped',
       note: `Skipped "${exercise.title}" (${reason})${note ? `: ${note.slice(0, 120)}` : ''}${escalated ? '; escalated to champion' : ''}.`,
-      data: { exerciseTitle: exercise.title, skipReason: reason, workSurface: exercise.workSurface },
+      data: {
+        exerciseTitle: exercise.title,
+        skipReason: reason,
+        workSurface: exercise.workSurface,
+      },
     });
     const nextUp = await this.ensureNextUp(person, orgId);
     return { escalated, nextUp };

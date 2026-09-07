@@ -209,7 +209,9 @@ export class InterviewerService {
       nextQuestion,
       result: session.result,
       voice: session.voice,
-      finished: session.status === 'complete' || Boolean((session.result as Record<string, unknown> | null)?.finishedByInterviewer),
+      finished:
+        session.status === 'complete' ||
+        Boolean(session.result?.finishedByInterviewer),
       proposeFinish:
         session.status === 'active' &&
         (session.completeness >= FINISH_COMPLETENESS ||
@@ -326,7 +328,11 @@ export class InterviewerService {
     this.applyScribe(session, out);
     // The model decides when the interview ends (out.finish); no text matching, no forced wrap-up suffix.
     const nextQuestion = out.nextQuestion.trim();
-    if (out.finish) session.result = { ...(session.result ?? {}), finishedByInterviewer: true };
+    if (out.finish)
+      session.result = {
+        ...(session.result ?? {}),
+        finishedByInterviewer: true,
+      };
     session.transcript = [
       ...session.transcript,
       {
@@ -675,7 +681,9 @@ export class InterviewerService {
         note: `${session.mode} interview completed after ${session.turnCount} answers; ${workflowMapIds.length} workflow map(s)${placement ? `; placed at rung ${placement.rung}` : ''}.`,
       });
     } catch (error) {
-      this.logger.warn(`Memory record after interview failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `Memory record after interview failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
     if (latest.completeness < FINISH_COMPLETENESS)
       latest.completeness = Math.max(
@@ -770,8 +778,12 @@ export class InterviewerService {
       );
       ids.push(row.id);
       // The interview's time estimate is the first baseline (spec: "Interviewer estimate + champion sign-off").
-      const minutesPerRun = Number((schema as { minutesPerRun?: unknown }).minutesPerRun ?? 0);
-      const runsPerWeek = Number((schema as { runsPerWeek?: unknown }).runsPerWeek ?? 0);
+      const minutesPerRun = Number(
+        (schema as { minutesPerRun?: unknown }).minutesPerRun ?? 0,
+      );
+      const runsPerWeek = Number(
+        (schema as { runsPerWeek?: unknown }).runsPerWeek ?? 0,
+      );
       if (minutesPerRun > 0 && runsPerWeek > 0) {
         await this.baselines.save(
           this.baselines.create({

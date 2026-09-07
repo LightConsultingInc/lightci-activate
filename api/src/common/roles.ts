@@ -17,13 +17,15 @@ export const RUNG_META: Record<
   0: {
     code: 'L0',
     name: 'Orientation',
-    competency: 'What Claude is good for, what to keep out of it, and your firm\'s rules',
+    competency:
+      "What Claude is good for, what to keep out of it, and your firm's rules",
     artifact: 'First finished piece of real work in session one',
   },
   1: {
     code: 'L1',
     name: 'Conversational',
-    competency: 'Clear requests, and checking what comes back before you use it',
+    competency:
+      'Clear requests, and checking what comes back before you use it',
     artifact:
       'A graded draft on a real task with expectation and critique recorded',
   },
@@ -51,7 +53,7 @@ export const RUNG_META: Record<
   5: {
     code: 'L5',
     name: 'Champion',
-    competency: 'Reviewing others\' work and running the team\'s queue',
+    competency: "Reviewing others' work and running the team's queue",
     artifact: 'Reviews in the promotion queue; owns a team backlog',
   },
 };

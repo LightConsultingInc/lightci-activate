@@ -24,7 +24,17 @@ import './workflows.mocks';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([WorkflowMap, Baseline, Measurement, Person, Team, Org, Skill, Escalation, ContextLayer]),
+    TypeOrmModule.forFeature([
+      WorkflowMap,
+      Baseline,
+      Measurement,
+      Person,
+      Team,
+      Org,
+      Skill,
+      Escalation,
+      ContextLayer,
+    ]),
     SkillsModule,
     LearningModule,
   ],

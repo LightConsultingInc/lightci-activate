@@ -25,7 +25,11 @@ export interface LearnerSituation {
  * Merge the person ContextLayer, their WorkflowMaps and Person.profile into one picture. Returns null
  * when nothing is known (no intake yet), so callers can fall back to generic content.
  */
-export function buildSituation(person: Person, layer: ContextLayer | null, maps: WorkflowMap[]): LearnerSituation | null {
+export function buildSituation(
+  person: Person,
+  layer: ContextLayer | null,
+  maps: WorkflowMap[],
+): LearnerSituation | null {
   const profile = person.profile ?? {};
   const fromMaps: SituationWorkflow[] = maps.map((m) => ({
     name: m.name,
@@ -44,14 +48,23 @@ export function buildSituation(person: Person, layer: ContextLayer | null, maps:
         seen.add(name.toLowerCase());
         return { name: name.trim() };
       });
-  const workflows = [...fromMaps, ...add(profile.weeklyWorkflows), ...add(layer?.anchorWorkflows)];
+  const workflows = [
+    ...fromMaps,
+    ...add(profile.weeklyWorkflows),
+    ...add(layer?.anchorWorkflows),
+  ];
   const responsibilities = profile.responsibilities ?? [];
-  if (!layer && responsibilities.length === 0 && workflows.length === 0) return null;
+  if (!layer && responsibilities.length === 0 && workflows.length === 0)
+    return null;
   return {
     role: person.title ?? null,
     responsibilities,
-    workflows: workflows.sort((a, b) => (b.runsPerWeek ?? 0) - (a.runsPerWeek ?? 0)),
-    systems: [...new Set([...(layer?.systems ?? []), ...(profile.systems ?? [])])],
+    workflows: workflows.sort(
+      (a, b) => (b.runsPerWeek ?? 0) - (a.runsPerWeek ?? 0),
+    ),
+    systems: [
+      ...new Set([...(layer?.systems ?? []), ...(profile.systems ?? [])]),
+    ],
     summary: layer?.summary ?? null,
   };
 }

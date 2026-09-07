@@ -190,7 +190,9 @@ export class LibraryService {
       skillCount = read?.skills.length ?? 0;
     }
     return {
-      repo: this.git.githubMode ? process.env.GITHUB_REPO! : this.git.sourcePath,
+      repo: this.git.githubMode
+        ? process.env.GITHUB_REPO!
+        : this.git.sourcePath,
       branch: head.branch,
       head: head.head,
       dirty: head.dirty,
@@ -198,7 +200,11 @@ export class LibraryService {
       skillCount,
       lastSyncAt: lastSyncAt.get(orgId) ?? null,
       workDir: this.git.mode === 'nested' ? this.git.workDir : null,
-      mode: this.git.githubMode ? 'github' : this.git.mode === 'nested' ? 'local-nested' : 'local',
+      mode: this.git.githubMode
+        ? 'github'
+        : this.git.mode === 'nested'
+          ? 'local-nested'
+          : 'local',
     };
   }
 
@@ -290,7 +296,8 @@ export class LibraryService {
         skill.publishedAt = rs.versions.length
           ? new Date(rs.versions[rs.versions.length - 1].committedAt)
           : new Date();
-      if (rs.successor) successorLinks.push({ slug: rs.slug, successorSlug: rs.successor });
+      if (rs.successor)
+        successorLinks.push({ slug: rs.slug, successorSlug: rs.successor });
       skill.skillMd ??= rs.skillMd;
       skill.name ??= rs.name;
       skill.triggerLine ??= rs.triggerLine;
@@ -368,8 +375,12 @@ export class LibraryService {
         this.skills.findOne({ where: { orgId, slug: link.slug } }),
         this.skills.findOne({ where: { orgId, slug: link.successorSlug } }),
       ]);
-      if (skill && successor && skill.successorSkillId !== successor.id) await this.skills.update(skill.id, { successorSkillId: successor.id });
-      if (skill && !successor) result.warnings.push(`${link.slug}: successor "${link.successorSlug}" is not in the repo or the DB`);
+      if (skill && successor && skill.successorSkillId !== successor.id)
+        await this.skills.update(skill.id, { successorSkillId: successor.id });
+      if (skill && !successor)
+        result.warnings.push(
+          `${link.slug}: successor "${link.successorSlug}" is not in the repo or the DB`,
+        );
     }
 
     // published skills that vanished from the repo → deprecated (never delete)

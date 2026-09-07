@@ -163,7 +163,7 @@ export function CompletionStep({
                   ~{first.estimatedMinutes} min
                 </span>
               </div>
-              <p className="eyebrow mt-3">Your first practice, when you're ready</p>
+              <p className="eyebrow mt-3">Your first practice, when you&apos;re ready</p>
               <h3 className="mt-1 font-display text-2xl leading-snug font-medium">
                 {first.title}
               </h3>

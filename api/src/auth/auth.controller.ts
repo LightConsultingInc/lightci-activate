@@ -65,7 +65,10 @@ export class AuthController {
     summary:
       'The signed-in person with org, team and rung; { user: null } when signed out.',
   })
-  async me(@CurrentUser() user?: Person, @OrgId() scopedOrgId?: string | null): Promise<MeResponse> {
+  async me(
+    @CurrentUser() user?: Person,
+    @OrgId() scopedOrgId?: string | null,
+  ): Promise<MeResponse> {
     if (!user) return { user: null, org: null, team: null, orgs: [] };
     const isLead = user.roles.includes('lead');
     const orgId = scopedOrgId ?? user.orgId;
@@ -129,7 +132,11 @@ export class AuthController {
   @ApiOperation({
     summary: 'Invite a person by email via WorkOS (org-scoped).',
   })
-  async invite(@CurrentUser() inviter: Person, @Body() dto: InviteDto, @OrgId() scopedOrgId?: string | null) {
+  async invite(
+    @CurrentUser() inviter: Person,
+    @Body() dto: InviteDto,
+    @OrgId() scopedOrgId?: string | null,
+  ) {
     const orgId = scopedOrgId ?? inviter.orgId;
     const org = orgId
       ? await this.orgs.findOne({ where: { id: orgId } })

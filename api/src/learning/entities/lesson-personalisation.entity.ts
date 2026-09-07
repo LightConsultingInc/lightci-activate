@@ -1,7 +1,21 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
-export interface LessonExample { title: string; text: string }
-export interface LessonCheck { question: string; options: string[]; answer: number; explanation: string }
+export interface LessonExample {
+  title: string;
+  text: string;
+}
+export interface LessonCheck {
+  question: string;
+  options: string[];
+  answer: number;
+  explanation: string;
+}
 
 /** A lesson's example and check rewritten once for one person from their own workflows (task coach.personalise-lesson). */
 @Entity('lesson_personalisations')

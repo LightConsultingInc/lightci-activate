@@ -30,13 +30,24 @@ export const PRACTICE_KIND_FOR_SURFACE: Record<WorkSurface, PracticeKind> = {
   review: 'review',
 };
 
-const PRACTICE_KINDS: PracticeKind[] = ['prompt', 'project', 'skill', 'workflow', 'review'];
+const PRACTICE_KINDS: PracticeKind[] = [
+  'prompt',
+  'project',
+  'skill',
+  'workflow',
+  'review',
+];
 
-const str = (x: unknown, fallback = ''): string => (typeof x === 'string' ? x : fallback);
+const str = (x: unknown, fallback = ''): string =>
+  typeof x === 'string' ? x : fallback;
 
 /** Default SKILL.md template used when a skill-kind exercise has no pre-filled editor text. */
 export function skillTemplate(workflowName: string): string {
-  const slug = workflowName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'my-skill';
+  const slug =
+    workflowName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'my-skill';
   return [
     '---',
     `name: ${slug}`,
@@ -80,7 +91,12 @@ function defaultSampleRequests(workflowName: string): [string, string, string] {
 function isPractice(x: unknown): x is Practice {
   if (!x || typeof x !== 'object') return false;
   const p = x as Record<string, unknown>;
-  return typeof p.ask === 'string' && PRACTICE_KINDS.includes(p.kind as PracticeKind) && !!p.prefill && typeof p.prefill === 'object';
+  return (
+    typeof p.ask === 'string' &&
+    PRACTICE_KINDS.includes(p.kind as PracticeKind) &&
+    !!p.prefill &&
+    typeof p.prefill === 'object'
+  );
 }
 
 /**
@@ -92,7 +108,7 @@ export function practiceOf(
   e: Pick<Exercise, 'brief' | 'workSurface' | 'starter' | 'title'>,
   workflowName?: string | null,
 ): Practice {
-  const starter = (e.starter ?? {}) as Record<string, unknown>;
+  const starter = e.starter ?? {};
   const stored = starter.practice;
   if (isPractice(stored)) return stored;
   const kind = PRACTICE_KIND_FOR_SURFACE[e.workSurface] ?? 'prompt';
@@ -107,30 +123,55 @@ export function practiceOf(
         kind,
         workflowName: name,
         prefill: {
-          prompt: str(starter.starterPrompt) || notes || `I am working on ${name}. Here is what I need:\n\n[what to make, who reads it, the shape you want]\n\n[Paste your inputs here. No client names or account details.]`,
+          prompt:
+            str(starter.starterPrompt) ||
+            notes ||
+            `I am working on ${name}. Here is what I need:\n\n[what to make, who reads it, the shape you want]\n\n[Paste your inputs here. No client names or account details.]`,
         },
       };
     case 'project': {
-      const current = Array.isArray(starter.currentFiles) ? (starter.currentFiles as unknown[]).filter((f): f is string => typeof f === 'string') : [];
+      const current = Array.isArray(starter.currentFiles)
+        ? (starter.currentFiles as unknown[]).filter(
+            (f): f is string => typeof f === 'string',
+          )
+        : [];
       return {
         ask,
         kind,
         workflowName: name,
         prefill: {
-          instructions: notes || `You help with ${name}. Always: [the rules that hold every time]. Output: [shape, length, tone]. Never: [what to leave out].`,
-          files: current.slice(0, 2).map((f) => ({ name: f, content: '[paste the file contents here]' })),
-          testTask: str(starter.testTask) || `Do one real run of ${name} from the material below.\n\n[paste this week's inputs, placeholders for anything client-specific]`,
+          instructions:
+            notes ||
+            `You help with ${name}. Always: [the rules that hold every time]. Output: [shape, length, tone]. Never: [what to leave out].`,
+          files: current.slice(0, 2).map((f) => ({
+            name: f,
+            content: '[paste the file contents here]',
+          })),
+          testTask:
+            str(starter.testTask) ||
+            `Do one real run of ${name} from the material below.\n\n[paste this week's inputs, placeholders for anything client-specific]`,
         },
       };
     }
     case 'skill': {
-      const reqs = Array.isArray(starter.sampleRequests) ? (starter.sampleRequests as unknown[]).filter((r): r is string => typeof r === 'string') : [];
-      const three = [...reqs, ...defaultSampleRequests(name)].slice(0, 3) as [string, string, string];
+      const reqs = Array.isArray(starter.sampleRequests)
+        ? (starter.sampleRequests as unknown[]).filter(
+            (r): r is string => typeof r === 'string',
+          )
+        : [];
+      const three = [...reqs, ...defaultSampleRequests(name)].slice(0, 3) as [
+        string,
+        string,
+        string,
+      ];
       return {
         ask,
         kind,
         workflowName: name,
-        prefill: { skillMd: str(starter.skillMd) || notes || skillTemplate(name), sampleRequests: three },
+        prefill: {
+          skillMd: str(starter.skillMd) || notes || skillTemplate(name),
+          sampleRequests: three,
+        },
       };
     }
     case 'workflow':
@@ -139,17 +180,25 @@ export function practiceOf(
         kind,
         workflowName: name,
         prefill: {
-          schema: (starter.schema && typeof starter.schema === 'object'
-            ? starter.schema
-            : { purpose: name }) as Partial<WorkflowSchema>,
+          schema:
+            starter.schema && typeof starter.schema === 'object'
+              ? starter.schema
+              : { purpose: name },
         },
       };
     case 'review':
-      return { ask, kind, workflowName: name, prefill: { submissionId: str(starter.submissionId) } };
+      return {
+        ask,
+        kind,
+        workflowName: name,
+        prefill: { submissionId: str(starter.submissionId) },
+      };
   }
 }
 
-export function practiceKindOf(e: Pick<Exercise, 'workSurface' | 'starter'>): PracticeKind {
+export function practiceKindOf(
+  e: Pick<Exercise, 'workSurface' | 'starter'>,
+): PracticeKind {
   const stored = (e.starter ?? {}).practice;
   if (isPractice(stored)) return stored.kind;
   return PRACTICE_KIND_FOR_SURFACE[e.workSurface] ?? 'prompt';
@@ -171,11 +220,16 @@ const FEEDBACK_KEYS: { key: keyof PracticeFeedback; label: string }[] = [
 
 /** Serialise the three learner lines into grade.feedback (no new columns). */
 export function encodeFeedback(f: PracticeFeedback): string {
-  return FEEDBACK_KEYS.map(({ key, label }) => `${label}: ${(f[key] ?? '').trim()}`).join('\n');
+  return FEEDBACK_KEYS.map(
+    ({ key, label }) => `${label}: ${(f[key] ?? '').trim()}`,
+  ).join('\n');
 }
 
 /** Read the three lines back; legacy paragraph feedback is split into worked / change with the teaching moment as tryNext. */
-export function decodeFeedback(feedback: string | null | undefined, teachingMoment: string | null | undefined): PracticeFeedback {
+export function decodeFeedback(
+  feedback: string | null | undefined,
+  teachingMoment: string | null | undefined,
+): PracticeFeedback {
   const text = (feedback ?? '').trim();
   const out: Partial<PracticeFeedback> = {};
   for (const line of text.split(/\r?\n/)) {
@@ -185,14 +239,27 @@ export function decodeFeedback(feedback: string | null | undefined, teachingMome
     }
   }
   if (out.worked !== undefined && out.change !== undefined) {
-    return { worked: out.worked, change: out.change, tryNext: out.tryNext ?? (teachingMoment ?? '').trim() };
+    return {
+      worked: out.worked,
+      change: out.change,
+      tryNext: out.tryNext ?? (teachingMoment ?? '').trim(),
+    };
   }
-  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-  const sentences = paragraphs.length <= 1 ? text.split(/(?<=[.!?])\s+/).filter(Boolean) : [];
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const sentences =
+    paragraphs.length <= 1 ? text.split(/(?<=[.!?])\s+/).filter(Boolean) : [];
   const worked = paragraphs[0] ?? '';
-  const change = paragraphs.length > 1 ? paragraphs.slice(1).join(' ') : sentences.length > 1 ? sentences.slice(1).join(' ') : '';
+  const change =
+    paragraphs.length > 1
+      ? paragraphs.slice(1).join(' ')
+      : sentences.length > 1
+        ? sentences.slice(1).join(' ')
+        : '';
   return {
-    worked: paragraphs.length > 1 ? worked : sentences[0] ?? worked,
+    worked: paragraphs.length > 1 ? worked : (sentences[0] ?? worked),
     change,
     tryNext: (teachingMoment ?? '').trim(),
   };
@@ -202,7 +269,9 @@ export function score10Of(score: number): number {
   return Math.round(Math.min(1, Math.max(0, score)) * 100) / 10;
 }
 
-export function practiceDecisionOf(decision: Grade['decision']): PracticeDecision {
+export function practiceDecisionOf(
+  decision: Grade['decision'],
+): PracticeDecision {
   return decision === 'pass' ? 'pass' : 'try_again';
 }
 
@@ -254,7 +323,9 @@ export type RubricScoreWithSelfCheck = RubricScore & {
 export function selfCheckAgreementOf(
   rubric: RubricScore[],
 ): GradeView['selfCheckAgreement'] {
-  const rows = (rubric as RubricScoreWithSelfCheck[]).filter((r) => r.selfCheck);
+  const rows = (rubric as RubricScoreWithSelfCheck[]).filter(
+    (r) => r.selfCheck,
+  );
   return rows.length
     ? rows.map((r) => ({
         item: r.selfCheck!.item,

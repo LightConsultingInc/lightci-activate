@@ -153,7 +153,9 @@ export function boundaryToManifest(
 }
 
 /** `metadata.activate-version` as a positive integer, else 1. */
-export function declaredVersion(meta: Record<string, unknown> | null | undefined): number {
+export function declaredVersion(
+  meta: Record<string, unknown> | null | undefined,
+): number {
   const n = Number.parseInt(String(meta?.['activate-version'] ?? ''), 10);
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
@@ -208,14 +210,18 @@ export function readSkillDir(
     return null;
   }
   if (!existsSync(yPath)) {
-    warnings.push(`${rel}: no activate.yaml (not governed by Activate); skipped`);
+    warnings.push(
+      `${rel}: no activate.yaml (not governed by Activate); skipped`,
+    );
     return null;
   }
   let manifest: RepoManifest;
   try {
     manifest = (parseYaml(readFileSync(yPath, 'utf8')) ?? {}) as RepoManifest;
   } catch (e) {
-    warnings.push(`${rel}: activate.yaml unparsable (${(e as Error).message}); skipped`);
+    warnings.push(
+      `${rel}: activate.yaml unparsable (${(e as Error).message}); skipped`,
+    );
     return null;
   }
   const meta = (fm.data.metadata ?? {}) as Record<string, unknown>;
@@ -230,7 +236,9 @@ export function readSkillDir(
   const owner = String(manifest.owner ?? meta['activate-owner'] ?? '');
   // Human name: the first H1 in the body (frontmatter `name` is the slug per the plugin spec).
   const h1 = fm.body.match(/^#\s+(.+?)\s*$/m)?.[1]?.trim();
-  const name = h1 || (typeof fm.data.name === 'string' && fm.data.name ? fm.data.name : slug);
+  const name =
+    h1 ||
+    (typeof fm.data.name === 'string' && fm.data.name ? fm.data.name : slug);
   const triggerLine =
     typeof fm.data.description === 'string' ? fm.data.description.trim() : '';
   if (!triggerLine)

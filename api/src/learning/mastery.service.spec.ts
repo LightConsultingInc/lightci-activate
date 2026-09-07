@@ -91,8 +91,17 @@ describe('mastery math (docs/mastery-model.md worked example: Priya, Context eng
       judgement: 0.68,
     });
     expect(composite).toBeCloseTo(0.862, 3);
-    expect(compositeMastery({ artifact: 0.87, consistency: 0.91, retention: 0.79 })).toBe(composite);
-    expect(compositeMastery({ artifact: 0.87, consistency: 0.91, retention: 0.79, judgement: 0 })).toBe(composite);
+    expect(
+      compositeMastery({ artifact: 0.87, consistency: 0.91, retention: 0.79 }),
+    ).toBe(composite);
+    expect(
+      compositeMastery({
+        artifact: 0.87,
+        consistency: 0.91,
+        retention: 0.79,
+        judgement: 0,
+      }),
+    ).toBe(composite);
   });
 });
 
@@ -120,7 +129,12 @@ describe('MasteryService.computeOne from Grade/Submission/Exercise/Revisit rows'
     expect(view.components.retention).toBeCloseTo(0.88 * Math.exp(-0.24), 2);
     expect(view.mastery).toBeGreaterThanOrEqual(0.8);
     expect(view.mastery).toBeLessThanOrEqual(0.9);
-    expect(view.mastery).toBeCloseTo(0.6 * view.components.artifact + 0.2 * view.components.consistency + 0.2 * view.components.retention, 2);
+    expect(view.mastery).toBeCloseTo(
+      0.6 * view.components.artifact +
+        0.2 * view.components.consistency +
+        0.2 * view.components.retention,
+      2,
+    );
     expect(view.status).toBe('mastered');
   });
 
@@ -236,9 +250,15 @@ describe('promotion gate logic (RUNG_GATES)', () => {
 
   it('judgement never gates (retired 2026-09-06): L3 and L5 are met regardless of the judgement score', () => {
     const low = { ...judgement, score: 0 };
-    expect(svc().gateCheck(3, [comp('L3.a', 3, 0.9, 3)], low).met.judgement).toBe(true);
-    expect(svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], low).met.judgement).toBe(true);
-    expect(svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], low).toNextRung).toBe(1);
+    expect(
+      svc().gateCheck(3, [comp('L3.a', 3, 0.9, 3)], low).met.judgement,
+    ).toBe(true);
+    expect(
+      svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], low).met.judgement,
+    ).toBe(true);
+    expect(svc().gateCheck(5, [comp('L5.a', 5, 0.95, 4)], low).toNextRung).toBe(
+      1,
+    );
     expect(RUNG_GATES[5].minJudgement).toBe(0);
   });
 

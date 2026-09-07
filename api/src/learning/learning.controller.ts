@@ -273,9 +273,13 @@ export class LearningController {
   }
 
   @Post('exercises/:id/expect')
-  @ApiOperation({ summary: 'Retired (410). Practice v2 has no prediction step.' })
+  @ApiOperation({
+    summary: 'Retired (410). Practice v2 has no prediction step.',
+  })
   expect(): never {
-    throw new GoneException('Retired: practice no longer asks for a guess before Run; call POST /exercises/:id/run directly.');
+    throw new GoneException(
+      'Retired: practice no longer asks for a guess before Run; call POST /exercises/:id/run directly.',
+    );
   }
 
   @Post('exercises/:id/run')
@@ -290,7 +294,12 @@ export class LearningController {
     @Body() dto: RunDto,
   ): Promise<RunResult> {
     const exercise = await this.loadExercise(id, user, orgId, 'edit');
-    return this.coach.run(exercise, user, orgId, dto as Record<string, unknown>);
+    return this.coach.run(
+      exercise,
+      user,
+      orgId,
+      dto as Record<string, unknown>,
+    );
   }
 
   @Post('exercises/:id/submit')
@@ -315,13 +324,26 @@ export class LearningController {
       );
     if (practice.kind === 'review') {
       if (artifact.type !== 'review')
-        throw new BadRequestException("artifact.type must be 'review' for this practice.");
-      if (typeof artifact.score10 !== 'number' || !Number.isFinite(artifact.score10))
-        throw new BadRequestException('artifact.score10 (0–10) is required for a review.');
+        throw new BadRequestException(
+          "artifact.type must be 'review' for this practice.",
+        );
+      if (
+        typeof artifact.score10 !== 'number' ||
+        !Number.isFinite(artifact.score10)
+      )
+        throw new BadRequestException(
+          'artifact.score10 (0–10) is required for a review.',
+        );
       if (typeof artifact.notes !== 'string' || !artifact.notes.trim())
-        throw new BadRequestException('artifact.notes is required: a few lines the author can act on.');
-      if (typeof artifact.content !== 'string' || !artifact.content.trim()) artifact.content = artifact.notes.trim();
-    } else if (typeof artifact.content !== 'string' || !artifact.content.trim()) {
+        throw new BadRequestException(
+          'artifact.notes is required: a few lines the author can act on.',
+        );
+      if (typeof artifact.content !== 'string' || !artifact.content.trim())
+        artifact.content = artifact.notes.trim();
+    } else if (
+      typeof artifact.content !== 'string' ||
+      !artifact.content.trim()
+    ) {
       throw new BadRequestException('artifact.content is required.');
     }
     if (exercise.status === 'passed')
@@ -348,11 +370,21 @@ export class LearningController {
     let agreement: SubmitResponse['agreement'];
     let grade: Grade;
     if (practice.kind === 'review') {
-      const r = await this.grader.gradeReview(exercise, submission, user, orgId);
+      const r = await this.grader.gradeReview(
+        exercise,
+        submission,
+        user,
+        orgId,
+      );
       grade = r.grade;
       agreement = r.agreement;
     } else {
-      grade = await this.grader.gradeSubmission(exercise, submission, user, orgId);
+      grade = await this.grader.gradeSubmission(
+        exercise,
+        submission,
+        user,
+        orgId,
+      );
     }
     exercise.status = grade.decision === 'pass' ? 'passed' : 'revise';
     exercise.completedAt = grade.decision === 'pass' ? new Date() : null;
@@ -368,7 +400,16 @@ export class LearningController {
     await this.memory.record(user.id, orgId, {
       kind: 'submission_graded',
       note: `Graded "${exercise.title}" (${practice.kind}): ${score10}/10 ${decision}${weak.length ? `; missed: ${weak.join(', ')}` : ''}${feedback.tryNext ? `; next time: ${feedback.tryNext.slice(0, 140)}` : ''}${promotion ? `; promoted to L${promotion.newRung}` : ''}.`,
-      data: { exerciseTitle: exercise.title, score: grade.score, score10, decision: grade.decision, missed: weak, tryNext: feedback.tryNext, practiceKind: practice.kind, workSurface: exercise.workSurface },
+      data: {
+        exerciseTitle: exercise.title,
+        score: grade.score,
+        score10,
+        decision: grade.decision,
+        missed: weak,
+        tryNext: feedback.tryNext,
+        practiceKind: practice.kind,
+        workSurface: exercise.workSurface,
+      },
     });
 
     let nextUp = await this.coach.nextUp(user.id);
@@ -419,9 +460,13 @@ export class LearningController {
   }
 
   @Post('exercises/:id/open-in-claude')
-  @ApiOperation({ summary: 'Retired (410). Every practice item runs in the app.' })
+  @ApiOperation({
+    summary: 'Retired (410). Every practice item runs in the app.',
+  })
   openInClaude(): never {
-    throw new GoneException('Retired: practice runs in the app now; use POST /exercises/:id/run.');
+    throw new GoneException(
+      'Retired: practice runs in the app now; use POST /exercises/:id/run.',
+    );
   }
 
   // ───────────────────────── revisits ─────────────────────────
@@ -578,7 +623,8 @@ export class LearningController {
         ? this.workflows.findOne({ where: { id: exercise.workflowMapId } })
         : null,
     ]);
-    const { draftExpectation: _legacyDraft, ...starterRest } = exercise.starter ?? {};
+    const { draftExpectation: _legacyDraft, ...starterRest } =
+      exercise.starter ?? {};
     void _legacyDraft;
     const practice = practiceOf(exercise, workflow?.name ?? null);
     return {

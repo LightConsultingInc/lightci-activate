@@ -16,7 +16,12 @@ function build(seed: Partial<Revisit>[] = []) {
     ),
   };
   const memory = { record: jest.fn(() => Promise.resolve({ version: 1 })) };
-  const svc = new RevisitService(repo as any, fakeAi() as any, mastery as any, memory as any);
+  const svc = new RevisitService(
+    repo as any,
+    fakeAi() as any,
+    mastery as any,
+    memory as any,
+  );
   return { svc, repo, mastery, memory };
 }
 
@@ -115,7 +120,11 @@ describe('answer() via the grader.revisit mock', () => {
     expect(repo.rows).toHaveLength(2);
     expect(repo.rows[1].prompt).not.toBe(revisit.prompt);
     expect(mastery.snapshot).toHaveBeenCalledWith('p1');
-    expect(memory.record).toHaveBeenCalledWith('p1', 'org1', expect.objectContaining({ kind: 'revisit_answered' }));
+    expect(memory.record).toHaveBeenCalledWith(
+      'p1',
+      'org1',
+      expect.objectContaining({ kind: 'revisit_answered' }),
+    );
   });
 
   it('a short answer fails and resets to the 2-day box', async () => {

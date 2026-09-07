@@ -10,7 +10,14 @@ import { COMPETENCY_BY_CODE } from './competency-catalog';
 import { COACH_SYSTEM } from './prompts';
 import './learning.mocks';
 
-export const MEMORY_EVENT_KINDS = ['interview_completed', 'submission_graded', 'exercise_skipped', 'skill_adopted', 'lesson_checked', 'revisit_answered'] as const;
+export const MEMORY_EVENT_KINDS = [
+  'interview_completed',
+  'submission_graded',
+  'exercise_skipped',
+  'skill_adopted',
+  'lesson_checked',
+  'revisit_answered',
+] as const;
 export type MemoryEventKind = (typeof MEMORY_EVENT_KINDS)[number];
 
 /** Compact, PII-free record of something that happened in the learning loop. */
@@ -58,16 +65,38 @@ export interface PersonMemory {
 }
 
 export const MemorySynthesisSchema = z.object({
-  summary: z.string().describe('4–6 sentences: who they are, how they work, strengths, recurring struggles, preferences. Factual, plain, no PII, no rung codes.'),
-  strengths: z.array(z.string()).describe('Short phrases, evidenced by the events. 0–6.'),
-  struggles: z.array(z.string()).describe('Recurring difficulties, short phrases, evidenced by the events. 0–6.'),
-  preferences: z.array(z.string()).describe('How they like to work ("prefers typing", "no time during month-end"). 0–6.'),
-  vocabulary: z.array(z.object({ term: z.string(), meaning: z.string() })).describe('Their own terms; keep previous ones unless contradicted.'),
+  summary: z
+    .string()
+    .describe(
+      '4–6 sentences: who they are, how they work, strengths, recurring struggles, preferences. Factual, plain, no PII, no rung codes.',
+    ),
+  strengths: z
+    .array(z.string())
+    .describe('Short phrases, evidenced by the events. 0–6.'),
+  struggles: z
+    .array(z.string())
+    .describe(
+      'Recurring difficulties, short phrases, evidenced by the events. 0–6.',
+    ),
+  preferences: z
+    .array(z.string())
+    .describe(
+      'How they like to work ("prefers typing", "no time during month-end"). 0–6.',
+    ),
+  vocabulary: z
+    .array(z.object({ term: z.string(), meaning: z.string() }))
+    .describe('Their own terms; keep previous ones unless contradicted.'),
   systems: z.array(z.string()),
-  anchorWorkflows: z.array(z.string()).describe('The weekly workflows they keep coming back to.'),
+  anchorWorkflows: z
+    .array(z.string())
+    .describe('The weekly workflows they keep coming back to.'),
 });
 
-export const WhyMeSchema = z.object({ line: z.string().describe('One sentence, second person, plain words, no rung codes.') });
+export const WhyMeSchema = z.object({
+  line: z
+    .string()
+    .describe('One sentence, second person, plain words, no rung codes.'),
+});
 
 /**
  * The living person memory: appends compact events to the person ContextLayer and periodically
@@ -80,15 +109,39 @@ export class MemoryService {
   private readonly logger = new Logger(MemoryService.name);
 
   constructor(
-    @InjectRepository(ContextLayer) private readonly layers: Repository<ContextLayer>,
+    @InjectRepository(ContextLayer)
+    private readonly layers: Repository<ContextLayer>,
     @InjectRepository(Person) private readonly people: Repository<Person>,
     private readonly ai: AiService,
   ) {}
 
-  async layerFor(personId: string, orgId: string, create = false): Promise<ContextLayer | null> {
-    const existing = await this.layers.findOne({ where: { orgId, layer: 'person', ownerId: personId } });
+  async layerFor(
+    personId: string,
+    orgId: string,
+    create = false,
+  ): Promise<ContextLayer | null> {
+    const existing = await this.layers.findOne({
+      where: { orgId, layer: 'person', ownerId: personId },
+    });
     if (existing || !create) return existing;
-    return this.layers.create({ orgId, layer: 'person', ownerId: personId, summary: null, vocabulary: [], anchorWorkflows: [], sensitivities: [], systems: [], strengths: [], struggles: [], preferences: [], lastEvents: [], eventsSinceSynthesis: 0, synthesisedAt: null, moduleLines: {}, version: 0 });
+    return this.layers.create({
+      orgId,
+      layer: 'person',
+      ownerId: personId,
+      summary: null,
+      vocabulary: [],
+      anchorWorkflows: [],
+      sensitivities: [],
+      systems: [],
+      strengths: [],
+      struggles: [],
+      preferences: [],
+      lastEvents: [],
+      eventsSinceSynthesis: 0,
+      synthesisedAt: null,
+      moduleLines: {},
+      version: 0,
+    });
   }
 
   toMemory(layer: ContextLayer | null): PersonMemory {
@@ -101,7 +154,9 @@ export class MemoryService {
       systems: layer?.systems ?? [],
       anchorWorkflows: layer?.anchorWorkflows ?? [],
       version: layer?.version ?? 0,
-      updatedAt: layer?.updatedAt ? new Date(layer.updatedAt).toISOString() : null,
+      updatedAt: layer?.updatedAt
+        ? new Date(layer.updatedAt).toISOString()
+        : null,
       lastEvents: layer?.lastEvents ?? [],
     };
   }
@@ -112,17 +167,30 @@ export class MemoryService {
   }
 
   /** Append one event; synthesise when it is an interview completion or ≥ 3 events have accrued since the last synthesis. */
-  async record(personId: string, orgId: string | null, event: MemoryEvent): Promise<PersonMemory> {
+  async record(
+    personId: string,
+    orgId: string | null,
+    event: MemoryEvent,
+  ): Promise<PersonMemory> {
     if (!orgId) return this.toMemory(null);
     const layer = (await this.layerFor(personId, orgId, true)) as ContextLayer;
-    const entry = { at: event.at ?? new Date().toISOString(), kind: event.kind, note: scrub(event.note).slice(0, 300) };
+    const entry = {
+      at: event.at ?? new Date().toISOString(),
+      kind: event.kind,
+      note: scrub(event.note).slice(0, 300),
+    };
     layer.lastEvents = [...(layer.lastEvents ?? []), entry].slice(-MAX_EVENTS);
     layer.eventsSinceSynthesis = (layer.eventsSinceSynthesis ?? 0) + 1;
-    if (event.kind === 'interview_completed' || layer.eventsSinceSynthesis >= SYNTHESIS_EVERY) {
+    if (
+      event.kind === 'interview_completed' ||
+      layer.eventsSinceSynthesis >= SYNTHESIS_EVERY
+    ) {
       try {
         await this.synthesise(layer, personId, orgId);
       } catch (error) {
-        this.logger.warn(`Memory synthesis failed for ${personId}: ${error instanceof Error ? error.message : String(error)}`);
+        this.logger.warn(
+          `Memory synthesis failed for ${personId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
     const saved = await this.layers.save(layer);
@@ -130,9 +198,15 @@ export class MemoryService {
   }
 
   /** Rewrite the narrative from the previous memory + the events since the last synthesis (task memory.synthesise). Mutates `layer`. */
-  async synthesise(layer: ContextLayer, personId: string, orgId: string): Promise<void> {
+  async synthesise(
+    layer: ContextLayer,
+    personId: string,
+    orgId: string,
+  ): Promise<void> {
     const person = await this.people.findOne({ where: { id: personId } });
-    const fresh = layer.lastEvents.slice(-Math.max(1, layer.eventsSinceSynthesis));
+    const fresh = layer.lastEvents.slice(
+      -Math.max(1, layer.eventsSinceSynthesis),
+    );
     const previous = this.toMemory(layer);
     const out = await this.ai.structured(
       {
@@ -153,17 +227,40 @@ This call maintains the Coach's memory of one learner. Rewrite the memory from t
               `Profile: ${JSON.stringify(person?.profile ?? {})}`,
               '',
               '# Previous memory',
-              JSON.stringify({ summary: previous.summary, strengths: previous.strengths, struggles: previous.struggles, preferences: previous.preferences, vocabulary: previous.vocabulary, systems: previous.systems, anchorWorkflows: previous.anchorWorkflows }, null, 2),
+              JSON.stringify(
+                {
+                  summary: previous.summary,
+                  strengths: previous.strengths,
+                  struggles: previous.struggles,
+                  preferences: previous.preferences,
+                  vocabulary: previous.vocabulary,
+                  systems: previous.systems,
+                  anchorWorkflows: previous.anchorWorkflows,
+                },
+                null,
+                2,
+              ),
               '',
               `# New events since the last rewrite (${fresh.length})`,
-              ...fresh.map((e) => `- ${e.at.slice(0, 10)} ${e.kind}: ${e.note}`),
+              ...fresh.map(
+                (e) => `- ${e.at.slice(0, 10)} ${e.kind}: ${e.note}`,
+              ),
               '',
               `# Older events (for context)`,
-              ...layer.lastEvents.slice(0, -fresh.length).slice(-12).map((e) => `- ${e.at.slice(0, 10)} ${e.kind}: ${e.note}`),
+              ...layer.lastEvents
+                .slice(0, -fresh.length)
+                .slice(-12)
+                .map((e) => `- ${e.at.slice(0, 10)} ${e.kind}: ${e.note}`),
             ].join('\n'),
           },
         ],
-        mockSeed: { previous, events: fresh, allEvents: layer.lastEvents, role: person?.title ?? null, profile: person?.profile ?? {} },
+        mockSeed: {
+          previous,
+          events: fresh,
+          allEvents: layer.lastEvents,
+          role: person?.title ?? null,
+          profile: person?.profile ?? {},
+        },
       },
       MemorySynthesisSchema,
     );
@@ -180,13 +277,18 @@ This call maintains the Coach's memory of one learner. Rewrite the memory from t
   }
 
   /** One sentence on why a module matters for this person, cached per memory version on the layer. */
-  async whyMe(person: Person, orgId: string | null, code: string): Promise<{ line: string }> {
+  async whyMe(
+    person: Person,
+    orgId: string | null,
+    code: string,
+  ): Promise<{ line: string }> {
     const module = describeModule(code);
     if (!orgId) return { line: genericWhy(module.name) };
     const layer = await this.layerFor(person.id, orgId);
     if (!layer) return { line: genericWhy(module.name) };
     const cached = layer.moduleLines?.[code];
-    if (cached && cached.version === layer.version) return { line: cached.line };
+    if (cached && cached.version === layer.version)
+      return { line: cached.line };
     const memory = this.toMemory(layer);
     let line: string;
     try {
@@ -199,24 +301,42 @@ This call maintains the Coach's memory of one learner. Rewrite the memory from t
           effort: 'low',
           model: this.ai.fastModel,
           system: `${COACH_SYSTEM}\n\nWrite one sentence, to the learner, on why this module matters for them right now, grounded in their memory (their workflows, struggles, strengths). Plain words, second person, no rung codes, no flattery.`,
-          messages: [{ role: 'user', content: `# Module\n${module.name}: ${module.description}\n\n# Memory\n${JSON.stringify({ summary: memory.summary, strengths: memory.strengths, struggles: memory.struggles, preferences: memory.preferences, anchorWorkflows: memory.anchorWorkflows }, null, 2)}` }],
-          mockSeed: { module: module.name, struggles: memory.struggles, anchorWorkflows: memory.anchorWorkflows, role: person.title },
+          messages: [
+            {
+              role: 'user',
+              content: `# Module\n${module.name}: ${module.description}\n\n# Memory\n${JSON.stringify({ summary: memory.summary, strengths: memory.strengths, struggles: memory.struggles, preferences: memory.preferences, anchorWorkflows: memory.anchorWorkflows }, null, 2)}`,
+            },
+          ],
+          mockSeed: {
+            module: module.name,
+            struggles: memory.struggles,
+            anchorWorkflows: memory.anchorWorkflows,
+            role: person.title,
+          },
         },
         WhyMeSchema,
       );
       line = out.line.trim();
     } catch (error) {
-      this.logger.warn(`why-me failed for ${person.id}/${code}: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `why-me failed for ${person.id}/${code}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return { line: genericWhy(module.name) };
     }
-    layer.moduleLines = { ...(layer.moduleLines ?? {}), [code]: { line, version: layer.version } };
+    layer.moduleLines = {
+      ...(layer.moduleLines ?? {}),
+      [code]: { line, version: layer.version },
+    };
     await this.layers.save(layer);
     return { line };
   }
 }
 
 /** A module code is a competency code ("L1.description") or a rung code ("L1" / "1"). */
-export function describeModule(code: string): { name: string; description: string } {
+export function describeModule(code: string): {
+  name: string;
+  description: string;
+} {
   const comp = COMPETENCY_BY_CODE.get(code);
   if (comp) return { name: comp.name, description: comp.description };
   const rung = /^L?([0-5])$/i.exec(code.trim());
@@ -233,7 +353,12 @@ function genericWhy(name: string): string {
 
 function dedupe(xs: string[]): string[] {
   const seen = new Set<string>();
-  return xs.map((x) => x.trim()).filter((x) => x && !seen.has(x.toLowerCase()) && (seen.add(x.toLowerCase()), true));
+  return xs
+    .map((x) => x.trim())
+    .filter(
+      (x) =>
+        x && !seen.has(x.toLowerCase()) && (seen.add(x.toLowerCase()), true),
+    );
 }
 
 /** Strip the obvious PII shapes from an event note before it is stored. */

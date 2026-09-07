@@ -6,7 +6,10 @@
 import type { Artifact } from './entities/submission.entity';
 import type { Exercise } from './entities/exercise.entity';
 import type { RubricScore } from './entities/grade.entity';
-import type { WorkflowSchema, WorkflowScore } from '../workflows/entities/workflow-map.entity';
+import type {
+  WorkflowSchema,
+  WorkflowScore,
+} from '../workflows/entities/workflow-map.entity';
 
 export interface PersonRef {
   id: string;
@@ -82,7 +85,8 @@ export interface StreakView {
  * Practice model v2 (docs/practice-model.md): one ask, one input area matching the kind, Run, feedback.
  * Carried on `exercise.starter.practice`; legacy rows are adapted at read time (mappers.practiceOf).
  */
-export type PracticeKind = 'prompt' | 'project' | 'skill' | 'workflow' | 'review';
+export type PracticeKind =
+  'prompt' | 'project' | 'skill' | 'workflow' | 'review';
 
 export interface PromptPrefill {
   prompt: string;
@@ -188,7 +192,11 @@ export interface GradeView {
   /** Legacy (pre-v2) grades only: self-check ticks vs the Grader's. */
   selfCheckAgreement?: { item: string; learner: boolean; grader: boolean }[];
   /** What the learner sees: three lines, a score out of 10 and pass / try again. Derived from feedback + teachingMoment. */
-  learner: { feedback: PracticeFeedback; score10: number; decision: PracticeDecision };
+  learner: {
+    feedback: PracticeFeedback;
+    score10: number;
+    decision: PracticeDecision;
+  };
   gradedAt: string;
   gradedBy: 'grader' | PersonRef;
 }

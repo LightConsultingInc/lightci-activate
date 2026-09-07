@@ -1,11 +1,11 @@
 "use client"
 
-import { ChevronDown, FilePlus2, Trash2 } from "lucide-react"
+import { FilePlus2, Trash2 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { MarkdownLite } from "./markdown-lite"
 import { WorkflowSchemaForm, EMPTY_SCHEMA, Field } from "./workflow-schema-form"
 import type { Artifact, ExerciseDetail, PracticeKind, PracticeSpec, RunBody, RunResult, SkillRunResult, WorkflowSchema } from "@/hooks/learner/types"
@@ -78,7 +78,12 @@ export function initialSurface(ex: ExerciseDetail, spec: PracticeSpec = practice
   const last = ex.submissions?.[ex.submissions.length - 1]?.artifact
   switch (spec.kind) {
     case "prompt":
-      return { kind: "prompt", prompt: last?.content ?? str(f.prompt), material: last?.material ?? str(f.material), output: null }
+      {
+        const prompt = last?.content ?? str(f.prompt)
+        const material = last?.material ?? str(f.material)
+        // One box: any separately stored material is appended so nothing is hidden behind a toggle.
+        return { kind: "prompt", prompt: material && !prompt.includes(material) ? `${prompt.trimEnd()}\n\n${material}` : prompt, material: "", output: null }
+      }
     case "project":
       return {
         kind: "project",
@@ -194,22 +199,6 @@ export function PromptInput({ value, onChange, disabled, rung }: EditorProps<Pro
         aria-label="Your prompt"
         data-testid="prompt-input"
       />
-      <Collapsible defaultOpen={Boolean(value.material)}>
-        <CollapsibleTrigger className="group inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" data-testid="prompt-material-toggle">
-          <ChevronDown className="size-3.5 transition-transform group-data-[panel-open]:rotate-180" /> Paste the material
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">
-          <Textarea
-            value={value.material}
-            onChange={(e) => onChange({ ...value, material: e.target.value })}
-            disabled={disabled}
-            className="min-h-28 font-mono text-[13px]"
-            placeholder="The email, the notes, the draft… whatever Claude needs to see."
-            aria-label="Material"
-            data-testid="prompt-material-input"
-          />
-        </CollapsibleContent>
-      </Collapsible>
     </div>
   )
 }

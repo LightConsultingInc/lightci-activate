@@ -212,7 +212,11 @@ export function computeMastery(input: MasteryInput): {
 /** Promotion gate check from §6: mastery and contexts. Judgement is accepted for compatibility and ignored (retired 2026-09-06). */
 export function meetsGate(
   m: { mastery: number; contexts: number; judgement?: number | null },
-  gate: { masteryThreshold: number; minContexts: number; minJudgement?: number },
+  gate: {
+    masteryThreshold: number;
+    minContexts: number;
+    minJudgement?: number;
+  },
 ): boolean {
   return m.mastery >= gate.masteryThreshold && m.contexts >= gate.minContexts;
 }

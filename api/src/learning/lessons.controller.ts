@@ -1,9 +1,20 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsInt, IsObject, IsString, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsObject,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { CurrentUser, OrgId } from '../common/decorators';
 import { Person } from '../orgs/entities/person.entity';
-import type { LessonCheck, LessonExample } from './entities/lesson-personalisation.entity';
+import type {
+  LessonCheck,
+  LessonExample,
+} from './entities/lesson-personalisation.entity';
 import { LessonsService, type PersonalisedLesson } from './lessons.service';
 
 class PersonaliseLessonDto {
@@ -26,8 +37,16 @@ export class LessonsController {
   constructor(private readonly lessons: LessonsService) {}
 
   @Post(':slug/personalised')
-  @ApiOperation({ summary: 'Rewrite a lesson\'s example and check for the caller from their own workflows (cached per person+lesson); generic content with personalised=false when nothing is known about them.' })
-  async personalised(@CurrentUser() user: Person, @OrgId() orgId: string, @Param('slug') slug: string, @Body() dto: PersonaliseLessonDto): Promise<PersonalisedLesson> {
+  @ApiOperation({
+    summary:
+      "Rewrite a lesson's example and check for the caller from their own workflows (cached per person+lesson); generic content with personalised=false when nothing is known about them.",
+  })
+  async personalised(
+    @CurrentUser() user: Person,
+    @OrgId() orgId: string,
+    @Param('slug') slug: string,
+    @Body() dto: PersonaliseLessonDto,
+  ): Promise<PersonalisedLesson> {
     return this.lessons.personalise(user, orgId, slug.slice(0, 120), {
       rung: dto.rung,
       title: dto.title,
@@ -40,8 +59,15 @@ export class LessonsController {
   }
 
   @Post(':slug/checked')
-  @ApiOperation({ summary: 'Record the outcome of a lesson check (feeds the person memory).' })
-  async checked(@CurrentUser() user: Person, @OrgId() orgId: string, @Param('slug') slug: string, @Body() dto: LessonCheckedDto): Promise<{ ok: true; memoryVersion: number }> {
+  @ApiOperation({
+    summary: 'Record the outcome of a lesson check (feeds the person memory).',
+  })
+  async checked(
+    @CurrentUser() user: Person,
+    @OrgId() orgId: string,
+    @Param('slug') slug: string,
+    @Body() dto: LessonCheckedDto,
+  ): Promise<{ ok: true; memoryVersion: number }> {
     return this.lessons.checked(user, orgId, slug.slice(0, 120), dto.correct);
   }
 }

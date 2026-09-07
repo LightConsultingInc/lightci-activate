@@ -1,5 +1,11 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { cpSync, existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { simpleGit, type SimpleGit } from 'simple-git';
 import { isGitRepo, readTree, resolveRepoPath } from './repo-reader';
@@ -56,12 +62,17 @@ export class GitRepoService implements OnModuleInit {
     if (this.resolved || !this.sourcePath) return;
     this.resolved = true;
     if (isGitRepo(this.sourcePath)) {
-      this.logger.log(`Marketplace repo mode: in-place (${this.sourcePath} is already a git repo)`);
+      this.logger.log(
+        `Marketplace repo mode: in-place (${this.sourcePath} is already a git repo)`,
+      );
       return;
     }
     let toplevel: string | null = null;
     try {
-      toplevel = (await simpleGit(this.sourcePath).revparse(['--show-toplevel'])).trim() || null;
+      toplevel =
+        (
+          await simpleGit(this.sourcePath).revparse(['--show-toplevel'])
+        ).trim() || null;
     } catch {
       toplevel = null;
     }
@@ -73,20 +84,30 @@ export class GitRepoService implements OnModuleInit {
       }
     };
     const source = real(this.sourcePath);
-    const nested = Boolean(toplevel) && real(toplevel!) !== source && source.startsWith(real(toplevel!) + sep);
+    const nested =
+      Boolean(toplevel) &&
+      real(toplevel!) !== source &&
+      source.startsWith(real(toplevel!) + sep);
     if (!nested) {
       this.logger.log(`Marketplace repo mode: in-place (${this.sourcePath})`);
       return;
     }
-    const workDir = resolveRepoPath(process.env.LIBRARY_WORK_DIR ?? '.marketplace-work')!;
+    const workDir = resolveRepoPath(
+      process.env.LIBRARY_WORK_DIR ?? '.marketplace-work',
+    )!;
     if (!existsSync(workDir)) {
       cpSync(this.sourcePath, workDir, {
         recursive: true,
-        filter: (src) => !src.endsWith(`${sep}.git`) && !src.includes(`${sep}.git${sep}`),
+        filter: (src) =>
+          !src.endsWith(`${sep}.git`) && !src.includes(`${sep}.git${sep}`),
       });
-      this.logger.log(`Marketplace repo mode: nested inside ${toplevel}; mirrored plain files to work dir ${workDir}`);
+      this.logger.log(
+        `Marketplace repo mode: nested inside ${toplevel}; mirrored plain files to work dir ${workDir}`,
+      );
     } else {
-      this.logger.log(`Marketplace repo mode: nested inside ${toplevel}; reusing existing work dir ${workDir}`);
+      this.logger.log(
+        `Marketplace repo mode: nested inside ${toplevel}; reusing existing work dir ${workDir}`,
+      );
     }
     this.mode = 'nested';
     this.workDir = workDir;
@@ -110,39 +131,65 @@ export class GitRepoService implements OnModuleInit {
    * Resolves true when the folder is a usable git repo.
    */
   ensureRepo(): Promise<boolean> {
-    if (!this.sourcePath || !existsSync(this.sourcePath)) return Promise.resolve(false);
-    if (this.resolved && this.path && isGitRepo(this.path)) return Promise.resolve(true);
+    if (!this.sourcePath || !existsSync(this.sourcePath))
+      return Promise.resolve(false);
+    if (this.resolved && this.path && isGitRepo(this.path))
+      return Promise.resolve(true);
     return this.locked(async () => {
       await this.resolveLocation();
       // A nested work dir can be wiped at runtime (the demo seed reset does this): mirror it again.
-      if (this.mode === 'nested' && this.workDir && !existsSync(this.workDir) && this.sourcePath) {
+      if (
+        this.mode === 'nested' &&
+        this.workDir &&
+        !existsSync(this.workDir) &&
+        this.sourcePath
+      ) {
         cpSync(this.sourcePath, this.workDir, {
           recursive: true,
-          filter: (src) => !src.endsWith(`${sep}.git`) && !src.includes(`${sep}.git${sep}`),
+          filter: (src) =>
+            !src.endsWith(`${sep}.git`) && !src.includes(`${sep}.git${sep}`),
         });
-        this.logger.log(`Re-mirrored marketplace plain files into ${this.workDir}`);
+        this.logger.log(
+          `Re-mirrored marketplace plain files into ${this.workDir}`,
+        );
       }
       if (!this.path || !existsSync(this.path)) return false;
       if (isGitRepo(this.path)) return true;
       try {
-        const git = simpleGit(this.path!);
+        const git = simpleGit(this.path);
         await git.init(['-b', this.defaultBranch]);
         await git.addConfig('user.name', 'Activate Bot', false, 'local');
-        await git.addConfig('user.email', 'activate@lightci.com', false, 'local');
+        await git.addConfig(
+          'user.email',
+          'activate@lightci.com',
+          false,
+          'local',
+        );
         await git.add(['-A']);
-        await git.commit('Initial marketplace import\n\nImported from plain files by LightCI Activate GitRepoService.ensureRepo().', undefined, {
-          '--author': 'Activate Bot <activate@lightci.com>',
-        });
-        const tree = readTree(this.path!);
+        await git.commit(
+          'Initial marketplace import\n\nImported from plain files by LightCI Activate GitRepoService.ensureRepo().',
+          undefined,
+          {
+            '--author': 'Activate Bot <activate@lightci.com>',
+          },
+        );
+        const tree = readTree(this.path);
         for (const skill of tree.skills) {
           const tag = `${skill.slug}@v${skill.declaredVersion}`;
-          await git.addAnnotatedTag(tag, `${skill.slug} v${skill.declaredVersion} — imported as current content`);
+          await git.addAnnotatedTag(
+            tag,
+            `${skill.slug} v${skill.declaredVersion} — imported as current content`,
+          );
         }
-        this.logger.log(`Initialised marketplace repo at ${this.path} (${tree.skills.length} skills tagged)`);
+        this.logger.log(
+          `Initialised marketplace repo at ${this.path} (${tree.skills.length} skills tagged)`,
+        );
         return true;
       } catch (e) {
-        this.logger.error(`ensureRepo failed at ${this.path}: ${(e as Error).message}`);
-        return isGitRepo(this.path!);
+        this.logger.error(
+          `ensureRepo failed at ${this.path}: ${(e as Error).message}`,
+        );
+        return isGitRepo(this.path);
       }
     });
   }
@@ -293,7 +340,8 @@ export class GitRepoService implements OnModuleInit {
     head: string | null;
     dirty: boolean;
   }> {
-    if (!(await this.ensureRepo())) return { branch: null, head: null, dirty: false };
+    if (!(await this.ensureRepo()))
+      return { branch: null, head: null, dirty: false };
     const git = this.git();
     const [branch, head, status] = await Promise.all([
       git.revparse(['--abbrev-ref', 'HEAD']).catch(() => null),

@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { AiService } from '../ai/ai.service';
@@ -15,11 +20,21 @@ import { CoachNote } from './entities/coach-note.entity';
 import type { RubricCriterion } from './entities/competency.entity';
 import { Exercise } from './entities/exercise.entity';
 import { Grade, type RubricScore } from './entities/grade.entity';
-import { encodeFeedback, gradeOfRecord, practiceOf, score10Of } from './mappers';
+import {
+  encodeFeedback,
+  gradeOfRecord,
+  practiceOf,
+  score10Of,
+} from './mappers';
 import type { PracticeFeedback } from './learning.types';
 import { Submission } from './entities/submission.entity';
 import { MasteryService } from './mastery.service';
-import { GRADER_FIRST_TASK_SYSTEM, GRADER_SKILL_SYSTEM, GRADER_SYSTEM, boundaryText } from './prompts';
+import {
+  GRADER_FIRST_TASK_SYSTEM,
+  GRADER_SKILL_SYSTEM,
+  GRADER_SYSTEM,
+  boundaryText,
+} from './prompts';
 import './learning.mocks';
 
 export const GRADER_VERSION = 'grader-v2';
@@ -28,8 +43,20 @@ export const FIRST_TASK_PASS_THRESHOLD = 0.7;
 
 /** Rung 0: one real task. Pass when it is finished and usable and uses only what the learner supplied. */
 export const FIRST_TASK_RUBRIC: readonly RubricCriterion[] = [
-  { key: 'finished', label: 'Finished and usable', description: 'A complete piece of the learner\'s real work they could use as it is (or with a light edit), not a fragment or a plan.', weight: 0.6 },
-  { key: 'own_facts', label: 'Only uses facts the learner gave it', description: 'No invented names, figures or details; placeholders where something was missing.', weight: 0.4 },
+  {
+    key: 'finished',
+    label: 'Finished and usable',
+    description:
+      "A complete piece of the learner's real work they could use as it is (or with a light edit), not a fragment or a plan.",
+    weight: 0.6,
+  },
+  {
+    key: 'own_facts',
+    label: 'Only uses facts the learner gave it',
+    description:
+      'No invented names, figures or details; placeholders where something was missing.',
+    weight: 0.4,
+  },
 ];
 
 export interface SecurityFinding {
@@ -75,7 +102,11 @@ export class GraderService {
     artifactType: string,
   ): WeightedCriterion[] {
     if (exercise.rung === 0)
-      return FIRST_TASK_RUBRIC.map((r) => ({ ...r, criterion: `first.${r.key}`, competencyCode: 'L0.surfaces' }));
+      return FIRST_TASK_RUBRIC.map((r) => ({
+        ...r,
+        criterion: `first.${r.key}`,
+        competencyCode: 'L0.surfaces',
+      }));
     const out: WeightedCriterion[] = [];
     for (const code of exercise.competencyCodes) {
       const def = COMPETENCY_BY_CODE.get(code);
@@ -213,9 +244,14 @@ export class GraderService {
           )
         : [];
     const feedback: PracticeFeedback = {
-      worked: oneLine(out.worked) || 'You made a real attempt on your own work.',
-      change: oneLine(out.change) || `Look again at ${(rubricScores.sort((a, b) => a.score - b.score)[0]?.label ?? 'the weakest part').toLowerCase()}.`,
-      tryNext: oneLine(out.tryNext) || 'Next run, say who reads this and what they will do with it.',
+      worked:
+        oneLine(out.worked) || 'You made a real attempt on your own work.',
+      change:
+        oneLine(out.change) ||
+        `Look again at ${(rubricScores.sort((a, b) => a.score - b.score)[0]?.label ?? 'the weakest part').toLowerCase()}.`,
+      tryNext:
+        oneLine(out.tryNext) ||
+        'Next run, say who reads this and what they will do with it.',
     };
 
     const grade = this.grades.create({
@@ -249,7 +285,10 @@ export class GraderService {
     submission: Submission,
     person: Person,
     orgId: string | null,
-  ): Promise<{ grade: Grade; agreement: { learner: number; grader: number; note: string } }> {
+  ): Promise<{
+    grade: Grade;
+    agreement: { learner: number; grader: number; note: string };
+  }> {
     const practice = practiceOf(exercise);
     const targetId =
       practice.kind === 'review' ? practice.prefill.submissionId : '';
@@ -257,25 +296,50 @@ export class GraderService {
       ? await this.submissions.findOne({ where: { id: targetId } })
       : null;
     if (!target)
-      throw new ConflictException("The work to review is no longer available; skip this one and Coach will queue another.");
+      throw new ConflictException(
+        'The work to review is no longer available; skip this one and Coach will queue another.',
+      );
     let graderGrade = gradeOfRecord(
       await this.grades.find({ where: { submissionId: target.id } }),
     );
     if (!graderGrade) {
-      const targetExercise = await this.exercises.findOne({ where: { id: target.exerciseId } });
-      const author = targetExercise ? ({ id: target.personId } as Person) : null;
+      const targetExercise = await this.exercises.findOne({
+        where: { id: target.exerciseId },
+      });
+      const author = targetExercise
+        ? ({ id: target.personId } as Person)
+        : null;
       if (!targetExercise || !author)
-        throw new ConflictException('The work to review has no grade yet and its exercise is missing.');
-      graderGrade = await this.gradeSubmission(targetExercise, target, author, orgId);
+        throw new ConflictException(
+          'The work to review has no grade yet and its exercise is missing.',
+        );
+      graderGrade = await this.gradeSubmission(
+        targetExercise,
+        target,
+        author,
+        orgId,
+      );
     }
-    const learner10 = Math.round(Math.min(10, Math.max(0, Number(submission.artifact.score10 ?? 0))) * 10) / 10;
+    const learner10 =
+      Math.round(
+        Math.min(10, Math.max(0, Number(submission.artifact.score10 ?? 0))) *
+          10,
+      ) / 10;
     const grader10 = score10Of(graderGrade.score);
     const delta = Math.abs(learner10 - grader10);
     const agreementScore = clamp01(1 - delta / 10);
-    const decisionMatch = (learner10 >= 7) === (graderGrade.decision === 'pass');
-    const notes = (submission.artifact.notes ?? submission.artifact.content ?? '').trim();
+    const decisionMatch = learner10 >= 7 === (graderGrade.decision === 'pass');
+    const notes = (
+      submission.artifact.notes ??
+      submission.artifact.content ??
+      ''
+    ).trim();
     const notesQuality = clamp01(
-      0.4 + (notes.length > 80 ? 0.3 : notes.length > 30 ? 0.15 : 0) + (/\b(change|instead|try|because|missing|add|cut|remove)\b/i.test(notes) ? 0.3 : 0),
+      0.4 +
+        (notes.length > 80 ? 0.3 : notes.length > 30 ? 0.15 : 0) +
+        (/\b(change|instead|try|because|missing|add|cut|remove)\b/i.test(notes)
+          ? 0.3
+          : 0),
     );
     const rubric = this.rubricFor(exercise, 'review');
     const rubricScores: RubricScore[] = rubric.map((c) => {
@@ -284,15 +348,30 @@ export class GraderService {
       let note = `You gave ${learner10}/10; the Grader gave ${grader10}/10.`;
       if (key === 'decision') {
         score = decisionMatch ? 1 : 0.3;
-        note = decisionMatch ? 'Your pass / try-again call matched the Grader.' : 'Your pass / try-again call differed from the Grader.';
-      } else if (c.competencyCode === 'L5.feedback' || key === 'specific' || key === 'smallest' || key === 'principle') {
+        note = decisionMatch
+          ? 'Your pass / try-again call matched the Grader.'
+          : 'Your pass / try-again call differed from the Grader.';
+      } else if (
+        c.competencyCode === 'L5.feedback' ||
+        key === 'specific' ||
+        key === 'smallest' ||
+        key === 'principle'
+      ) {
         score = notesQuality;
-        note = notes.length > 80 ? 'Your notes name specific things to change.' : 'Your notes are short; name the one change that would fix the weakest part.';
+        note =
+          notes.length > 80
+            ? 'Your notes name specific things to change.'
+            : 'Your notes are short; name the one change that would fix the weakest part.';
       } else if (key === 'consistency') {
         score = clamp01((agreementScore + (decisionMatch ? 1 : 0.5)) / 2);
         note = 'Consistency is judged across your reviews over time.';
       }
-      return { criterion: c.criterion, label: c.label, score: clamp01(score), note };
+      return {
+        criterion: c.criterion,
+        label: c.label,
+        score: clamp01(score),
+        note,
+      };
     });
     const score = this.weightedScore(rubric, rubricScores);
     const threshold = this.thresholdFor(exercise, 'review');
@@ -304,9 +383,20 @@ export class GraderService {
           ? `You were ${delta.toFixed(1)} points kinder than the Grader (${learner10} vs ${grader10}).`
           : `You were ${delta.toFixed(1)} points harsher than the Grader (${learner10} vs ${grader10}).`;
     const feedback: PracticeFeedback = {
-      worked: delta <= 1 ? 'Your score landed close to the Grader\'s.' : notes.length > 80 ? 'Your notes point at specific things the author can change.' : 'You read the work and made a call.',
-      change: delta <= 1 ? (notes.length > 80 ? 'Nothing major; keep tying each note to one part of the work.' : 'Write notes the author can act on: name the part and the smallest change.') : `Re-read the rubric notes before scoring: ${agreementNote}`,
-      tryNext: 'Next review, write down your score before you read anyone else\'s, then compare.',
+      worked:
+        delta <= 1
+          ? "Your score landed close to the Grader's."
+          : notes.length > 80
+            ? 'Your notes point at specific things the author can change.'
+            : 'You read the work and made a call.',
+      change:
+        delta <= 1
+          ? notes.length > 80
+            ? 'Nothing major; keep tying each note to one part of the work.'
+            : 'Write notes the author can act on: name the part and the smallest change.'
+          : `Re-read the rubric notes before scoring: ${agreementNote}`,
+      tryNext:
+        "Next review, write down your score before you read anyone else's, then compare.",
     };
     const grade = await this.grades.save(
       this.grades.create({
@@ -326,7 +416,10 @@ export class GraderService {
         gradedByPersonId: null,
       }),
     );
-    return { grade, agreement: { learner: learner10, grader: grader10, note: agreementNote } };
+    return {
+      grade,
+      agreement: { learner: learner10, grader: grader10, note: agreementNote },
+    };
   }
 
   // ───────────────────────── skills ─────────────────────────
@@ -640,9 +733,13 @@ export class GraderService {
     const a = submission.artifact;
     if (!a) return '';
     const parts = [`Type: ${a.type}`, a.content];
-    if (a.material) parts.push(`\n--- material the learner pasted ---\n${a.material}`);
+    if (a.material)
+      parts.push(`\n--- material the learner pasted ---\n${a.material}`);
     if (a.testTask) parts.push(`\n--- test task ---\n${a.testTask}`);
-    if (a.schema) parts.push(`\n--- workflow map ---\n${JSON.stringify(a.schema, null, 2)}`);
+    if (a.schema)
+      parts.push(
+        `\n--- workflow map ---\n${JSON.stringify(a.schema, null, 2)}`,
+      );
     if (a.output) parts.push(`\n--- Claude output ---\n${a.output}`);
     if (a.sampleRequests?.length && !a.results?.length)
       parts.push(`\n--- sample requests ---\n${a.sampleRequests.join('\n')}`);

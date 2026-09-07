@@ -160,7 +160,9 @@ export function ladderLite(f: OrgFacts, person: Person): LadderView {
       : 0,
     baselineMinutesPerWeek: hb.measuredTasks
       ? hb.baselineMinutesPerWeek
-      : f.baselines.filter((b) => b.personId === person.id).reduce((s, b) => s + b.minutesPerWeek + b.reworkMinutesPerWeek, 0),
+      : f.baselines
+          .filter((b) => b.personId === person.id)
+          .reduce((s, b) => s + b.minutesPerWeek + b.reworkMinutesPerWeek, 0),
     currentMinutesPerWeek: hb.measuredTasks ? hb.currentMinutesPerWeek : 0,
     netOfReworkMinutes: hb.measuredTasks ? hb.minutesBackPerWeek : 0,
     hasBaseline: f.baselines.some((b) => b.personId === person.id),

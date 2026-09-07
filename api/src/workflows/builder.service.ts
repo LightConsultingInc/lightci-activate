@@ -32,21 +32,43 @@ export class BuilderService {
   private readonly logger = new Logger(BuilderService.name);
 
   constructor(
-    @InjectRepository(WorkflowMap) private readonly maps: Repository<WorkflowMap>,
+    @InjectRepository(WorkflowMap)
+    private readonly maps: Repository<WorkflowMap>,
     @InjectRepository(Team) private readonly teams: Repository<Team>,
-    @InjectRepository(ContextLayer) private readonly layers: Repository<ContextLayer>,
-    @InjectRepository(Escalation) private readonly escalations: Repository<Escalation>,
+    @InjectRepository(ContextLayer)
+    private readonly layers: Repository<ContextLayer>,
+    @InjectRepository(Escalation)
+    private readonly escalations: Repository<Escalation>,
     private readonly library: LibraryService,
     private readonly ai: AiService,
   ) {}
 
-  async build(workflowMapId: string, person: Person): Promise<{ skill: SkillDetail; confidence: number; openQuestions: string[]; escalated: boolean }> {
+  async build(
+    workflowMapId: string,
+    person: Person,
+  ): Promise<{
+    skill: SkillDetail;
+    confidence: number;
+    openQuestions: string[];
+    escalated: boolean;
+  }> {
     const map = await this.maps.findOneOrFail({ where: { id: workflowMapId } });
-    if (map.completeness < 0.4) throw new ConflictException(`Workflow map is ${(map.completeness * 100).toFixed(0)}% complete; finish the Interviewer session (≥ 40%) before building.`);
+    if (map.completeness < 0.4)
+      throw new ConflictException(
+        `Workflow map is ${(map.completeness * 100).toFixed(0)}% complete; finish the Interviewer session (≥ 40%) before building.`,
+      );
     const boundary = await this.library.orgBoundary(map.orgId);
-    const team = map.teamId ? await this.teams.findOne({ where: { id: map.teamId } }) : null;
-    const company = await this.layers.findOne({ where: { orgId: map.orgId, layer: 'company' } });
-    const teamLayer = map.teamId ? await this.layers.findOne({ where: { orgId: map.orgId, layer: 'team', ownerId: map.teamId } }) : null;
+    const team = map.teamId
+      ? await this.teams.findOne({ where: { id: map.teamId } })
+      : null;
+    const company = await this.layers.findOne({
+      where: { orgId: map.orgId, layer: 'company' },
+    });
+    const teamLayer = map.teamId
+      ? await this.layers.findOne({
+          where: { orgId: map.orgId, layer: 'team', ownerId: map.teamId },
+        })
+      : null;
     const plugin = team?.pluginName ?? 'shared';
     const family = slugify(map.name).split('-').slice(0, 2).join('-');
 
@@ -74,15 +96,29 @@ export class BuilderService {
               '',
               '# Firm context',
               company?.summary ?? '(none)',
-              company?.vocabulary?.length ? `Vocabulary: ${company.vocabulary.map((v) => `${v.term} = ${v.meaning}`).join('; ')}` : '',
-              teamLayer ? `\n# Team context\n${teamLayer.summary ?? ''}\n${teamLayer.vocabulary?.length ? `Vocabulary: ${teamLayer.vocabulary.map((v) => `${v.term} = ${v.meaning}`).join('; ')}` : ''}` : '',
+              company?.vocabulary?.length
+                ? `Vocabulary: ${company.vocabulary.map((v) => `${v.term} = ${v.meaning}`).join('; ')}`
+                : '',
+              teamLayer
+                ? `\n# Team context\n${teamLayer.summary ?? ''}\n${teamLayer.vocabulary?.length ? `Vocabulary: ${teamLayer.vocabulary.map((v) => `${v.term} = ${v.meaning}`).join('; ')}` : ''}`
+                : '',
               '',
               '# Workflow map (schema)',
               JSON.stringify(map.schema, null, 2),
             ].join('\n'),
           },
         ],
-        mockSeed: { name: map.name, schema: map.schema, slug: slugify(map.name), teamSlug: team?.slug ?? 'shared', plugin, ownerEmail: person.email, forbiddenDataClasses: boundary.forbiddenDataClasses, humanReviewPoints: boundary.humanReviewPoints, family },
+        mockSeed: {
+          name: map.name,
+          schema: map.schema,
+          slug: slugify(map.name),
+          teamSlug: team?.slug ?? 'shared',
+          plugin,
+          ownerEmail: person.email,
+          forbiddenDataClasses: boundary.forbiddenDataClasses,
+          humanReviewPoints: boundary.humanReviewPoints,
+          family,
+        },
       },
       BuilderOutputSchema,
     );
@@ -96,7 +132,12 @@ export class BuilderService {
       skillMd: out.skillMd,
       boundary: {
         mayRead: out.boundary.mayRead,
-        mustNeverReceive: [...new Set([...out.boundary.mustNeverReceive, ...boundary.forbiddenDataClasses])],
+        mustNeverReceive: [
+          ...new Set([
+            ...out.boundary.mustNeverReceive,
+            ...boundary.forbiddenDataClasses,
+          ]),
+        ],
         humanReview: out.boundary.humanReview,
       },
       sampleCases: out.sampleCases,
@@ -107,7 +148,12 @@ export class BuilderService {
     });
 
     const fresh = await this.maps.findOneOrFail({ where: { id: map.id } });
-    await this.maps.update(map.id, { status: 'in_build', linkedSkillIds: fresh.linkedSkillIds.includes(skill.id) ? fresh.linkedSkillIds : [...fresh.linkedSkillIds, skill.id] });
+    await this.maps.update(map.id, {
+      status: 'in_build',
+      linkedSkillIds: fresh.linkedSkillIds.includes(skill.id)
+        ? fresh.linkedSkillIds
+        : [...fresh.linkedSkillIds, skill.id],
+    });
 
     let escalated = false;
     if (out.confidence < BUILDER_ESCALATION_CONFIDENCE) {
@@ -125,9 +171,23 @@ export class BuilderService {
           slaDueAt: new Date(Date.now() + 3 * 86_400_000),
         }),
       );
-      this.logger.warn(`Builder escalated ${out.slug} (confidence ${out.confidence})`);
+      this.logger.warn(
+        `Builder escalated ${out.slug} (confidence ${out.confidence})`,
+      );
     }
-    if (out.openQuestions.length) await this.library.comment(map.orgId, person, skill.id, `Builder open questions:\n- ${out.openQuestions.join('\n- ')}\n\nConfidence ${(out.confidence * 100).toFixed(0)}%.`, 'system');
-    return { skill: await this.library.getDetail(map.orgId, skill.id, person.id), confidence: out.confidence, openQuestions: out.openQuestions, escalated };
+    if (out.openQuestions.length)
+      await this.library.comment(
+        map.orgId,
+        person,
+        skill.id,
+        `Builder open questions:\n- ${out.openQuestions.join('\n- ')}\n\nConfidence ${(out.confidence * 100).toFixed(0)}%.`,
+        'system',
+      );
+    return {
+      skill: await this.library.getDetail(map.orgId, skill.id, person.id),
+      confidence: out.confidence,
+      openQuestions: out.openQuestions,
+      escalated,
+    };
   }
 }
