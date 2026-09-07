@@ -175,7 +175,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
         <div ref={resultsRef} className="order-first space-y-6 scroll-mt-20 lg:order-2" data-testid="results-column">
           {run.isPending && <PendingCard testId="run-pending">Claude is working on it…</PendingCard>}
           {submit.isPending && <PendingCard testId="submit-pending">Coach is reading it…</PendingCard>}
-          {result && <FeedbackCard result={result} moduleCode={moduleCode} onTryAgain={finished ? undefined : tryAgain} />}
+          {result && <FeedbackCard result={result} moduleCode={moduleCode} rung={ex.rung} onTryAgain={finished ? undefined : tryAgain} />}
           <RunOutput surface={surface} />
         </div>
       )}

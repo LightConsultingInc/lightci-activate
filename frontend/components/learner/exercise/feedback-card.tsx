@@ -8,6 +8,7 @@ import { Chip } from "../chips"
 import { PromotionCelebration } from "../promotion-celebration"
 import { useReducedMotion } from "@/hooks/learner/use-reduced-motion"
 import { cn } from "@/lib/utils"
+import { rungMeta } from "@/components/brand/rung"
 import type { ExerciseSummary, Feedback, PracticeDecision } from "@/hooks/learner/types"
 
 export type FeedbackResult = {
@@ -22,14 +23,19 @@ export type FeedbackResult = {
 type Props = {
   result: FeedbackResult
   moduleCode: string
+  /** The module this practice belongs to. When the next practice sits in a later module, the card sends you to that module's lessons first. */
+  rung: number
   onTryAgain?: () => void
   className?: string
 }
 
 /** Score out of 10, pass or try again, Coach's three lines, and what to do next. */
-export function FeedbackCard({ result, moduleCode, onTryAgain, className }: Props) {
+export function FeedbackCard({ result, moduleCode, rung, onTryAgain, className }: Props) {
   const reduced = useReducedMotion()
   const pass = result.decision === "pass"
+  // Lessons come before practice in every module: a next practice one module up means "go to that module", not "skip its lessons".
+  const nextAhead = result.nextUp != null && result.nextUp.rung > rung ? rungMeta(result.nextUp.rung) : null
+  const nextHere = result.nextUp != null && result.nextUp.rung <= rung ? result.nextUp : null
   // The exact score, one decimal at most: "6.7" beats a rounded "7" sitting next to "Try again".
   const clamped = Math.max(0, Math.min(10, result.score10))
   const score = Number.isInteger(clamped) ? String(clamped) : clamped.toFixed(1).replace(/\.0$/, "")
@@ -73,9 +79,14 @@ export function FeedbackCard({ result, moduleCode, onTryAgain, className }: Prop
               <RotateCcw data-icon="inline-start" /> Try again
             </Button>
           )}
-          {result.nextUp && (
-            <Button variant={pass || !onTryAgain ? "default" : "outline"} render={<Link href={`/exercise/${result.nextUp.id}`} />} data-testid="next-practice-button">
+          {nextHere && (
+            <Button variant={pass || !onTryAgain ? "default" : "outline"} render={<Link href={`/exercise/${nextHere.id}`} />} data-testid="next-practice-button">
               Next practice <ArrowRight data-icon="inline-end" />
+            </Button>
+          )}
+          {nextAhead && (
+            <Button variant={pass || !onTryAgain ? "default" : "outline"} render={<Link href={`/modules/${nextAhead.code}?tab=learn`} />} data-testid="next-module-button">
+              Next: {nextAhead.code} {nextAhead.name} <ArrowRight data-icon="inline-end" />
             </Button>
           )}
           <Button variant="ghost" render={<Link href={`/modules/${moduleCode}?tab=practice`} />} data-testid="back-to-module-button">

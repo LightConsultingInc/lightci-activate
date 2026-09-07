@@ -110,7 +110,9 @@ test.describe("practice: ask, run, submit, feedback", () => {
     } else {
       await expect(page.getByTestId("exercise-view")).toHaveAttribute("data-status", "passed")
       await expect(card.getByTestId("try-again-button")).toHaveCount(0)
-      await expect(card.getByTestId("next-practice-button").or(card.getByTestId("back-to-module-button")).first()).toBeVisible()
+      // Next practice in this module, the next module's lessons when the practice is a module up, or back to the module.
+      await expect(card.getByTestId("next-practice-button").or(card.getByTestId("next-module-button")).or(card.getByTestId("back-to-module-button")).first()).toBeVisible()
+      await expect(card.getByTestId("next-practice-button").or(card.getByTestId("next-module-button"))).toHaveCount(1)
     }
   })
 
