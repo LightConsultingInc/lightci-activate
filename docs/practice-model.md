@@ -50,7 +50,7 @@ Every lesson opens with one static diagram, drawn in the LightCI presentation st
 
 ### Where to click (added 2026-09-07)
 
-Lessons that touch Claude's own screen carry an optional `mock` (`frontend/components/learner/mocks`): a static sketch of that screen (fresh chat, the plus menu, the tools menu with the firm's connectors, a conversation with a follow-up, a Project page, the instructions editor, a skill picked up from a plain request) with numbered spots and a plain-words legend. Each sketch closes with "yours may look a little different, but the buttons keep their names", because Claude's interface moves faster than our lessons. L4 and L5 lessons live in Activate's own screens and carry no mock.
+Lessons that touch Claude's own screen carry an optional `mock` (`frontend/components/learner/mocks`): a static sketch of that screen (fresh chat, the plus menu, the plus menu's Connectors list, Settings › Connectors for connecting your own account, a conversation with a follow-up, a Project page, the instructions editor, a skill picked up from a plain request) with numbered spots and a plain-words legend. Each sketch closes with "yours may look a little different, but the buttons keep their names", because Claude's interface moves faster than our lessons. L4 and L5 lessons live in Activate's own screens and carry no mock.
 
 ## Data stance (corrected 2026-09-07)
 
@@ -59,3 +59,10 @@ Claude Enterprise is a governed workspace. Pasting documents, uploading files an
 ## Connectors are part of the curriculum
 
 Connectors let Claude read (and, when allowed, write to) the tools people already use. They appear in every module: L0 explains what a connector is and how to see which ones the firm has turned on; L1 teaches asking Claude to pull from a connector instead of pasting; L2 teaches a Project that uses connected sources; L3 teaches a skill that calls a connector; L4 maps which steps read from which system and which steps a person keeps; L5 covers reviewing skills that touch systems of record. Practice prefills may say "pull this from Salesforce if you have the connector; otherwise paste the summary".
+
+## Connector facts the lessons rely on (checked 2026-09-07 against the Claude Help Center)
+
+- On Team and Enterprise plans an Owner/admin enables a connector for the organisation (Organization settings › Connectors › Browse connectors › Add). Enabling makes it available; it does not connect anyone.
+- Each person then connects their own account once: Settings › Connectors › Connect, then sign in to that tool. Access is per-user delegated OAuth, so Claude sees only what that person could open.
+- In a chat, connectors live under the **+** button beside the message box (Connectors submenu), each with an on/off switch for that conversation; "Manage connectors" leads back to Settings.
+- Sources: support.claude.com articles 11176164 ("Use connectors to extend Claude's capabilities") and 14503689 ("MCP connectors").

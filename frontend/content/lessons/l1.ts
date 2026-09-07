@@ -65,7 +65,7 @@ Use your team's words. If you call it a "quarterly check-in", say that. Claude w
       promise: "You will write a prompt that names a connected tool, says what to fetch, and says what to do with it.",
       minutes: 4,
       scene: "connectors",
-      mock: "tools-menu",
+      mock: "connect-connector",
       body: `Pasting works. Pulling is better, when you have the connector.
 
 When you paste a transcript or a spreadsheet, you did the finding, the copying, and the trimming. Claude gets a snapshot, and if you cut the wrong part, it never knows.
@@ -80,11 +80,13 @@ The second version is shorter to write and more complete. The prompt names the t
 
 Two habits. Name the tool when you know which one has the answer; otherwise Claude may guess or ask. And still read the result the way you read any draft: connectors fetch faithfully, but a stale record in Salesforce is still stale.
 
+**Connecting one, the first time.** Your firm's admin turns a connector on for everyone; that makes it available, it does not connect you. You link your own account once: open **Settings** from your name at the bottom of the left rail, choose **Connectors**, click **Connect** next to the tool, and sign in with your normal login for it. From then on it sits under the **+** button in every chat, where a switch turns it on or off for that conversation. If a tool you use is not in the list, ask your champion; only an admin can add one.
+
 If you do not have the connector, paste the material. Your practice prompts will say so: pull from Salesforce if you have it; otherwise paste the summary.`,
       keyPoints: [
         "A connector prompt has three parts: name the tool, say what to fetch, say what to do with it.",
-        "Pulling reads the whole record; pasting gives Claude only the snapshot you trimmed.",
-        "Read the result as you would any draft; a stale record is still stale.",
+        "Connect once: Settings, Connectors, Connect, sign in with your own login. Then it lives under the + button in every chat.",
+        "Pulling reads the whole record; pasting gives Claude only the snapshot you trimmed. Read the result as you would any draft.",
       ],
       example: {
         title: "Try this",

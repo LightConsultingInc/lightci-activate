@@ -1,7 +1,7 @@
 "use client"
 
 import type { MockKind } from "@/content/lessons/types"
-import { AttachMenu, Conversation, NewChat, ProjectInstructions, ProjectPage, SkillInUse, ToolsMenu } from "./screens"
+import { AttachMenu, ConnectorsSettings, Conversation, NewChat, ProjectInstructions, ProjectPage, SkillInUse, ToolsMenu } from "./screens"
 
 /** One screen per kind, and the plain-words legend for its numbered spots. */
 const MOCKS: Record<MockKind, { Screen: () => React.JSX.Element; title: string; legend: string[] }> = {
@@ -13,8 +13,8 @@ const MOCKS: Record<MockKind, { Screen: () => React.JSX.Element; title: string; 
       "Projects: a saved setup for a task you repeat.",
       "Code: Claude Code, for work that lives in files and code.",
       "Cowork: hand off a longer job and check in on it.",
-      "The plus button: add a file, or one from Drive.",
-      "The tools button: the connectors your firm has turned on.",
+      "The plus button: add a file or one from Drive, and switch your firm's connectors on or off for this chat.",
+      "The tools button: web search and other switches.",
       "Send. Enter does the same.",
     ],
   },
@@ -24,7 +24,7 @@ const MOCKS: Record<MockKind, { Screen: () => React.JSX.Element; title: string; 
     legend: [
       "Click the plus button.",
       "Upload a file from your computer: a document, a spreadsheet, a PDF.",
-      "Or pick one straight from your firm's Drive.",
+      "Or pick one straight from your firm's Drive. Connectors sit in this same menu.",
       "Pasting into the box works too. Notes, an email, a table: paste and describe what you want.",
     ],
   },
@@ -32,9 +32,20 @@ const MOCKS: Record<MockKind, { Screen: () => React.JSX.Element; title: string; 
     Screen: ToolsMenu,
     title: "Your firm's connectors",
     legend: [
-      "Click the tools button next to the plus.",
-      "Everything listed under Connectors has been turned on by your firm. You cannot add one yourself, and that is the point.",
+      "Click the plus button under the message box, then Connectors.",
+      "Everything listed has been turned on by your firm. Each switch turns it on or off for this chat.",
+      "Manage connectors takes you to Settings, where you connect your own account to one the first time.",
       "Name the tool in your request and say what to fetch. Claude sees only what you could open yourself.",
+    ],
+  },
+  "connect-connector": {
+    Screen: ConnectorsSettings,
+    title: "Connecting one, the first time",
+    legend: [
+      "Open Settings from your name at the bottom of the left rail.",
+      "Choose Connectors. Everything here was turned on for the firm by your admin; you cannot add one yourself.",
+      "Click Connect next to the one you want.",
+      "Sign in with your own login for that tool and approve. Once. From then on it appears under the plus button in every chat, and Claude sees only what you could open yourself.",
     ],
   },
   conversation: {

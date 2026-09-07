@@ -102,19 +102,19 @@ Some outputs still get a human read before they go out: anything a customer rece
 
 Typical connectors: **Salesforce** for accounts and opportunities, **Gong** for call recordings and transcripts, **Google Drive** for documents and spreadsheets, **Confluence** for internal pages. Your firm may have others.
 
-To see which ones you have, open a new chat and look at the tools menu next to the message box. Everything listed there has been turned on by your firm's admin. Activate lists them too, on your home page under your firm's tools. If something you use is missing, ask your champion; you cannot add connectors yourself, and that is the point.
+To see which ones you have, open a new chat, click the **+** button under the message box and look under **Connectors**. Everything listed there has been turned on by your firm's admin. The first time you use one you connect your own account: **Settings**, **Connectors**, **Connect**, then sign in with your normal login for that tool. Activate lists your firm's connectors too, on your home page. If something you use is missing, ask your champion; you cannot add connectors yourself, and that is the point.
 
 Permissions follow you. When Claude reads Salesforce through a connector, it sees only the records you could open yourself. It cannot reach a colleague's private files or a restricted folder. Nothing about your access changes; Claude simply works with it.
 
 So instead of exporting a report, copying it and pasting it in, you can say: "Using Salesforce, show me the open opportunities I own that close this month." The next module shows how to ask well.`,
       keyPoints: [
         "A connector links Claude to a tool your firm already uses, so it can read from it in a conversation.",
-        "The tools menu in a new chat shows which connectors your firm has turned on; Activate lists them too.",
+        "The + button in a chat shows which connectors your firm has turned on; you connect your own account once in Settings.",
         "Claude sees only what you could see yourself; your permissions do not change.",
       ],
       example: {
         title: "Try this",
-        text: "Open a new chat, click the tools menu next to the message box, and write down which connectors you see. If Salesforce or Drive is there, ask: \"Using Salesforce, list the accounts I own.\"",
+        text: "Open a new chat, click the + button under the message box, open Connectors and write down which ones you see. If one says Connect rather than a switch, connect it with your own login. Then ask: \"Using Salesforce, list the accounts I own.\"",
       },
       check: {
         question: "A colleague worries that a connector lets Claude read a restricted folder they cannot open themselves. Is that right?",

@@ -30,7 +30,8 @@ export type SceneKind =
 export type MockKind =
   | "new-chat"             // the rail (Chats, Projects, Code, Cowork), the box, plus, tools, send
   | "attach-menu"          // the plus menu open: upload, Drive, screenshot; paste works too
-  | "tools-menu"           // the tools menu open: the firm's connectors, switched on
+  | "tools-menu"           // the plus menu with Connectors open: the firm's connectors, on or off for this chat
+  | "connect-connector"    // Settings › Connectors: connect your own account to a connector the firm turned on
   | "conversation"         // your request, Claude's draft, the actions under it, the follow-up box
   | "project-page"         // a Project: instructions, files, connected folder, start a chat inside
   | "project-instructions" // editing a Project's instructions

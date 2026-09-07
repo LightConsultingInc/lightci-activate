@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, Camera, Check, ChevronDown, Cloud, Copy, Database, FileText, Globe, Pencil, Phone, RotateCcw, ThumbsDown, ThumbsUp, Upload } from "lucide-react"
+import { BookOpen, Camera, Check, ChevronDown, Cloud, Copy, Database, FileText, Pencil, Phone, RotateCcw, Settings, ThumbsDown, ThumbsUp, Upload } from "lucide-react"
 import { Composer, Menu, MenuItem, Message, Sidebar, Spot, Toggle, Window } from "./frame"
 
 const Shell = ({ children, active, spots, projectName }: { children: React.ReactNode; active?: Parameters<typeof Sidebar>[0]["active"]; spots?: Parameters<typeof Sidebar>[0]["spots"]; projectName?: string }) => (
@@ -33,6 +33,7 @@ export function AttachMenu() {
           <Spot n={2} pos="r"><MenuItem icon={<Upload className="size-3.5" />}>Upload a file</MenuItem></Spot>
           <Spot n={3} pos="r"><MenuItem icon={<Cloud className="size-3.5" />}>Add from Google Drive</MenuItem></Spot>
           <MenuItem icon={<Camera className="size-3.5" />}>Take a screenshot</MenuItem>
+          <div className="mt-1 border-t pt-1"><MenuItem icon={<Database className="size-3.5" />} trailing={<ChevronDown className="size-3 -rotate-90 text-muted-foreground" />}>Connectors</MenuItem></div>
         </Menu>
         <Composer spots={{ plus: 1, box: 4 }} text="Here are my notes from the Harbor Trust call. Turn them into a follow-up email…" />
       </div>
@@ -40,7 +41,7 @@ export function AttachMenu() {
   )
 }
 
-/** 3 · The tools menu open: the connectors your firm has switched on. */
+/** 3 · The plus menu, Connectors open: the ones your firm has switched on, each on or off for this chat. */
 export function ToolsMenu() {
   const tools = [
     { icon: <Database className="size-3.5" />, name: "Salesforce" },
@@ -51,13 +52,12 @@ export function ToolsMenu() {
   return (
     <Shell>
       <div className="mx-auto flex h-full max-w-md flex-col justify-end gap-3 py-2">
-        <Menu title="Tools">
-          <MenuItem icon={<Globe className="size-3.5" />} trailing={<Toggle />}>Web search</MenuItem>
-          <Spot n={2} pos="r" className="w-fit"><p className="px-2 pb-1 pt-2 pr-3 text-[10px] uppercase tracking-wider text-muted-foreground">Connectors</p></Spot>
+        <Menu title="Connectors">
+          <Spot n={2} pos="r" className="w-fit"><p className="px-2 pb-1 pr-3 text-[10px] uppercase tracking-wider text-muted-foreground">On for this chat</p></Spot>
           {tools.map((t) => <MenuItem key={t.name} icon={t.icon} trailing={<Toggle />}>{t.name}</MenuItem>)}
-          <div className="mt-1 border-t pt-1"><MenuItem>Manage connectors…</MenuItem></div>
+          <div className="mt-1 border-t pt-1"><Spot n={3} pos="r" className="w-fit pr-3"><MenuItem>Manage connectors…</MenuItem></Spot></div>
         </Menu>
-        <Composer spots={{ tools: 1, box: 3 }} text="Using Salesforce, show me the open opportunities I own that close this month, oldest first." />
+        <Composer spots={{ plus: 1, box: 4 }} text="Using Salesforce, show me the open opportunities I own that close this month, oldest first." />
       </div>
     </Shell>
   )
@@ -193,5 +193,52 @@ export function SkillInUse() {
         <Composer className="mt-auto" />
       </div>
     </Shell>
+  )
+}
+
+/** 8 · Settings › Connectors: connect your own account, once, to a connector your firm has turned on. */
+export function ConnectorsSettings() {
+  const rows = [
+    { icon: <Database className="size-4" />, name: "Salesforce", sub: "Accounts, opportunities, notes", state: "connected" as const },
+    { icon: <Cloud className="size-4" />, name: "Google Drive", sub: "Documents and spreadsheets", state: "connected" as const },
+    { icon: <Phone className="size-4" />, name: "Gong", sub: "Call recordings and transcripts", state: "connect" as const },
+    { icon: <BookOpen className="size-4" />, name: "Confluence", sub: "Internal pages", state: "connect" as const },
+  ]
+  return (
+    <Window url="claude.ai/settings/connectors">
+      <div className="flex min-h-[300px]">
+        <aside className="hidden w-[168px] shrink-0 flex-col gap-0.5 border-r bg-muted/25 p-2 sm:flex">
+          <Spot n={1} pos="r" className="w-fit"><div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-[13px] font-semibold"><Settings className="size-3.5" /> Settings</div></Spot>
+          {["Profile", "Appearance", "Capabilities"].map((x) => <div key={x} className="rounded-lg px-2 py-1.5 text-[12px] text-muted-foreground">{x}</div>)}
+          <Spot n={2} pos="r"><div className="rounded-lg bg-foreground/[0.06] px-2 py-1.5 text-[12px] font-medium">Connectors</div></Spot>
+          {["Privacy", "Billing"].map((x) => <div key={x} className="rounded-lg px-2 py-1.5 text-[12px] text-muted-foreground">{x}</div>)}
+        </aside>
+        <main className="min-w-0 flex-1 p-4 sm:p-6">
+          <h3 className="font-display text-lg">Connectors</h3>
+          <p className="mt-1 text-[12px] text-muted-foreground">Turned on for Northgate Advisory by your admin. Connect your own account to use one.</p>
+          <ul className="mt-4 divide-y rounded-xl border text-[12.5px]">
+            {rows.map((r, i) => (
+              <li key={r.name} className="flex items-center gap-3 px-3 py-2.5">
+                <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">{r.icon}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium">{r.name}</span>
+                  <span className="block text-[11px] text-muted-foreground">{r.sub}</span>
+                </span>
+                {r.state === "connected" ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-pass"><Check className="size-3" /> Connected</span>
+                ) : i === 2 ? (
+                  <Spot n={3}><span className="inline-block rounded-lg bg-claude px-3 py-1.5 text-[12px] text-paper">Connect</span></Spot>
+                ) : (
+                  <span className="inline-block rounded-lg border px-3 py-1.5 text-[12px]">Connect</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Spot n={4} pos="tl" className="mt-4 w-fit">
+            <div className="rounded-xl border bg-muted/40 px-3 py-2 text-[12px] text-muted-foreground">Signing in to Gong… <span className="text-foreground">you approve, once, with your own Gong login.</span></div>
+          </Spot>
+        </main>
+      </div>
+    </Window>
   )
 }
