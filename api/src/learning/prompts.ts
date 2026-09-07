@@ -12,7 +12,8 @@ export const LEARNER_FORBIDDEN_WORDS = ['expectation', 'critique', 'calibration'
 
 /** Plain-words list of the forbidden classes, e.g. "client PII documents, account numbers, SSNs and raw statements". Empty when none. */
 export function forbiddenClassesPlain(boundary: ComplianceBoundary | undefined | null): string {
-  const classes = (boundary?.forbiddenDataClasses ?? []).map((c) => c.trim()).filter(Boolean);
+  // Class codes are stored like `client_pii_documents`; say them the way a person would.
+  const classes = (boundary?.forbiddenDataClasses ?? []).map((c) => c.trim().replace(/_/g, ' ').replace(/\bpii\b/i, 'PII').replace(/\bssn\b/i, 'SSNs')).filter(Boolean);
   if (classes.length === 0) return '';
   if (classes.length === 1) return classes[0];
   return `${classes.slice(0, -1).join(', ')} and ${classes[classes.length - 1]}`;
