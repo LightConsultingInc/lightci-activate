@@ -34,6 +34,7 @@ import {
   GRADER_SKILL_SYSTEM,
   GRADER_SYSTEM,
   boundaryText,
+  dataStanceText,
 } from './prompts';
 import './learning.mocks';
 
@@ -200,6 +201,7 @@ export class GraderService {
               '',
               '# Firm compliance boundary',
               boundaryText(boundary),
+              dataStanceText(boundary),
               '',
               "# The learner's work (what they typed, then what Claude produced on Run)",
               artifactText,
@@ -462,6 +464,7 @@ export class GraderService {
               '',
               '# Firm compliance boundary',
               boundaryText(orgBoundary),
+              dataStanceText(orgBoundary),
               '',
               '# Skill boundary declaration',
               JSON.stringify(boundary ?? {}, null, 2),

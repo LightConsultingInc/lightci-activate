@@ -272,6 +272,8 @@ export interface ExerciseDetail extends ExerciseSummary {
   skill?: SkillCard;
   workflow?: WorkflowSummary;
   coachIntro: string;
+  /** From the org boundary: "Your firm's policy keeps these out of Claude: …"; empty when the boundary names nothing. */
+  dataReminder: string;
 }
 
 export interface LadderView {

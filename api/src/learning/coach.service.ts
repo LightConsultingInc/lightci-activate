@@ -48,6 +48,7 @@ import {
   COACH_SYSTEM,
   COACH_WORKFLOW_DRAFT_SYSTEM,
   boundaryText,
+  dataStanceText,
 } from './prompts';
 import { buildSituation } from './situation';
 import './learning.mocks';
@@ -166,6 +167,7 @@ export class CoachService {
     if (rung === 0 && !opts.kind && !opts.skillId)
       return this.generateFirstRealTask(person, orgId);
     const memory = await this.memory.get(person.id, orgId);
+    const knownSystemsSeed: string[] = [...memory.systems];
     const unlocked = report.competencies.filter((c) => c.status !== 'locked' || (opts.rung !== undefined && c.rung === opts.rung));
     const target = this.pickTarget(
       unlocked,
@@ -212,6 +214,7 @@ export class CoachService {
         ...competenciesForRung(Math.min(5, rung) as 0).map((c) => c.code),
       );
 
+    const knownSystems = [...new Set([...knownSystemsSeed, ...layers.flatMap((l) => l.systems ?? []), ...workflows.flatMap((w) => w.schema?.systems ?? []), ...(person.profile?.systems ?? [])].map((x) => x.trim()).filter(Boolean))];
     const out = await this.ai.structured(
       {
         agent: 'coach',
@@ -288,8 +291,12 @@ export class CoachService {
               `Struggles: ${memory.struggles.join('; ') || '(none recorded)'}`,
               `Preferences: ${memory.preferences.join('; ') || '(none recorded)'}`,
               '',
-              '# Firm compliance boundary',
+              '# Systems and connectors this learner works in (suggest the connector in the ask or pre-fill; at project/skill/workflow stages involve a connected source where sensible)',
+              knownSystems.length ? knownSystems.join(', ') : '(none recorded; leave a paste slot)',
+              '',
+              '# Firm compliance boundary and data stance',
               boundaryText(org?.settings?.boundary),
+              dataStanceText(org?.settings?.boundary),
               '',
               `Produce one practice item for the ${surface} surface${rung === 3 ? ' with a complete workedExample (shown after the first submission)' : ' (workedExample null)'}. Exactly three hints. The brief is the ask: one sentence. Fill only the prefill fields for this surface.`,
             ]
@@ -300,6 +307,7 @@ export class CoachService {
         mockSeed: {
           rung,
           struggles: memory.struggles,
+          systems: knownSystems,
           weakestCode: target.code,
           weakestName: target.name,
           workSurface: surface,
@@ -391,13 +399,17 @@ export class CoachService {
     const systems = wf?.systems?.length
       ? ` We normally work in ${wf.systems.join(' and ')}.`
       : '';
+    const primarySystem = wf?.systems?.[0] ?? situation?.systems?.[0] ?? null;
+    const inputSlot = primarySystem
+      ? `[Using the ${primarySystem} connector, pull ${inputs}; if you don't have it, paste them here.]`
+      : '[Paste your inputs here.]';
     const starterPrompt = [
       `I am a ${role}. Help me with ${task}.${systems}`,
       `Inputs I will give you: ${inputs}.`,
       `What I need back: ${outputs}, in the shape we use for ${task}.`,
-      'Use only the facts I give you. Put [placeholders] where something is missing rather than guessing. If anything is unclear, ask me one question before you start.',
+      'Work from the inputs I give you. Put [placeholders] where something is missing rather than guessing. If anything is unclear, ask me one question before you start.',
       '',
-      '[Paste your inputs here. No client names or account details.]',
+      inputSlot,
     ].join('\n');
     const cadence = wf?.runsPerWeek
       ? `${wf.runsPerWeek} time${wf.runsPerWeek === 1 ? '' : 's'} a week`
@@ -423,7 +435,9 @@ export class CoachService {
       workflowMapId: wf?.workflowMapId ?? null,
       skillId: null,
       hints: [
-        'Try pasting in the real inputs you would use this week, with names and numbers swapped for placeholders.',
+        primarySystem
+          ? `Try pulling the real inputs from ${primarySystem} through the connector; if it is not turned on for you, paste them in.`
+          : 'Try pasting in the real inputs you would use this week; the more real the material, the more useful the result.',
         'Try telling Claude who reads the result and what they will do with it.',
         'Try asking for the shape you actually use (headings, length, tone) instead of accepting the default.',
       ],
@@ -705,8 +719,9 @@ export class CoachService {
       this.layersFor(person, orgId),
     ]);
     const firmContext = [
-      '# Firm compliance boundary',
+      '# Firm compliance boundary and data stance',
       boundaryText(org?.settings?.boundary),
+      dataStanceText(org?.settings?.boundary),
       layers.length
         ? `\n# Firm and team context (for vocabulary; do not treat as client data)\n${layers.map((l) => `${l.layer}: ${l.summary ?? ''}`).join('\n')}`
         : '',

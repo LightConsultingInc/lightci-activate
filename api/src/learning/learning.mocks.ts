@@ -63,7 +63,7 @@ function mockFirstTaskGrade(
       ? invented
         ? 'One figure crept in that you never supplied; swap it for a placeholder.'
         : 'Nothing major; the draft is usable as it is.'
-      : 'Finish the run: paste the real inputs (placeholders for anything sensitive) and ask for the whole thing.',
+      : 'Finish the run: paste the real inputs (or pull them through a connector) and ask for the whole thing.',
     tryNext: usable
       ? 'Next run, tell Claude who reads this and what they will do with it.'
       : 'Next run, say what shape you need back so Claude does not stop at an outline.',
@@ -237,13 +237,14 @@ registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
     workflow: `Map your ${task}.`,
     review: "Review this piece of a teammate's work.",
   };
+  const system = (s as { systems?: string[] }).systems?.[0] ?? null;
   const isPrompt = surface === 'prompt' || surface === 'orientation';
   return {
     title: `${MOCK_TITLES[surface] ?? 'Do'} ${task} for one case`.slice(0, 60),
     brief: asks[surface] ?? asks.prompt,
     workflowName: wfName,
     prefillPrompt: isPrompt
-      ? `Help me with ${task}. Who reads it: [reader]. What I need back: [shape, length, tone]. Use only the facts below; put [placeholders] where something is missing.\n\n[Paste your inputs here. No client names or account details.]`
+      ? `Help me with ${task}. Who reads it: [reader]. What I need back: [shape, length, tone]. Work from the material below; put [placeholders] where something is missing.\n\n${system ? `[Using the ${system} connector, pull this week's inputs; if you don't have it, paste them here.]` : '[Paste your inputs here.]'}`
       : null,
     prefillMaterial: null,
     prefillInstructions:
@@ -261,7 +262,7 @@ registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
         : [],
     prefillTestTask:
       surface === 'project'
-        ? `Do this week's ${task} from the notes below.\n\n[paste the notes; placeholders for anything client-specific]`
+        ? `Do this week's ${task} from the notes below.\n\n${system ? `[Pull the notes from ${system} if you have the connector; otherwise paste them here.]` : '[paste the notes here]'}`
         : null,
     prefillSkillMd:
       surface === 'skill'

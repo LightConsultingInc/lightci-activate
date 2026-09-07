@@ -126,7 +126,7 @@ export function practiceOf(
           prompt:
             str(starter.starterPrompt) ||
             notes ||
-            `I am working on ${name}. Here is what I need:\n\n[what to make, who reads it, the shape you want]\n\n[Paste your inputs here. No client names or account details.]`,
+            `I am working on ${name}. Here is what I need:\n\n[what to make, who reads it, the shape you want]\n\n[Paste your inputs here, or pull them through a connector.]`,
         },
       };
     case 'project': {

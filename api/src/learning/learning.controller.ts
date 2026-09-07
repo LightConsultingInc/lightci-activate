@@ -59,6 +59,7 @@ import {
 } from './mappers';
 import { MasteryService } from './mastery.service';
 import { MemoryService } from './memory.service';
+import { dataReminder } from './prompts';
 import { PersonRefService } from './person-ref.service';
 import { RevisitService } from './revisit.service';
 
@@ -604,6 +605,11 @@ export class LearningController {
     );
   }
 
+  private async boundaryForPerson(personId: string) {
+    const person = await this.people.findOne({ where: { id: personId } });
+    return this.grader.orgBoundary(person?.orgId ?? null);
+  }
+
   async detail(exercise: Exercise): Promise<ExerciseDetail> {
     const submissions = await this.submissions.find({
       where: { exerciseId: exercise.id },
@@ -645,6 +651,7 @@ export class LearningController {
         ? { workflow: await this.ladder.workflowSummary(workflow) }
         : {}),
       coachIntro: this.coach.coachIntro(exercise, submissions.length),
+      dataReminder: dataReminder(await this.boundaryForPerson(exercise.personId)),
     };
   }
 
