@@ -163,20 +163,29 @@ export function CompletionStep({
                   ~{first.estimatedMinutes} min
                 </span>
               </div>
-              <h3 className="mt-2 font-display text-2xl leading-snug font-medium">
+              <p className="eyebrow mt-3">Your first practice, when you're ready</p>
+              <h3 className="mt-1 font-display text-2xl leading-snug font-medium">
                 {first.title}
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 {first.rationale}
               </p>
-              <Button
-                size="lg"
-                className="mt-4"
-                render={<Link href={`/exercise/${first.id}`} />}
-                data-testid="first-exercise-start"
-              >
-                Finish something real <ArrowRight data-icon="inline-end" />
-              </Button>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button
+                  size="lg"
+                  render={<Link href={`/modules/L${placed?.rung ?? first.rung}?tab=learn`} />}
+                  data-testid="first-lesson-start"
+                >
+                  Start with the first lesson <ArrowRight data-icon="inline-end" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  render={<Link href={`/exercise/${first.id}`} />}
+                  data-testid="first-exercise-start"
+                >
+                  or jump straight to this practice
+                </Button>
+              </div>
             </>
           ) : (
             <>

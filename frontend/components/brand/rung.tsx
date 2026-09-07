@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils"
 
 export const RUNGS = [
-  { rung: 0, code: "L0", name: "Orientation", short: "Which surface for what" },
-  { rung: 1, code: "L1", name: "Conversational", short: "Prompting and discernment" },
-  { rung: 2, code: "L2", name: "Context", short: "Context engineering for one" },
-  { rung: 3, code: "L3", name: "Skill", short: "Context engineering for reuse" },
-  { rung: 4, code: "L4", name: "Workflow", short: "Map and ship, governed" },
-  { rung: 5, code: "L5", name: "Champion", short: "Grade and review others" },
+  { rung: 0, code: "L0", name: "Orientation", short: "What Claude is good for, and what to keep out" },
+  { rung: 1, code: "L1", name: "Conversational", short: "Clear requests, checked before you use them" },
+  { rung: 2, code: "L2", name: "Context", short: "A Project that remembers how you work" },
+  { rung: 3, code: "L3", name: "Skill", short: "A repeatable skill your team can reuse" },
+  { rung: 4, code: "L4", name: "Workflow", short: "A whole workflow, mapped and reviewed" },
+  { rung: 5, code: "L5", name: "Champion", short: "Reviewing others and running the queue" },
 ] as const
 
 export function rungMeta(rung: number) {

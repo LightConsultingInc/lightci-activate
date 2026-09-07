@@ -17,43 +17,41 @@ export const RUNG_META: Record<
   0: {
     code: 'L0',
     name: 'Orientation',
-    competency: 'Which surface for what; usage policy; the 4D frame',
+    competency: 'What Claude is good for, what to keep out of it, and your firm\'s rules',
     artifact: 'First finished piece of real work in session one',
   },
   1: {
     code: 'L1',
     name: 'Conversational',
-    competency: 'Prompting and discernment; predict-then-critique on every run',
+    competency: 'Clear requests, and checking what comes back before you use it',
     artifact:
       'A graded draft on a real task with expectation and critique recorded',
   },
   2: {
     code: 'L2',
     name: 'Context',
-    competency:
-      'Context engineering for one person: Projects, what to include and leave out',
+    competency: 'A Project that remembers how you like a repeated task done',
     artifact:
       'A working Project that improves a repeated task, with a written rationale',
   },
   3: {
     code: 'L3',
     name: 'Skill',
-    competency:
-      'Context engineering for reuse: progressive disclosure, minimal triggers, canonical examples',
+    competency: 'A repeatable skill your team can pick up and reuse',
     artifact:
       'A skill that passes the Grader rubric, written cold before a worked example',
   },
   4: {
     code: 'L4',
     name: 'Workflow',
-    competency: 'Map a workflow and ship it governed',
+    competency: 'A whole workflow mapped, reviewed and published for the team',
     artifact:
       'A workflow promoted through the compliance queue with a measured baseline',
   },
   5: {
     code: 'L5',
     name: 'Champion',
-    competency: 'Grade and review others',
+    competency: 'Reviewing others\' work and running the team\'s queue',
     artifact: 'Reviews in the promotion queue; owns a team backlog',
   },
 };
