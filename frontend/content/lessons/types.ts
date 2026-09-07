@@ -26,6 +26,16 @@ export type SceneKind =
   | "promotion-queue"        // a skill moving draft → review → approved → published
   | "review-others"          // two rubrics side by side converging (grader agreement)
 
+/** A sketch of Claude's own screen showing where to click (components/learner/mocks). Optional per lesson. */
+export type MockKind =
+  | "new-chat"             // the rail (Chats, Projects, Code, Cowork), the box, plus, tools, send
+  | "attach-menu"          // the plus menu open: upload, Drive, screenshot; paste works too
+  | "tools-menu"           // the tools menu open: the firm's connectors, switched on
+  | "conversation"         // your request, Claude's draft, the actions under it, the follow-up box
+  | "project-page"         // a Project: instructions, files, connected folder, start a chat inside
+  | "project-instructions" // editing a Project's instructions
+  | "skill-in-use"         // a plain request picking up a skill: the step shown, what it read, the result
+
 export interface LessonCheck {
   question: string
   options: string[]
@@ -42,6 +52,8 @@ export interface Lesson {
   promise: string
   minutes: number
   scene: SceneKind
+  /** Optional "where to click" screen, shown after the body. */
+  mock?: MockKind
   /** 120–260 words of teaching in plain language, may use **bold** and short paragraphs (blank-line separated). */
   body: string
   keyPoints: [string, string, string]

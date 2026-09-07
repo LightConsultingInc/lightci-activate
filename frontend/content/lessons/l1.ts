@@ -20,6 +20,7 @@ export const MODULE_L1: Module = {
       promise: "You will write a prompt with the five parts that turn a generic draft into a usable one.",
       minutes: 4,
       scene: "prompt-anatomy",
+      mock: "conversation",
       body: `Claude cannot see your screen, your calendar or your customer unless you show it. Everything it knows about the task is what you put in the message. A good description has five parts, and you can write them in any order.
 
 **Role**: who Claude should be for this task. "You are helping an account manager who looks after long-standing customers."
@@ -64,6 +65,7 @@ Use your team's words. If you call it a "quarterly check-in", say that. Claude w
       promise: "You will write a prompt that names a connected tool, says what to fetch, and says what to do with it.",
       minutes: 4,
       scene: "connectors",
+      mock: "tools-menu",
       body: `Pasting works. Pulling is better, when you have the connector.
 
 When you paste a transcript or a spreadsheet, you did the finding, the copying, and the trimming. Claude gets a snapshot, and if you cut the wrong part, it never knows.
@@ -148,6 +150,7 @@ Keep the sentence somewhere you will see it again, at the top of the chat or on 
       promise: "You will check facts, gaps and tone in a fixed order and write down what would fix it.",
       minutes: 4,
       scene: "check-output",
+      mock: "conversation",
       body: `Read Claude's draft the way you would read a bright new colleague's: grateful for the head start, responsible for what goes out.
 
 Check in four passes, in this order.
@@ -190,6 +193,7 @@ Two things to avoid. Do not accept because it reads smoothly; fluency is not acc
       promise: "You will turn your notes on a draft into two or three specific instructions and know when a fresh start is actually the fix.",
       minutes: 4,
       scene: "prompt-anatomy",
+      mock: "conversation",
       body: `The first draft is rarely the last. The mistake is to throw it away and start a fresh chat. Claude already has your context; use it.
 
 Iterate by telling Claude what to change, specifically. Not "make it better" but "keep the structure, cut the second paragraph to two sentences, and change the opening so it does not start with I hope this finds you well." Point at the part, say what is wrong, say what right looks like.

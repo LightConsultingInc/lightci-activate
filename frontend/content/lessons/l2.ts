@@ -20,6 +20,7 @@ export const MODULE_L2: Module = {
       promise: "You will know the three signs that a task deserves a Project, and the shapes to avoid.",
       minutes: 4,
       scene: "project-context",
+      mock: "project-page",
       body: `A Project is a chat with a memory. You give it instructions and reference files once, and every conversation inside it starts with them already loaded.
 
 Make a Project when three things are true. You do the task more than once. The background stays mostly the same between runs. And you have caught yourself pasting the same context twice.
@@ -58,6 +59,7 @@ A useful test: could you hand this Project to a colleague on your team and have 
       promise: "You will choose the tight set of context that helps and write one line on why each item is there.",
       minutes: 4,
       scene: "include-exclude",
+      mock: "project-page",
       body: `The best context is the smallest set that lets Claude do the job well. Every page you add competes for attention with every other page. Add too much and the important things get diluted.
 
 Start with the question: what does Claude need on every run that it does not already know? It knows what a status report is. It does not know your team's report template, your house rule about never quoting prices in a cover note, or the three things your team always checks before a customer meeting.
@@ -98,6 +100,7 @@ Tight beats thorough. A Project with four well-chosen pages will outperform one 
       promise: "You will write Project instructions at the right altitude: principles a new hire could follow, not rigid rules or vague advice.",
       minutes: 4,
       scene: "project-context",
+      mock: "project-instructions",
       body: `Project instructions are where you describe your judgement so Claude can apply it without you.
 
 Aim for the right altitude. Too low, and you write rigid rules for every case: "if the customer is new say this, if returning say that." They break the first time reality does not match. Too high, and you write "be professional and helpful", which tells Claude nothing it did not already assume.
@@ -136,6 +139,7 @@ Test the instructions by giving Claude a run with as little extra input as possi
       promise: "You will write Project instructions that name which connected sources to read, in what order, and what to do if one is empty.",
       minutes: 4,
       scene: "project-context",
+      mock: "project-page",
       body: `A Project can tell Claude where to look, not just what to know. If your team has connectors, the instructions should name the sources and the order to read them.
 
 Without that, each run starts with Claude asking, or guessing, where the customer's history lives. With it, every run does the same thing: "For meeting prep, first read the account in Salesforce, then the last two calls in Gong, then the latest proposal in Drive. Use the templates in this Project for the output."
@@ -176,6 +180,7 @@ Anyone who uses the Project sees only what their own access allows, so a colleag
       promise: "You will replace a long raw document with a one-page summary in your own words, and know when a full reference still belongs.",
       minutes: 4,
       scene: "include-exclude",
+      mock: "project-page",
       body: `It is tempting to drop the whole policy manual into a Project. Resist, not because it is unsafe, but because it works badly.
 
 Long raw documents work against you in two ways. Claude has to find the relevant paragraph in a sea of irrelevant ones, and the sheer volume crowds out the instructions you wrote so carefully. A forty-page PDF added "for reference" usually makes the output worse.
@@ -216,6 +221,7 @@ Rule of thumb: if you could not summarise the document in a paragraph, you do no
       promise: "You will keep a Project working for months with three small habits and spot the signs it has drifted.",
       minutes: 3,
       scene: "project-context",
+      mock: "project-instructions",
       body: `A Project is not finished when you build it. It drifts. Templates change, a house rule is added, a file goes stale, and one morning the output is subtly wrong and you cannot see why.
 
 Keep a Project healthy with three small habits.

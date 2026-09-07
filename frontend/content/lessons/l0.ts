@@ -20,6 +20,7 @@ export const MODULE_L0: Module = {
       promise: "You will know whether a task belongs in a chat, a Project, a skill, or Claude Code and Cowork.",
       minutes: 4,
       scene: "surfaces",
+      mock: "new-chat",
       body: `Claude shows up in a few places, and picking the right one saves you from fighting the tool.
 
 **Chat** is for one-off work: draft this email, summarise these notes, give me three ways to say this more gently. You bring everything Claude needs in the moment, and when you are done, you are done.
@@ -55,6 +56,7 @@ The rule of thumb: one-off means Chat, repeated means Project, shared means Skil
       promise: "You will paste documents and upload files with confidence, and know the short list your firm keeps out.",
       minutes: 4,
       scene: "policy-boundary",
+      mock: "attach-menu",
       body: `Claude Enterprise is a governed workspace your firm chose. Pasting documents, uploading files and connecting tools is how Claude does real work here, and it is expected. Most of what crosses your desk can go straight in: notes, drafts, contracts, proposals, transcripts, spreadsheets, internal pages.
 
 The only line is your firm's own policy, and it is about a few named kinds of data, not about documents in general. Typically: personal identifiers, health data, payment card data, account numbers, and secrets such as passwords or keys. Your firm's exact list is written down in Activate under your firm's boundary. Read it once; it is short.
@@ -95,6 +97,7 @@ Some outputs still get a human read before they go out: anything a customer rece
       promise: "You will know what a connector is, how to see which ones your firm has turned on, and why your permissions still apply.",
       minutes: 4,
       scene: "connectors",
+      mock: "tools-menu",
       body: `Claude does its best work when it can see the same things you see. A connector is the link that makes that possible: your firm connects Claude to a tool it already uses, and Claude can read from it, and sometimes write to it, inside a conversation.
 
 Typical connectors: **Salesforce** for accounts and opportunities, **Gong** for call recordings and transcripts, **Google Drive** for documents and spreadsheets, **Confluence** for internal pages. Your firm may have others.
@@ -168,6 +171,7 @@ The four form a loop. Poor delegation makes description hard. Poor description m
       promise: "You will finish one small, real task with Claude today, with your expectation written down before you run it.",
       minutes: 3,
       scene: "first-task",
+      mock: "new-chat",
       body: `You finish this module by doing one real piece of work with Claude today. Not a demo. Something already on your list.
 
 Pick a task that is small, yours, and low-stakes: a first draft of a follow-up email, a summary of your own meeting notes, an agenda for next week. Paste in whatever it needs. If the material contains something on your firm's short list of forbidden data, redact that part and carry on.

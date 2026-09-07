@@ -20,6 +20,7 @@ export const MODULE_L3: Module = {
       promise: "You will know what a skill is, how it differs from a Project, and why it should do exactly one job.",
       minutes: 4,
       scene: "skill-trigger",
+      mock: "skill-in-use",
       body: `A skill is a recipe Claude can pick up on its own. You write it once, it lives in the team library, and when a request matches, Claude reads the recipe and follows it.
 
 That is what makes a skill different from a Project. With a Project, you open it. With a skill, Claude decides to use it based on a short description you wrote. That means the description has to do real work, which the next lesson covers.
@@ -60,6 +61,7 @@ Before you write a skill, run the task a few times and notice what you keep expl
       promise: "You will write a description that names what the skill does and when to use it, in the words a teammate would type.",
       minutes: 4,
       scene: "skill-trigger",
+      mock: "skill-in-use",
       body: `The description is the one line Claude reads to decide whether to use your skill. If it is vague, the skill fires at the wrong times or never. If it is precise, the skill appears exactly when a teammate needs it.
 
 Write it in two halves: what the skill does, and when to use it. Say both in the words a colleague would actually type, not the internal steps of the skill.
@@ -178,6 +180,7 @@ Keep the examples in the main file if they are short, or in an examples file if 
       promise: "You will write a skill that names its source, says what to read, and says what a person still checks.",
       minutes: 4,
       scene: "boundary-declaration",
+      mock: "skill-in-use",
       body: `A skill can use connectors too. The difference from a chat is that the skill has to say, in writing, which source it reads and what a person still checks.
 
 Three lines do most of the work.

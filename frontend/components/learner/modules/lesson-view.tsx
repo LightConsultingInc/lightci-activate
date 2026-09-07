@@ -12,6 +12,7 @@ import { useLessonChecked, useLessonPersonalised, useMemory } from "@/hooks/lear
 import { useModuleReadiness } from "@/hooks/learner/use-module-readiness"
 import { MarkdownLite } from "../markdown-lite"
 import { LessonDiagram } from "../diagrams"
+import { ClaudeMock } from "../mocks"
 import { parseModuleCode } from "./module-state"
 import { cn } from "@/lib/utils"
 
@@ -70,6 +71,8 @@ export function LessonView({ code, slug }: { code: string; slug: string }) {
       <LessonDiagram scene={lesson.scene} />
 
       <MarkdownLite text={lesson.body} className="text-[15px] leading-relaxed" />
+
+      {lesson.mock && <ClaudeMock kind={lesson.mock} />}
 
       <section className="rounded-xl border bg-card p-5" data-testid="lesson-key-points">
         <p className="eyebrow mb-3">Three things to keep</p>
