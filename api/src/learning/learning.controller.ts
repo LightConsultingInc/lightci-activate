@@ -70,6 +70,7 @@ class RunDto {
   // prompt
   @IsOptional() @IsString() prompt?: string;
   @IsOptional() @IsString() material?: string;
+  @IsOptional() @IsArray() connectors?: string[];
   // project
   @IsOptional() @IsString() instructions?: string;
   @IsOptional() @IsArray() files?: { name: string; content: string }[];
@@ -633,9 +634,17 @@ export class LearningController {
       exercise.starter ?? {};
     void _legacyDraft;
     const practice = practiceOf(exercise, workflow?.name ?? null);
+    // The tools this person told us they work in, offered as connectors in the practice composer.
+    const owner = await this.people.findOne({
+      where: { id: exercise.personId },
+    });
+    const connectors = owner
+      ? await this.coach.connectorsFor(owner, owner.orgId ?? null)
+      : [];
     return {
       ...toExerciseSummary(exercise),
       practice,
+      connectors,
       hints: exercise.hints.slice(0, exercise.hintsRevealed),
       hintsRevealed: exercise.hintsRevealed,
       hintsTotal: exercise.hints.length,
@@ -651,7 +660,9 @@ export class LearningController {
         ? { workflow: await this.ladder.workflowSummary(workflow) }
         : {}),
       coachIntro: this.coach.coachIntro(exercise, submissions.length),
-      dataReminder: dataReminder(await this.boundaryForPerson(exercise.personId)),
+      dataReminder: dataReminder(
+        await this.boundaryForPerson(exercise.personId),
+      ),
     };
   }
 

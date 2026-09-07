@@ -45,7 +45,7 @@ export const NextExerciseSchema = z.object({
     .string()
     .nullable()
     .describe(
-      "prompt surface: a starter prompt in the learner's voice for this workflow, with [placeholders] for anything client-specific. Null for other surfaces.",
+      'Always null. The prompt box starts empty; a pre-written prompt gives the answer away. Put guidance in the hints.',
     ),
   prefillMaterial: z
     .string()

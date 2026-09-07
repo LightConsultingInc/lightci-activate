@@ -1,6 +1,8 @@
 "use client"
 
-import { FilePlus2, Trash2 } from "lucide-react"
+import { ArrowUp, ChevronDown, FilePlus2, FileText, Loader2, Plug, Plus, SlidersHorizontal, Trash2, X } from "lucide-react"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +16,17 @@ import type { Artifact, ExerciseDetail, PracticeKind, PracticeSpec, RunBody, Run
 // One input per kind (docs/practice-model.md). The output of Run lives next to the input so
 // "Try again" can clear it while keeping the draft.
 
-export type PromptSurface = { kind: "prompt"; prompt: string; material: string; output: string | null }
+export type PromptSurface = {
+  kind: "prompt"
+  prompt: string
+  /** Attached material (the sample, or whatever the learner pasted as a file). Sent with the prompt. */
+  material: string
+  attachmentName: string | null
+  /** Connectors offered (the person's own tools) and the ones switched on for this chat. */
+  available: string[]
+  connectors: string[]
+  output: string | null
+}
 export type ProjectSurface = { kind: "project"; instructions: string; files: { name: string; content: string }[]; testTask: string; output: string | null }
 export type SkillSurface = { kind: "skill"; skillMd: string; sampleRequests: string[]; results: SkillRunResult[] | null }
 export type WorkflowSurface = { kind: "workflow"; schema: Partial<WorkflowSchema>; skillDraft: string | null }
@@ -83,14 +95,15 @@ export function initialSurface(ex: ExerciseDetail, spec: PracticeSpec = practice
   const f = spec.prefill
   const last = ex.submissions?.[ex.submissions.length - 1]?.artifact
   switch (spec.kind) {
-    case "prompt":
-      {
-        const prompt = last?.content ?? str(f.prompt)
-        // The sample material belongs to the first draft only; once the learner has sent a version, keep exactly what they sent.
-        const material = last ? (last.material ?? "") : str(f.material)
-        // One box: any separately stored material is appended so nothing is hidden behind a toggle.
-        return { kind: "prompt", prompt: material && !prompt.includes(material) ? `${prompt.trimEnd()}\n\n${material}` : prompt, material: "", output: null }
-      }
+    case "prompt": {
+      // Never pre-write the prompt: the box starts empty (or with the learner's own last draft). It gives too much away otherwise.
+      const prompt = last?.content ?? ""
+      // Sample material rides along as an attachment, the way a file would in Claude; after a sent version, keep exactly what they sent.
+      const material = last ? (last.material ?? "") : str(f.material)
+      const available = ex.connectors ?? []
+      const connectors = last?.connectors ?? available
+      return { kind: "prompt", prompt, material, attachmentName: material ? (last ? "Attached material" : "Sample material, made up") : null, available, connectors, output: null }
+    }
     case "project":
       return {
         kind: "project",
@@ -119,7 +132,7 @@ export function initialSurface(ex: ExerciseDetail, spec: PracticeSpec = practice
 
 export function toRunBody(s: SurfaceState): RunBody | null {
   switch (s.kind) {
-    case "prompt": return { kind: "prompt", prompt: s.prompt, material: s.material.trim() || undefined }
+    case "prompt": return { kind: "prompt", prompt: s.prompt, material: s.material.trim() || undefined, connectors: s.connectors }
     case "project": return { kind: "project", instructions: s.instructions, files: s.files, testTask: s.testTask }
     case "skill": return { kind: "skill", skillMd: s.skillMd, sampleRequests: s.sampleRequests }
     case "workflow": return { kind: "workflow", schema: s.schema }
@@ -161,7 +174,7 @@ export function hasOutput(s: SurfaceState): boolean {
 
 export function toArtifact(s: SurfaceState): Artifact {
   switch (s.kind) {
-    case "prompt": return { type: "prompt_run", content: s.prompt, material: s.material.trim() || undefined, output: s.output ?? undefined }
+    case "prompt": return { type: "prompt_run", content: s.prompt, material: s.material.trim() || undefined, connectors: s.connectors, output: s.output ?? undefined }
     case "project": return { type: "project", content: s.instructions, files: s.files, testTask: s.testTask, output: s.output ?? undefined }
     case "skill": return { type: "skill", content: s.skillMd, sampleRequests: s.sampleRequests, results: s.results ?? undefined }
     case "workflow": return { type: "workflow", content: JSON.stringify(s.schema, null, 2), skillDraft: s.skillDraft ?? undefined }
@@ -193,19 +206,77 @@ export function canSubmit(s: SurfaceState): { ok: boolean; reason?: string } {
 
 type EditorProps<T extends SurfaceState> = { value: T; onChange: (v: T) => void; disabled?: boolean }
 
-export function PromptInput({ value, onChange, disabled, rung, reminder }: EditorProps<PromptSurface> & { rung?: number; reminder?: string }) {
+/**
+ * The prompt practice looks like Claude's own message box: an empty composer, a + menu with the person's connectors
+ * (switched on by default; the run simulates them) and the sample material as an attachment, the model label, and
+ * the send arrow, which is Run. Nothing is pre-written in the box.
+ */
+export function PromptInput({ value, onChange, disabled, rung, reminder, onRun, runLabel, runDisabled }: EditorProps<PromptSurface> & { rung?: number; reminder?: string; onRun?: () => void; runLabel?: string; runDisabled?: boolean }) {
+  const toggle = (name: string) =>
+    onChange({ ...value, connectors: value.connectors.includes(name) ? value.connectors.filter((c) => c !== name) : [...value.connectors, name] })
+  const running = Boolean(runLabel && runLabel !== "Run" && runLabel !== "Run again")
   return (
     <div className="space-y-3" data-testid="prompt-editor">
       {rung != null && rung <= 1 && reminder && <p className="text-xs text-muted-foreground" data-testid="prompt-reminder">{reminder}</p>}
-      <Textarea
-        value={value.prompt}
-        onChange={(e) => onChange({ ...value, prompt: e.target.value })}
-        disabled={disabled}
-        className="min-h-56 text-[15px] leading-relaxed"
-        placeholder="You are helping me prepare…"
-        aria-label="Your prompt"
-        data-testid="prompt-input"
-      />
+      <div className={cn("rounded-2xl border bg-background p-3 shadow-sm", disabled && "opacity-90")} data-testid="composer">
+        <Textarea
+          value={value.prompt}
+          onChange={(e) => onChange({ ...value, prompt: e.target.value })}
+          disabled={disabled}
+          className="min-h-40 resize-y border-0 bg-transparent px-1 py-1 text-[15px] leading-relaxed shadow-none focus-visible:ring-0"
+          placeholder="How can I help you today?"
+          aria-label="Your prompt"
+          data-testid="prompt-input"
+        />
+        {value.material && value.attachmentName && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1.5 text-xs" data-testid="prompt-attachment">
+              <FileText className="size-3.5 text-muted-foreground" /> {value.attachmentName}
+              {!disabled && (
+                <button type="button" className="ml-1 text-muted-foreground hover:text-foreground" aria-label="Remove attachment" onClick={() => onChange({ ...value, material: "", attachmentName: null })} data-testid="prompt-attachment-remove">
+                  <X className="size-3" />
+                </button>
+              )}
+            </span>
+          </div>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<button type="button" className="grid size-8 place-items-center rounded-lg border text-muted-foreground hover:bg-muted disabled:opacity-50" aria-label="Add" disabled={disabled} data-testid="composer-plus" />}
+            >
+              <Plus className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64" data-testid="composer-menu">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Connectors</DropdownMenuLabel>
+                {value.available.length === 0 && <p className="px-2 pb-1.5 text-xs text-muted-foreground">None yet. Name the tools you work in at your next interview and they appear here.</p>}
+                {value.available.map((name) => (
+                  <DropdownMenuCheckboxItem key={name} checked={value.connectors.includes(name)} onCheckedChange={() => toggle(name)} data-testid="composer-connector" data-name={name}>
+                    {name}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <span className="grid size-8 place-items-center rounded-lg border text-muted-foreground/60" aria-hidden><SlidersHorizontal className="size-4" /></span>
+          {value.connectors.length > 0 && (
+            <span className="ml-1 hidden items-center gap-1 text-[11px] text-muted-foreground sm:inline-flex" data-testid="composer-connectors-on">
+              <Plug className="size-3" /> {value.connectors.join(" · ")}
+            </span>
+          )}
+          <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground">Claude Opus 5 <ChevronDown className="size-3" /></span>
+          {onRun && (
+            <Button size="sm" onClick={onRun} disabled={runDisabled} className="h-8 gap-1.5 rounded-lg px-2.5" data-testid="run-button" aria-label={runLabel ?? "Run"}>
+              {running ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
+              <span className="text-xs">{runLabel ?? "Run"}</span>
+            </Button>
+          )}
+        </div>
+      </div>
+      {value.available.length > 0 && !disabled && (
+        <p className="text-xs text-muted-foreground">Your tools show under the + as connectors, switched on. Name one in your prompt and Claude will pull from it, with sample records in this practice.</p>
+      )}
     </div>
   )
 }
@@ -346,9 +417,9 @@ function artifactLabel(t: Artifact["type"]) {
 }
 
 /** The one input for the exercise's kind. */
-export function PracticeInput({ value, onChange, disabled, review, rung, reminder }: EditorProps<SurfaceState> & { review?: ExerciseDetail["review"]; rung?: number; reminder?: string }) {
+export function PracticeInput({ value, onChange, disabled, review, rung, reminder, onRun, runLabel, runDisabled }: EditorProps<SurfaceState> & { review?: ExerciseDetail["review"]; rung?: number; reminder?: string; onRun?: () => void; runLabel?: string; runDisabled?: boolean }) {
   switch (value.kind) {
-    case "prompt": return <PromptInput value={value} onChange={onChange} disabled={disabled} rung={rung} reminder={reminder} />
+    case "prompt": return <PromptInput value={value} onChange={onChange} disabled={disabled} rung={rung} reminder={reminder} onRun={onRun} runLabel={runLabel} runDisabled={runDisabled} />
     case "project": return <ProjectInput value={value} onChange={onChange} disabled={disabled} />
     case "skill": return <SkillInput value={value} onChange={onChange} disabled={disabled} />
     case "workflow": return <WorkflowInput value={value} onChange={onChange} disabled={disabled} />

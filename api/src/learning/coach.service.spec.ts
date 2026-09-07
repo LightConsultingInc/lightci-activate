@@ -131,15 +131,9 @@ describe('CoachService rung 0: one real task', () => {
     expect(practice.kind).toBe('prompt');
     expect(practice.ask).toBe(ex.brief);
     expect(practice.workflowName).toBe('RMD letters');
-    expect(practice.prefill.prompt).toContain("I'm a Financial planner");
-    // Run must produce the thing itself: the starter never asks Claude to stop and ask first.
-    expect(practice.prefill.prompt).not.toMatch(/ask me .*question/i);
-    expect(practice.prefill.prompt.split('\n').filter(Boolean)).toHaveLength(3);
-    expect(practice.prefill.prompt).toContain(
-      'Household summary, Prior letter',
-    );
-    expect(practice.prefill.prompt).toContain('Client letter');
-    expect(practice.prefill.prompt).toContain('CRM and Word');
+    // Never pre-written: the box starts empty and the nudges carry the guidance.
+    expect(practice.prefill.prompt).toBe('');
+    expect(ex.hints.join(' ')).toContain('CRM');
     expect(ex.rationale).toContain('4 times a week');
     expect(ex.hints).toHaveLength(3);
     expect(ex.hints.every((h) => /^Try /.test(h))).toBe(true);
@@ -157,7 +151,7 @@ describe('CoachService rung 0: one real task', () => {
     expect(ex.title).toBe('Do one real thing: Meeting prep');
     expect(
       (ex.starter.practice as { prefill: { prompt: string } }).prefill.prompt,
-    ).toContain('the notes I paste below');
+    ).toBe('');
     expect(ex.rationale).toContain('more than anything else');
   });
 });
@@ -178,7 +172,7 @@ describe('CoachService rung 1+: practice v2 shape and Run per kind', () => {
     updatedAt: new Date(),
   };
 
-  it('generates an in_app prompt practice with a one-sentence ask and a pre-filled prompt', async () => {
+  it('generates an in_app prompt practice with a one-sentence ask and an empty prompt box', async () => {
     const { svc } = build([wf], null, 1);
     const ex = await svc.generateNextExercise(person, 'org1');
     expect(ex.mode).toBe('in_app');
@@ -192,7 +186,7 @@ describe('CoachService rung 1+: practice v2 shape and Run per kind', () => {
     expect(practice.kind).toBe('prompt');
     expect(practice.ask).toBe(ex.brief);
     expect(ex.brief.split(/(?<=[.!?])\s+/).length).toBe(1);
-    expect(practice.prefill.prompt).toContain('[');
+    expect(practice.prefill.prompt).toBe(''); // never pre-written
     expect(ex.starter).not.toHaveProperty('notes');
   });
 

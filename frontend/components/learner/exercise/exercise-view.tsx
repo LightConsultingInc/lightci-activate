@@ -80,6 +80,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
   const locked = result !== null || finished || busy
   const isReview = surface.kind === "review"
   const hasRun = hasOutput(surface)
+  const runLabel = run.isPending ? "Claude is working…" : submit.isPending ? "Coach is reading it…" : hasRun ? "Run again" : "Run"
   // Once something is running or came back, the page widens into two columns: your work on the left, what came back on the right.
   const showResults = hasRun || result !== null || busy
 
@@ -151,11 +152,22 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
           <p className="eyebrow">{kindLabel(spec.kind)}</p>
           {locked && <Chip tone="neutral"><Lock className="size-3" /> Sent</Chip>}
         </div>
-        <PracticeInput value={surface} onChange={setSurface} disabled={locked} review={ex.review} rung={ex.rung} reminder={reminder} />
-        {!isReview && (
+        <PracticeInput
+          value={surface}
+          onChange={setSurface}
+          disabled={locked}
+          review={ex.review}
+          rung={ex.rung}
+          reminder={reminder}
+          onRun={surface.kind === "prompt" ? doRun : undefined}
+          runLabel={runLabel}
+          runDisabled={locked || !runnable.ok}
+        />
+        {surface.kind === "prompt" && !locked && !runnable.ok && runnable.reason && <p className="mt-2 text-xs text-muted-foreground">{runnable.reason}</p>}
+        {!isReview && surface.kind !== "prompt" && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button size="lg" onClick={doRun} disabled={locked || !runnable.ok} data-testid="run-button">
-              <Play data-icon="inline-start" /> {run.isPending ? "Claude is working…" : submit.isPending ? "Coach is reading it…" : hasRun ? "Run again" : "Run"}
+              <Play data-icon="inline-start" /> {runLabel}
             </Button>
             {!runnable.ok && !locked && runnable.reason && <p className="text-xs text-muted-foreground">{runnable.reason}</p>}
             {!locked && runnable.ok && <p className="text-xs text-muted-foreground">Claude does the task, then Coach tells you what worked and what to change.</p>}

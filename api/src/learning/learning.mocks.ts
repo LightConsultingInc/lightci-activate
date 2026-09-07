@@ -188,19 +188,6 @@ const MOCK_TITLES: Record<string, string> = {
   orientation: 'Finish',
 };
 
-const MOCK_BRIEF_TAIL: Record<string, string> = {
-  prompt:
-    'write the prompt, run it, and check what comes back against your own standard',
-  project:
-    'set up the Project instructions and the files you would include, with a short note on what you left out and why',
-  skill:
-    'write the SKILL.md and three sample cases (one that should trigger it, one that should not, one borderline)',
-  workflow:
-    'map the steps, who does each one, what goes in, what comes out and where a person must review',
-  review: 'read it as the reviewer and write what you would send back',
-  orientation: 'finish one real piece of it with Claude, start to end',
-};
-
 registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
   const s = seed<{
     rung?: number;
@@ -298,11 +285,18 @@ registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
 // ───────────────────────── Run, per practice kind ─────────────────────────
 
 registerMockResponder('coach.run.prompt#text', (call) => {
-  const s = seed<{ prompt?: string; material?: string }>(call);
+  const s = seed<{ prompt?: string; material?: string; connectors?: string[] }>(
+    call,
+  );
   const prompt = (s.prompt ?? '').trim();
   const material = (s.material ?? '').trim();
+  const pulled = (s.connectors ?? []).find((c) =>
+    new RegExp(`\\b${c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
+      prompt,
+    ),
+  );
   return {
-    text: `Here is a first draft for: "${prompt.slice(0, 160)}".${material ? ` I used the ${material.split(/\s+/).length}-word material you pasted.` : ' Figures and names are placeholders because none were given.'}\n\n1. Purpose: [the goal in one line]\n2. Reader: [who this is for]\n3. Draft:\n   - Opening line with the outcome.\n   - Two supporting points with placeholders such as [client name] and [figure].\n   - A closing line with the next action.`,
+    text: `${pulled ? `Pulled 3 records from ${pulled} (sample records standing in for ${pulled}).\n\n` : ''}Here is a first draft for: "${prompt.slice(0, 160)}".${material ? ` I used the ${material.split(/\s+/).length}-word material you attached.` : ' Figures and names are placeholders because none were given.'}\n\n1. Purpose: [the goal in one line]\n2. Reader: [who this is for]\n3. Draft:\n   - Opening line with the outcome.\n   - Two supporting points with placeholders such as [client name] and [figure].\n   - A closing line with the next action.`,
   };
 });
 

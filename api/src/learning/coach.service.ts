@@ -44,6 +44,7 @@ import { MasteryService } from './mastery.service';
 import { MemoryService } from './memory.service';
 import {
   COACH_RUN_SYSTEM,
+  CONNECTOR_SIMULATION_RULES,
   COACH_SKILL_RUN_SYSTEM,
   COACH_SYSTEM,
   COACH_WORKFLOW_DRAFT_SYSTEM,
@@ -168,7 +169,11 @@ export class CoachService {
       return this.generateFirstRealTask(person, orgId);
     const memory = await this.memory.get(person.id, orgId);
     const knownSystemsSeed: string[] = [...memory.systems];
-    const unlocked = report.competencies.filter((c) => c.status !== 'locked' || (opts.rung !== undefined && c.rung === opts.rung));
+    const unlocked = report.competencies.filter(
+      (c) =>
+        c.status !== 'locked' ||
+        (opts.rung !== undefined && c.rung === opts.rung),
+    );
     const target = this.pickTarget(
       unlocked,
       rung,
@@ -214,7 +219,18 @@ export class CoachService {
         ...competenciesForRung(Math.min(5, rung) as 0).map((c) => c.code),
       );
 
-    const knownSystems = [...new Set([...knownSystemsSeed, ...layers.flatMap((l) => l.systems ?? []), ...workflows.flatMap((w) => w.schema?.systems ?? []), ...(person.profile?.systems ?? [])].map((x) => x.trim()).filter(Boolean))];
+    const knownSystems = [
+      ...new Set(
+        [
+          ...knownSystemsSeed,
+          ...layers.flatMap((l) => l.systems ?? []),
+          ...workflows.flatMap((w) => w.schema?.systems ?? []),
+          ...(person.profile?.systems ?? []),
+        ]
+          .map((x) => x.trim())
+          .filter(Boolean),
+      ),
+    ];
     const out = await this.ai.structured(
       {
         agent: 'coach',
@@ -292,7 +308,9 @@ export class CoachService {
               `Preferences: ${memory.preferences.join('; ') || '(none recorded)'}`,
               '',
               '# Systems and connectors this learner works in (suggest the connector in the ask or pre-fill; at project/skill/workflow stages involve a connected source where sensible)',
-              knownSystems.length ? knownSystems.join(', ') : '(none recorded; leave a paste slot)',
+              knownSystems.length
+                ? knownSystems.join(', ')
+                : '(none recorded; leave a paste slot)',
               '',
               '# Firm compliance boundary and data stance',
               boundaryText(org?.settings?.boundary),
@@ -351,7 +369,14 @@ export class CoachService {
     }
     const exercise = this.exercises.create(draft);
     if (opts.moduleCode)
-      exercise.starter = { ...exercise.starter, practice: { moduleCode: opts.moduleCode, preparedAt: new Date().toISOString(), aheadOfPlacement: rung > report.rung } };
+      exercise.starter = {
+        ...exercise.starter,
+        practice: {
+          moduleCode: opts.moduleCode,
+          preparedAt: new Date().toISOString(),
+          aheadOfPlacement: rung > report.rung,
+        },
+      };
     const saved = await this.exercises.save(exercise);
     this.logger.log(
       `Coach generated "${saved.title}" (${saved.competencyCodes.join(',')}) for ${person.id}`,
@@ -360,8 +385,8 @@ export class CoachService {
   }
 
   /**
-   * Rung 0 practice is one real task: a starter prompt already filled with the learner's role and their
-   * most frequent workflow's inputs and outputs, run in the app; no policy quiz and no reading surface.
+   * Rung 0 practice is one real task on the learner's most frequent workflow, run in the app: an empty box,
+   * three nudges, and their own tools offered as connectors. No policy quiz and no reading surface.
    */
   async generateFirstRealTask(
     person: Person,
@@ -389,28 +414,7 @@ export class CoachService {
     );
     const wf = situation?.workflows[0] ?? null;
     const task = wf?.name ?? 'the task you do most';
-    const role = situation?.role ?? person.title ?? 'professional';
-    const inputs = wf?.inputs?.length
-      ? wf.inputs.join(', ')
-      : 'the notes I paste below';
-    const outputs = wf?.outputs?.length
-      ? wf.outputs.join(', ')
-      : 'a finished draft I can use as it is';
-    const systems = wf?.systems?.length
-      ? ` We normally work in ${wf.systems.join(' and ')}.`
-      : '';
     const primarySystem = wf?.systems?.[0] ?? situation?.systems?.[0] ?? null;
-    const inputSlot = primarySystem
-      ? `Here's the ${inputs}: [paste them here, or say "using the ${primarySystem} connector, pull them"]`
-      : `Here's the ${inputs}: [paste them here]`;
-    // Three short lines and one slot (docs/practice-model.md). Never "ask me a question first": Run
-    // must produce the thing itself, with [placeholders] where the learner left gaps.
-    const starterPrompt = [
-      `I'm a ${role}. Help me with ${task}.${systems}`,
-      `I need back ${outputs}, in the shape we use for ${task}. Work only from what I give you below; where a fact is missing, leave a [placeholder] rather than guessing.`,
-      '',
-      inputSlot,
-    ].join('\n');
     const cadence = wf?.runsPerWeek
       ? `${wf.runsPerWeek} time${wf.runsPerWeek === 1 ? '' : 's'} a week`
       : 'more than anything else';
@@ -419,7 +423,8 @@ export class CoachService {
       ask: brief,
       kind: 'prompt',
       workflowName: wf?.name ?? task,
-      prefill: { prompt: starterPrompt },
+      // The box starts empty: writing the ask is the exercise.
+      prefill: { prompt: '' },
     };
     const exercise = this.exercises.create({
       personId: person.id,
@@ -442,7 +447,7 @@ export class CoachService {
         'Try asking for the shape you actually use (headings, length, tone) instead of accepting the default.',
       ],
       workedExample: null,
-      starter: { practice, starterPrompt, workflowName: wf?.name ?? null },
+      starter: { practice, workflowName: wf?.name ?? null },
       status: 'queued',
       estimatedMinutes: 15,
       scheduledFor: new Date(),
@@ -544,9 +549,8 @@ export class CoachService {
           ...base,
           kind,
           prefill: {
-            prompt:
-              out.prefillPrompt?.trim() ||
-              (legacy('prompt') as { prompt: string }).prompt,
+            // Never pre-written: the box starts empty (it gives the answer away otherwise). Sample material rides along as an attachment.
+            prompt: '',
             ...(out.prefillMaterial?.trim()
               ? { material: out.prefillMaterial.trim() }
               : {}),
@@ -679,6 +683,40 @@ export class CoachService {
     });
   }
 
+  /**
+   * The tools this person has told us they work in (workflow maps, person layer, profile), offered as
+   * connectors in the practice composer. The run simulates them so "pull from Granola" works in practice.
+   */
+  async connectorsFor(person: Person, orgId: string | null): Promise<string[]> {
+    const [layers, maps] = await Promise.all([
+      this.layersFor(person, orgId),
+      orgId
+        ? this.workflows.find({
+            where: [
+              { ownerPersonId: person.id, orgId },
+              ...(person.teamId ? [{ teamId: person.teamId, orgId }] : []),
+            ],
+            take: 20,
+          })
+        : Promise.resolve<WorkflowMap[]>([]),
+    ]);
+    const situation = buildSituation(
+      person,
+      layers.find((l) => l.layer === 'person') ?? null,
+      maps,
+    );
+    const names = [
+      ...(situation?.systems ?? []),
+      ...(situation?.workflows ?? []).flatMap((w) => w.systems ?? []),
+    ]
+      .map((n) => n.trim())
+      .filter(Boolean);
+    const seen = new Map<string, string>();
+    for (const n of names)
+      if (!seen.has(n.toLowerCase())) seen.set(n.toLowerCase(), n);
+    return [...seen.values()].slice(0, 12);
+  }
+
   async layersFor(
     person: Person,
     orgId: string | null,
@@ -741,20 +779,31 @@ export class CoachService {
       if (!prompt)
         throw new BadRequestException('prompt is required for this practice.');
       const material = str(body.material);
+      const connectors = Array.isArray(body.connectors)
+        ? (body.connectors as unknown[])
+            .map((c) => str(c))
+            .filter(Boolean)
+            .slice(0, 12)
+        : [];
+      const connectorBlock = connectors.length
+        ? `# Connected tools in this practice\nSwitched on for this chat: ${connectors.join(', ')}.\n${CONNECTOR_SIMULATION_RULES}`
+        : `# Connected tools in this practice\nNone are switched on. If the prompt asks you to pull from a tool, say in one plain sentence that it is not connected here and how to connect it in Claude (Settings › Connectors › Connect), then do the task with [slots].`;
       const { text, runId } = await this.ai.text({
         ...common,
         task: 'coach.run.prompt',
-        system: `${COACH_RUN_SYSTEM}\n\n${firmContext}`,
+        system: `${COACH_RUN_SYSTEM}\n\n${firmContext}\n\n${connectorBlock}`,
         messages: [
           {
             role: 'user',
-            content: material ? `${prompt}\n\n---\n\n${material}` : prompt,
+            content: material
+              ? `${prompt}\n\n--- attached material ---\n\n${material}`
+              : prompt,
           },
         ],
-        mockSeed: { prompt, material, exerciseId: exercise.id },
+        mockSeed: { prompt, material, connectors, exerciseId: exercise.id },
       });
       result = { kind, output: text, model, runId };
-      summary = { prompt, material, output: text };
+      summary = { prompt, material, connectors, output: text };
     } else if (kind === 'project') {
       const instructions = str(body.instructions);
       const testTask = str(body.testTask);

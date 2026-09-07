@@ -75,7 +75,7 @@ test.describe("practice: ask, run, submit, feedback", () => {
 
     const input = page.getByTestId("prompt-input")
     await expect(input).toBeVisible()
-    await expect(input).not.toHaveValue("") // pre-filled from his workflow
+    await expect(input).toHaveValue("") // never pre-written: that would give the answer away
     await input.fill(PROMPT)
     await expect(page.getByTestId("run-output")).toHaveCount(0)
 

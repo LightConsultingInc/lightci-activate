@@ -55,7 +55,7 @@ export type PracticeSpec = {
 
 /** POST /exercises/:id/run body, by kind. Review items do not run. */
 export type RunBody =
-  | { kind: "prompt"; prompt: string; material?: string }
+  | { kind: "prompt"; prompt: string; material?: string; connectors?: string[] }
   | { kind: "project"; instructions: string; files: { name: string; content: string }[]; testTask: string }
   | { kind: "skill"; skillMd: string; sampleRequests: string[] }
   | { kind: "workflow"; schema: Partial<WorkflowSchema> }
@@ -127,8 +127,10 @@ export type Artifact = {
   type: "prompt_run" | "project" | "skill" | "workflow" | "text" | "review"
   content: string
   output?: string
-  /** prompt: the pasted material, if any. */
+  /** prompt: the pasted or attached material, if any. */
   material?: string
+  /** prompt: the connectors that were switched on for the run. */
+  connectors?: string[]
   files?: { name: string; content: string }[]
   /** project: the pre-filled task the Project was run against. */
   testTask?: string
@@ -266,6 +268,8 @@ export type ExerciseDetail = ExerciseSummary & {
   skill?: SkillCard
   workflow?: WorkflowSummary
   coachIntro?: string
+  /** The tools this person told us they work in, offered as connectors in the practice composer (simulated by the run). */
+  connectors?: string[]
 }
 
 export type LadderView = {

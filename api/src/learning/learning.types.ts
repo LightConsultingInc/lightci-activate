@@ -91,6 +91,8 @@ export type PracticeKind =
 export interface PromptPrefill {
   prompt: string;
   material?: string;
+  /** prompt: the connectors switched on for the run (simulated in practice). */
+  connectors?: string[];
 }
 export interface ProjectPrefill {
   instructions: string;
@@ -262,6 +264,8 @@ export interface WorkflowSummary {
 }
 
 export interface ExerciseDetail extends ExerciseSummary {
+  /** Tools the owner works in, offered as connectors in the prompt practice composer (simulated by the run). */
+  connectors?: string[];
   practice: Practice;
   hints: string[];
   hintsRevealed: number;
