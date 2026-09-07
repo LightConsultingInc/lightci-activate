@@ -316,7 +316,7 @@ export function IntakeChat({
       data-testid="intake-chat"
       data-mode={mode}
     >
-      <section className="flex min-h-[32rem] flex-col overflow-hidden rounded-xl border bg-card">
+      <section className="flex h-[min(42rem,calc(100svh-11rem))] min-h-[28rem] flex-col overflow-hidden rounded-xl border bg-card">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <div>
             <p className="eyebrow">Interviewer · {iv.mode}</p>
@@ -504,7 +504,7 @@ export function IntakeChat({
         {!inVoice && (
           <div
             ref={scrollRef}
-            className="flex-1 space-y-4 overflow-y-auto p-4"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
             data-testid="chat-transcript"
           >
             {messages.map((m, i) => (
