@@ -63,7 +63,7 @@ Use your team's words. If you call it a "quarterly check-in", say that. Claude w
       title: "Ask it to pull, don't paste",
       promise: "You will write a prompt that names a connected tool, says what to fetch, and says what to do with it.",
       minutes: 4,
-      scene: "prompt-anatomy",
+      scene: "connectors",
       body: `Pasting works. Pulling is better, when you have the connector.
 
 When you paste a transcript or a spreadsheet, you did the finding, the copying, and the trimming. Claude gets a snapshot, and if you cut the wrong part, it never knows.

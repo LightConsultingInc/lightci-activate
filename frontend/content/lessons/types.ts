@@ -5,9 +5,11 @@
 
 export type Rung = 0 | 1 | 2 | 3 | 4 | 5
 
-/** A small set of motion scenes the Explainer component knows how to draw. Lessons pick one. */
+/** The static diagram drawn at the top of a lesson (components/learner/diagrams). Lessons pick one. */
 export type SceneKind =
   | "surfaces"         // Claude surfaces as tiles: Chat, Projects, Claude Code, Cowork; highlights which fits a task
+  | "connectors"       // Claude reading the firm's tools through connectors, behind the person's own permissions
+  | "first-task"       // the first exercise: pick one real task, ask Claude, check it
   | "policy-boundary"  // documents flowing toward Claude; some pass, restricted classes bounce off a boundary line
   | "four-d"           // Delegation → Description → Discernment → Diligence as a loop
   | "prompt-anatomy"   // a prompt assembling from role, task, inputs, format, constraints

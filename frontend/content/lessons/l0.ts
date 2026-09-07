@@ -94,7 +94,7 @@ Some outputs still get a human read before they go out: anything a customer rece
       title: "Connectors: Claude can read your tools",
       promise: "You will know what a connector is, how to see which ones your firm has turned on, and why your permissions still apply.",
       minutes: 4,
-      scene: "surfaces",
+      scene: "connectors",
       body: `Claude does its best work when it can see the same things you see. A connector is the link that makes that possible: your firm connects Claude to a tool it already uses, and Claude can read from it, and sometimes write to it, inside a conversation.
 
 Typical connectors: **Salesforce** for accounts and opportunities, **Gong** for call recordings and transcripts, **Google Drive** for documents and spreadsheets, **Confluence** for internal pages. Your firm may have others.
@@ -167,7 +167,7 @@ The four form a loop. Poor delegation makes description hard. Poor description m
       title: "Your first real piece of work today",
       promise: "You will finish one small, real task with Claude today, with your expectation written down before you run it.",
       minutes: 3,
-      scene: "predict-then-see",
+      scene: "first-task",
       body: `You finish this module by doing one real piece of work with Claude today. Not a demo. Something already on your list.
 
 Pick a task that is small, yours, and low-stakes: a first draft of a follow-up email, a summary of your own meeting notes, an agenda for next week. Paste in whatever it needs. If the material contains something on your firm's short list of forbidden data, redact that part and carry on.

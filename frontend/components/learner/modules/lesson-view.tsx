@@ -11,6 +11,7 @@ import { useLessonProgress } from "@/hooks/learner/use-lesson-progress"
 import { useLessonChecked, useLessonPersonalised, useMemory } from "@/hooks/learner/queries"
 import { useModuleReadiness } from "@/hooks/learner/use-module-readiness"
 import { MarkdownLite } from "../markdown-lite"
+import { LessonDiagram } from "../diagrams"
 import { parseModuleCode } from "./module-state"
 import { cn } from "@/lib/utils"
 
@@ -65,6 +66,8 @@ export function LessonView({ code, slug }: { code: string; slug: string }) {
         <h1 className="font-display text-3xl font-medium leading-tight md:text-4xl" data-testid="lesson-title">{lesson.title}</h1>
         <p className="max-w-2xl text-base text-muted-foreground">{lesson.promise}</p>
       </header>
+
+      <LessonDiagram scene={lesson.scene} />
 
       <MarkdownLite text={lesson.body} className="text-[15px] leading-relaxed" />
 

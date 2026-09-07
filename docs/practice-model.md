@@ -42,6 +42,10 @@ A bad lesson:
 - tells the reader to go do something in another tool and come back;
 - talks about the reader's judgement, predictions, or how they will be measured.
 
+### The picture at the top (added 2026-09-07)
+
+Every lesson opens with one static diagram, drawn in the LightCI presentation style (SVG, mono small-caps labels with a quieter sub-line, tinted nodes, thin connectors, a serif word where the picture has a centre). No motion: the earlier animated scenes were removed because they distracted more than they taught. The lesson's `scene` picks the drawing from `frontend/components/learner/diagrams`, and each drawing carries a one-sentence caption that passes the layman test. Rules: one idea per picture; every label is a phrase a colleague would say; numbers appear only as concrete examples ("about 3 hours a week"), never as data; the drawing must read on paper and in dark mode (theme tokens only); narrow screens scroll the picture sideways rather than shrinking the type below legibility.
+
 ## Data stance (corrected 2026-09-07)
 
 Claude Enterprise is a governed workspace. Pasting documents, uploading files and using connectors (Salesforce, Gong, Google Drive, Confluence, and any MCP server the firm has approved) is encouraged and is how Claude does real work. The only line is the firm's own policy, which Activate holds as the org boundary: the named forbidden data classes (typically personal identifiers, health data, payment card data, account numbers, anything regulated) and secrets. Lessons and Coach must teach the policy, not fear: "your firm allows X, keeps out Y; here is how to check" rather than "describe the situation, not the person" as a blanket rule. "Describe the situation" is a useful habit only for the specific classes the policy forbids. Reminders shown to the learner come from the org boundary, never from a hard-coded list.
