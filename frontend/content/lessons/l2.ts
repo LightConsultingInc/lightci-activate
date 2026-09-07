@@ -4,50 +4,50 @@ export const MODULE_L2: Module = {
   rung: 2,
   code: "L2",
   name: "Context",
-  tagline: "Set up a Project so one repeated task starts with the right background every time.",
+  tagline: "Build a Project that makes one repeated task better every time you open it.",
   outcomes: [
-    "Set up a Project: standing instructions plus one or two files that Claude reads every time.",
-    "Choose what goes in and what stays out, and replace a long document with a one-page summary.",
-    "Write instructions that say how you decide, and fix repeat mistakes in the Project rather than in the chat.",
+    "Decide when a task deserves a Project and when it does not.",
+    "Choose the small set of instructions, files and connected sources that earn their place, and write down why.",
+    "Keep a Project useful over months by fixing it where it lives, not in the chat.",
   ],
   practice:
-    "Practice: set up a Project for one of your own tasks. Write the instructions, paste one or two files, and we run a test task and show you the result.",
+    "Practice: you'll set up a Project for one task you do every week, run a test task inside it, and get three lines of feedback.",
   lessons: [
     {
       slug: "l2-what-is-a-project",
       rung: 2,
-      title: "What a Project is",
-      promise: "You will know what a Project holds, what stays in each chat, and which tasks deserve one.",
-      minutes: 3,
+      title: "What a Project is and when to make one",
+      promise: "You will know the three signs that a task deserves a Project, and the shapes to avoid.",
+      minutes: 4,
       scene: "project-context",
-      body: `Most of what you type to Claude each week is the same background, again. A Project stops the retyping.
+      body: `A Project is a chat with a memory. You give it instructions and reference files once, and every conversation inside it starts with them already loaded.
 
-A Project is a folder with standing instructions and a few files. Every chat you start inside it begins with those already read. You add only the part that changed today.
+Make a Project when three things are true. You do the task more than once. The background stays mostly the same between runs. And you have caught yourself pasting the same context twice.
 
-**Without a Project**, every Monday: "You're helping me write our weekly sales report. One page, results before commentary, no customer names. Here is last week's for the format..." and then your notes.
+Weekly customer-meeting prep is the classic case. Every week you want the same structure, the same tone, the same reminders about what to check. What changes is this week's customers and this week's notes. The stable part goes into the Project. The changing part goes into each chat, or comes from a connected tool.
 
-**With a Project called "Weekly report"**: the instructions say "One page, results before commentary, never name a customer. Match the attached report's structure." One file: last month's report. Each Monday you open it, paste your bullet notes and type "Draft this week's."
+Do not make a Project for a one-off. Do not make one for a task where every run is completely different. And do not make one giant Project for "my work". It will collect everything and help with nothing. One Project per repeated task is the shape to aim for.
 
-Make a Project for a task you do again and again where the background barely changes: the weekly report, customer-meeting prep, the follow-up email after a call. One Project per task. Not for a one-off, and not one giant Project for "my job". A folder that holds everything helps with nothing.`,
+A useful test: could you hand this Project to a colleague on your team and have them run it next week without asking you anything? If yes, you have built something that improves the task. If no, the missing piece is probably in the instructions, which the next lessons cover.`,
       keyPoints: [
-        "A Project is a folder of standing instructions and files that Claude reads at the start of every chat inside it.",
-        "The part that stays the same goes in the Project; only what changed today goes in the chat.",
+        "Make a Project when the task repeats, the background is stable, and you have pasted the same context twice.",
+        "The stable part goes in the Project; only what changed this week goes in the chat.",
         "One Project per repeated task; never one giant Project for everything.",
       ],
       example: {
         title: "Try this",
-        text: "Create a Project called 'Weekly report'. Paste last month's report as a file and write one instruction: 'Match this tone and structure.' Ask it to draft this month's from your bullet notes.",
+        text: "Create a Project named after one task you do every week. Paste in the template you use for it and one finished example. Run this week's version inside it.",
       },
       check: {
-        question: "What goes in the Project, and what goes in each chat?",
+        question: "Which of these should become a Project?",
         options: [
-          "Standing instructions and reference files in the Project; today's notes in the chat",
-          "Everything in the chat every time; the Project is just a name",
-          "Today's notes in the Project; the instructions in each chat",
-          "Every task you do, together in one Project",
+          "A one-time email explaining an office move",
+          "The weekly customer-meeting prep",
+          "Everything you do at work, in one place",
+          "A quick rewording of one sentence",
         ],
-        answer: 0,
-        explanation: "The Project holds what stays the same between runs; each chat adds only what changed today.",
+        answer: 1,
+        explanation: "Meeting prep repeats weekly with a stable structure; the others are one-offs or too broad to help.",
       },
       competencies: ["L2.project_design", "L0.surfaces"],
     },
@@ -55,154 +55,194 @@ Make a Project for a task you do again and again where the background barely cha
       slug: "l2-include-exclude",
       rung: 2,
       title: "What to put in and what to leave out",
-      promise: "You will pick the few files that do a job in a Project and remove the ones that only add bulk.",
-      minutes: 3,
+      promise: "You will choose the tight set of context that helps and write one line on why each item is there.",
+      minutes: 4,
       scene: "include-exclude",
-      body: `Every file you add to a Project is one more thing Claude has to read before it gets to your request. Add too much and the rules you care about get lost in the pile.
+      body: `The best context is the smallest set that lets Claude do the job well. Every page you add competes for attention with every other page. Add too much and the important things get diluted.
 
-The question for each item: does Claude need this every time, and would it not already know it? It knows what a follow-up email is. It does not know your template, your rule about never quoting a price in an email, or that your customers read on their phones.
+Start with the question: what does Claude need on every run that it does not already know? It knows what a status report is. It does not know your team's report template, your house rule about never quoting prices in a cover note, or the three things your team always checks before a customer meeting.
 
-**Bloated "Follow-up emails" Project**: a guide to writing business emails, the whole 2025 email archive, two contracts, the brand guidelines PDF, six draft emails, and one instruction: "Be professional."
+**Include**: the template you actually use, the house rules that trip people up, one strong example of a finished output, and a short description of who the audience is.
 
-**Trimmed version**: the email template; three house rules ("never quote a price; always name who to contact; one screen long"); one finished email you were proud of; and one line: "Readers are busy managers on their phones."
+**Leave out**: general background Claude already has, anything you added "just in case", documents you have not read yourself, and the few data classes on your firm's forbidden list.
 
-The trimmed one wins because every item does a job. For each file, say in one sentence why it is there. If you cannot finish the sentence, take it out. Four good pages beat forty.`,
+For each item, write one sentence saying why it earns its place. If you cannot finish the sentence, take the item out. The reasoning is the skill, not the file list.
+
+Tight beats thorough. A Project with four well-chosen pages will outperform one with forty.`,
       keyPoints: [
-        "Add only what Claude needs every time and would not already know.",
-        "Include the real template, the house rules that trip people up, one finished example, and who reads the output.",
-        "Say in one sentence why each file is there; if you cannot, remove it.",
+        "Add only what Claude needs on every run and does not already know.",
+        "Include the real template, the house rules that trip people up, one strong example, and the audience.",
+        "Write one line on why each item earns its place; if you cannot, remove it.",
       ],
       example: {
         title: "Try this",
-        text: "Open one Project. For each file in it, say in one sentence why it is there. Remove any file you could not finish the sentence for.",
+        text: "Open one of your Projects and, next to each file, write one sentence on why it is there. Remove any file you could not finish the sentence for.",
       },
       check: {
-        question: "Which item earns its place in a \"Follow-up emails\" Project?",
+        question: "A colleague wants to add the full 60-page policy manual to the Project \"just in case\". What is the right call?",
         options: [
-          "A general guide to writing business emails",
-          "Last year's whole email archive",
-          "Your team's three house rules for customer emails",
-          "A contract, just in case",
+          "Add it; more context is always safer",
+          "Leave it out and write a one-page summary of the rules that apply to this task",
+          "Add it but tell Claude to ignore most of it",
+          "Replace the instructions with the manual",
         ],
-        answer: 2,
-        explanation: "Claude does not know your house rules and needs them every time; the others are known already or rarely relevant.",
+        answer: 1,
+        explanation: "A long raw document dilutes attention; a short summary of the rules that apply carries the signal without the noise.",
       },
       competencies: ["L2.selection"],
     },
     {
-      slug: "l2-instructions-how-you-decide",
+      slug: "l2-reusable-instructions",
       rung: 2,
-      title: "Instructions that say how you decide",
-      promise: "You will write Project instructions that describe how you make the calls, not just what the task is.",
-      minutes: 3,
+      title: "Reusable instructions that describe your judgement",
+      promise: "You will write Project instructions at the right altitude: principles a new hire could follow, not rigid rules or vague advice.",
+      minutes: 4,
       scene: "project-context",
-      body: `Project instructions are where you tell Claude how you make the calls, so it makes them the same way when you are not there to type them.
+      body: `Project instructions are where you describe your judgement so Claude can apply it without you.
 
-Two common misses. Too vague: "Be professional and helpful." Claude already assumed that; it changes nothing. Too rigid: "If the customer is new, write A. If returning, write B." It breaks the first time a customer fits neither.
+Aim for the right altitude. Too low, and you write rigid rules for every case: "if the customer is new say this, if returning say that." They break the first time reality does not match. Too high, and you write "be professional and helpful", which tells Claude nothing it did not already assume.
 
-**Describes the task** (not much use): "Write follow-up emails to customers after meetings."
+The middle is the useful part: the principles you would explain to a new hire in their first week. "We lead with what the customer needs to do, then why. We never quote prices in a cover email. We always say who to contact with questions, using the team member's name the user supplies."
 
-**Describes how you decide** (useful): "Lead with what the customer needs to do, then why. Never quote a price in an email; point to the attached proposal. Always name who to contact. If a question came up in the meeting that my notes do not answer, leave a bracketed placeholder rather than guessing."
+Structure helps. Give the instructions short headed sections: who this is for, what a good output looks like, house rules, what to do when unsure. Claude reads structure well, and so will you when you come back to edit in three months.
 
-The second is what you would tell a new colleague in their first week. Short headings help you both: who reads this, what good looks like, house rules, what to do when unsure.
-
-And if you catch yourself typing the same correction in chat twice, that sentence belongs in the instructions.`,
+Test the instructions by giving Claude a run with as little extra input as possible. If you find yourself typing the same correction in chat twice, that correction belongs in the instructions. Move it there and the Project gets better for good.`,
       keyPoints: [
-        "Write what you would tell a new colleague in their first week, not vague encouragement or a rule for every case.",
-        "Use four short headings: who reads this, what good looks like, house rules, what to do when unsure.",
+        "Write the principles you would tell a new hire, not rigid rules or vague encouragement.",
+        "Use short headed sections: audience, what good looks like, house rules, what to do when unsure.",
         "A correction you have typed twice in chat belongs in the instructions.",
       ],
       example: {
         title: "Try this",
-        text: "Write four lines for one Project: who reads the output, what a good one looks like, one house rule, and what to do when unsure. Paste them into the instructions.",
+        text: "Add one line to a Project's instructions that starts \"We always...\" or \"We never...\", using a rule your team actually follows. Run the task again and see if the draft changes.",
       },
       check: {
-        question: "Which instruction helps Claude most?",
+        question: "Which instruction is at the right altitude?",
         options: [
           "Be helpful and professional.",
-          "Write follow-up emails to customers after meetings.",
-          "Lead with what the customer needs to do, then why; never quote a price in an email.",
           "If the customer is new write A; if returning write B; if lapsed write C.",
+          "Lead with what the customer needs to do, then why; never quote prices in a cover email.",
+          "Do whatever seems best.",
         ],
         answer: 2,
-        explanation: "It says how you decide, so Claude can apply it to any email; the others are vague, only name the task, or break on the first case they miss.",
+        explanation: "It states a principle Claude can apply to any case, unlike the vague first option or the brittle rule list.",
       },
       competencies: ["L2.project_design"],
     },
     {
-      slug: "l2-one-page-beats-forty",
+      slug: "l2-connected-sources",
       rung: 2,
-      title: "One page beats forty",
-      promise: "You will replace a long document with a one-page summary in your own words, and know when the long version still belongs.",
-      minutes: 3,
-      scene: "include-exclude",
-      body: `The fastest way to make a Project worse is to drop the whole policy manual into it "for reference".
+      title: "A Project that uses your connected tools",
+      promise: "You will write Project instructions that name which connected sources to read, in what order, and what to do if one is empty.",
+      minutes: 4,
+      scene: "project-context",
+      body: `A Project can tell Claude where to look, not just what to know. If your team has connectors, the instructions should name the sources and the order to read them.
 
-A 40-page document has one or two paragraphs that matter for your task, buried among dozens that do not. Claude has to hunt for them, and the bulk pushes your instructions aside. The output gets vaguer, not sharper.
+Without that, each run starts with Claude asking, or guessing, where the customer's history lives. With it, every run does the same thing: "For meeting prep, first read the account in Salesforce, then the last two calls in Gong, then the latest proposal in Drive. Use the templates in this Project for the output."
 
-**Raw**: the 40-page "Reporting standards and brand guide" PDF.
+Keep it to the sources this task needs. A meeting-prep Project does not need Confluence; a policy-lookup Project probably needs nothing else.
 
-**Summary** (one page, your words): "Our report standards: eight slides maximum. Summary chart on slide two. Every figure shown with the same month last year alongside. Never name an individual customer. Titles in sentence case."
+Say what to do when a source is empty or missing. "If there are no Gong calls in the last 90 days, say so and work from Salesforce notes alone." That one line stops a quiet gap becoming a confident invention.
 
-The summary carries everything Claude needs and nothing it does not. Same for examples: one finished report you were proud of teaches the shape better than six half-finished ones.
+Files you upload to the Project still matter: templates, house rules, one good example. Connectors carry the changing facts; the Project carries the constant shape.
 
-If a long reference really is needed sometimes, keep it as its own file and say in the instructions when to open it: "For refund questions, check the refunds file." Then it is read only when it matters.
-
-If you cannot summarise a document in a paragraph, you do not yet know what you want Claude to take from it.`,
+Anyone who uses the Project sees only what their own access allows, so a colleague with narrower Salesforce permissions gets a narrower answer. That is expected. Note it in the instructions so nobody is surprised.`,
       keyPoints: [
-        "A long raw document buries the paragraph you need and pushes your instructions aside.",
-        "Write one page, in your words, of the rules from it that apply to this task.",
-        "Keep a genuinely needed long reference as its own file and say when to open it.",
+        "Name the connected sources and the order to read them, and only the ones this task needs.",
+        "Say what to do when a source is empty, so a gap does not become an invention.",
+        "Connectors carry the changing facts; the Project's files carry the constant shape.",
       ],
       example: {
         title: "Try this",
-        text: "Take one long document you would have added to a Project. Write five lines, in your own words, of the rules from it that apply to your task. Add those five lines instead of the document.",
+        text: "Add one line to a Project's instructions: \"Before drafting, read the customer's record in Salesforce (or the pasted notes if there is no connector).\" Run this week's task and see what changes.",
       },
       check: {
-        question: "You want Claude to follow your team's report standards. What should you add to the Project?",
+        question: "What should the instructions say about a connected source that might have no data for this customer?",
         options: [
-          "The 40-page brand and reporting PDF",
-          "A one-page summary, in your words, of the rules that apply to reports",
+          "Nothing; Claude will work it out",
+          "Tell Claude to invent a plausible history",
+          "Tell Claude to say the source is empty and continue from the other sources",
+          "Remove the source from the Project",
+        ],
+        answer: 2,
+        explanation: "One line about the empty case keeps a missing record from turning into a confident but invented one.",
+      },
+      competencies: ["L2.project_design", "L2.selection"],
+    },
+    {
+      slug: "l2-summaries-beat-documents",
+      rung: 2,
+      title: "Files: summaries beat raw documents",
+      promise: "You will replace a long raw document with a one-page summary in your own words, and know when a full reference still belongs.",
+      minutes: 4,
+      scene: "include-exclude",
+      body: `It is tempting to drop the whole policy manual into a Project. Resist, not because it is unsafe, but because it works badly.
+
+Long raw documents work against you in two ways. Claude has to find the relevant paragraph in a sea of irrelevant ones, and the sheer volume crowds out the instructions you wrote so carefully. A forty-page PDF added "for reference" usually makes the output worse.
+
+Write a summary instead. One page, in your words, of the parts that matter for this task. "Our report standards: eight slides maximum, the summary chart on slide two, no individual customer names, every figure shown with the same period last year alongside." That page carries everything Claude needs and nothing it does not.
+
+The same applies to examples. One finished quarterly report outline teaches the shape better than six partial ones. Pick the one you were proudest of.
+
+Where a long reference really is needed, keep it as a separate file and tell Claude in the instructions when to look at it: "For questions about refunds, consult the refunds reference file." Then it is read only when it is relevant.
+
+Rule of thumb: if you could not summarise the document in a paragraph, you do not yet understand what you want Claude to take from it.`,
+      keyPoints: [
+        "A long raw document buries the useful paragraph and crowds out your instructions.",
+        "Write a one-page summary in your words of the parts that matter for this task.",
+        "Keep a genuinely needed long reference as a separate file and say when to consult it.",
+      ],
+      example: {
+        title: "Try this",
+        text: "Pick the longest file in one of your Projects. Write a half-page summary of the parts that matter for that task, upload the summary, and move the original to a clearly named reference file.",
+      },
+      check: {
+        question: "You want Claude to follow the firm's report standards. What is the best thing to add to the Project?",
+        options: [
+          "The 40-page brand and policy PDF",
+          "A one-page summary of the standards that apply to reports, in your words",
           "Six half-finished reports from last year",
           "Nothing; Claude knows what a good report looks like",
         ],
         answer: 1,
-        explanation: "The summary carries the rules that matter without burying them; the PDF and the half-finished reports add bulk, and Claude cannot guess your team's standards.",
+        explanation: "A short summary carries the rules that matter without burying them; the raw PDF and partial examples add noise.",
       },
       competencies: ["L2.selection"],
     },
     {
-      slug: "l2-fix-it-in-the-project",
+      slug: "l2-keep-healthy",
       rung: 2,
-      title: "Fix it in the Project, not in the chat",
-      promise: "You will make a repeat mistake go away for good by moving the correction into the Project.",
-      minutes: 2,
+      title: "Keeping a Project healthy over time",
+      promise: "You will keep a Project working for months with three small habits and spot the signs it has drifted.",
+      minutes: 3,
       scene: "project-context",
-      body: `When Claude gets the same thing wrong two weeks running, the fix you type in chat is gone by next week. The fix you make in the Project lasts.
+      body: `A Project is not finished when you build it. It drifts. Templates change, a house rule is added, a file goes stale, and one morning the output is subtly wrong and you cannot see why.
 
-Every Monday the report comes back with the chart labelled by quarter when you want it by month. You type "label by month" and carry on. Next Monday, same thing.
+Keep a Project healthy with three small habits.
 
-**In the chat**: "Label the chart by month, not quarter." Works today. Forgotten tomorrow.
+**Correct in the Project, not in the chat.** When a run gets something wrong that will be wrong next week too, fix the instructions or the file. A correction typed in chat helps once. A correction in the Project helps forever.
 
-**In the Project instructions**: "Charts are always labelled by month." Works every week from now on, for you and anyone who borrows the Project.
+**Review it on a schedule.** Once a month, open the Project with fresh eyes. Read the instructions top to bottom. Open each file and ask whether it still earns its place. Remove what has gone stale. Five minutes.
 
-The same goes for files. When the template changes in June, swap the file and delete the old one; leaving both in makes Claude guess which you meant. A one-line note at the bottom of the instructions ("June: new proposal template") tells you later why it looks the way it does.
+**Keep a short change note.** A line at the bottom of the instructions: "September: added rule about chart labelling after report feedback." It tells you and any colleague why the Project looks the way it does.
 
-Two signs a Project needs attention: you are prefacing every chat with the same paragraph again, or the file list has grown past a handful. Both take five minutes: move the correction in, or take the file out.`,
+Signs of an unhealthy Project: you have started prefacing every chat with the same paragraph again, the file list has grown past a handful, or a teammate borrowed it and came back with questions. Each points at a specific fix.
+
+Treat the Project as a colleague's brief. You would not let that go a year without an update.`,
       keyPoints: [
-        "A correction typed in chat fixes today; the same line in the Project fixes every run from now on.",
-        "When a file changes, swap it and delete the old one, then add a one-line note saying what changed.",
-        "If you are prefacing every chat with the same paragraph again, that paragraph belongs in the Project.",
+        "Fix recurring mistakes in the Project, not in the chat.",
+        "Once a month, reread the instructions and ask whether each file still earns its place.",
+        "Keep a one-line change note so you and your teammates know why it looks the way it does.",
       ],
       example: {
         title: "Try this",
-        text: "Think of the last correction you typed to Claude twice. Open the Project and add it as one line in the instructions.",
+        text: "Open your oldest Project and add a dated one-line change note at the bottom of the instructions describing the last thing you fixed. Delete one file that no longer earns its place.",
       },
       check: {
-        question: "Claude labels the chart wrongly in every monthly report. What is the right fix?",
+        question: "Claude keeps labelling the chart wrongly in every monthly report. What is the right fix?",
         options: [
           "Correct it in the chat each time",
-          "Add the labelling rule to the Project instructions",
+          "Add the labelling rule to the Project instructions and note the change",
           "Start a new Project",
           "Stop using Claude for reports",
         ],

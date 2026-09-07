@@ -4,220 +4,270 @@ export const MODULE_L1: Module = {
   rung: 1,
   code: "L1",
   name: "Conversational",
-  tagline: "Write a clear prompt, give Claude the facts, and check what comes back before it goes out.",
+  tagline: "Describe a task well, ask Claude to pull from your tools, then check the result like a colleague's draft.",
   outcomes: [
-    "Write a prompt that says who will read it and what done looks like.",
-    "Give Claude the facts it needs, and check every number and date in what comes back.",
-    "Fix a draft with a short follow-up instead of starting over.",
+    "Write a prompt that says who it is for, what good looks like, and what shape the output takes.",
+    "Ask Claude to pull from a connected tool instead of pasting, and read the result carefully.",
+    "Fix a draft in two or three rounds instead of starting over, and know when not to use Claude at all.",
   ],
   practice:
-    "Practice: for one of your own tasks, you'll write the prompt (and paste the material if there is any). We run it and show you what Claude made, with three short lines of feedback.",
+    "Practice: you'll write one real prompt for something on your calendar this week, run it, and get three lines of feedback on what to change.",
   lessons: [
     {
-      slug: "l1-who-and-done",
+      slug: "l1-describe-the-task",
       rung: 1,
-      title: "Say who it's for and what done looks like",
-      promise: "You will add the two lines that turn a generic draft into one you can send.",
-      minutes: 3,
+      title: "Describing a task so Claude can do it",
+      promise: "You will write a prompt with the five parts that turn a generic draft into a usable one.",
+      minutes: 4,
       scene: "prompt-anatomy",
-      body: `Claude cannot see your inbox, your customer or your calendar. The only thing it knows about the job is what you type, so a prompt that leaves out the reader and the finish line gets a generic draft back.
+      body: `Claude cannot see your screen, your calendar or your customer unless you show it. Everything it knows about the task is what you put in the message. A good description has five parts, and you can write them in any order.
 
-Here is the prompt most people write:
+**Role**: who Claude should be for this task. "You are helping an account manager who looks after long-standing customers."
 
-"Write a follow-up email after today's meeting."
+**Task**: the verb and the object. "Draft the email that reminds a customer their annual renewal is coming up."
 
-Here is the same prompt with the two missing parts:
+**Inputs**: what it has to work with. Paste the notes, the template, the whole thread. Redact only anything on your firm's short forbidden list; everything else helps.
 
-"Write a follow-up email to Dana at Northfield after today's meeting. She's the operations lead, busy, prefers plain language. Confirm the two actions we agreed (we send the revised quote by Friday; she checks the site access dates), thank her briefly, no sales language, no prices. Under 120 words, ready to send."
+**What good looks like**: the audience and the standard. "For a customer who has been with us for years and prefers plain language. Warm, not chatty. Never quote prices in the email."
 
-The second version says **who will read it** and **what done looks like**: the points it must cover, the tone, the length, the things to leave out. That is the whole difference. Nothing clever, just the details you would give a new colleague.
+**Format**: shape and length. "Under 200 words, three short paragraphs, ready to paste into our email template."
 
-Use your own words for things. If your team says "check-in", not "sync", say check-in. Claude will use your words back and the draft will need less editing.`,
+Most weak prompts are missing the fourth and fifth parts. People say what to do and forget to say who it is for and what done looks like, then are surprised when the draft is generic.
+
+Use your team's words. If you call it a "quarterly check-in", say that. Claude will match your vocabulary, and the draft will need less rework.`,
       keyPoints: [
-        "Say who will read it: their role, how busy they are, how they like to be spoken to.",
-        "Say what done looks like: the points to cover, the tone, the length, what to leave out.",
+        "Five parts: role, task, inputs, what good looks like, format.",
+        "Most weak prompts skip the audience and the standard; that is why drafts come back generic.",
         "Use your team's own words and Claude will use them back.",
       ],
       example: {
         title: "Try this",
-        text: "Take the last email you sent. Ask Claude to rewrite it, and add one line saying who will read it and one line saying how long it should be.",
+        text: "Take the last prompt you wrote and add one line that says who will read the output and what it must not include. Run it again and compare the two drafts.",
       },
       check: {
-        question: "Someone types \"Summarise these notes\" and pastes the notes. The summary comes back long and generic. What was missing from the prompt?",
+        question: "Someone writes: \"Summarise these notes.\" The summary comes back long and generic. Which parts of the description were missing?",
         options: [
-          "Who will read it and what done looks like",
-          "The verb",
-          "The notes",
+          "Role and task",
+          "What good looks like and format",
+          "Inputs",
           "Nothing; Claude should have known",
         ],
-        answer: 0,
-        explanation: "The task and the notes were there. Nobody said who the summary was for, how long it should be, or what it had to cover, so Claude guessed.",
+        answer: 1,
+        explanation: "The task and inputs were there; the audience, the standard and the shape were not, so Claude had to guess.",
       },
       competencies: ["L1.description"],
     },
     {
-      slug: "l1-give-the-facts",
+      slug: "l1-pull-dont-paste",
       rung: 1,
-      title: "Give Claude the facts it needs",
-      promise: "You will hand over the three things Claude would otherwise have to guess.",
-      minutes: 3,
-      scene: "include-exclude",
-      body: `A prompt with no material is a request to make things up. Ask for a summary of last month's sales without the numbers and Claude will write something that sounds like a summary, and you will spend longer fixing it than writing it.
+      title: "Ask it to pull, don't paste",
+      promise: "You will write a prompt that names a connected tool, says what to fetch, and says what to do with it.",
+      minutes: 4,
+      scene: "prompt-anatomy",
+      body: `Pasting works. Pulling is better, when you have the connector.
 
-Before you send the prompt, ask what a colleague would need in hand to do this. Usually three things. The notes or the draft you already have. The facts that must appear. Anything they would otherwise have to guess.
+When you paste a transcript or a spreadsheet, you did the finding, the copying, and the trimming. Claude gets a snapshot, and if you cut the wrong part, it never knows.
 
-Weak: "Write talking points for my renewal call with Harbor Logistics tomorrow."
+When you ask Claude to pull from a connected tool, it does the finding itself and can go back for more. It reads the whole record, not the bit you remembered to copy.
 
-Better: "Write talking points for my renewal call with Harbor Logistics tomorrow. Facts: they have been with us three years; usage is up 40% since January; the contract renews on 30 September; they asked about a multi-site option in June. My notes from the last call are pasted below."
+**Before**: you open Gong, find two call recordings, copy both transcripts, paste them, then write "list open items".
 
-Paste, don't describe. "Here are my notes" with the notes attached beats "my notes said roughly that..." Swap out customer personal details before you paste.
+**After**: "Using Gong, pull my last two calls with Acme and list the open items from each, with who owns them."
 
-Hand over the drafting, not the decision. Claude drafts the talking points; whether to offer a discount on the call is yours.`,
+The second version is shorter to write and more complete. The prompt names the tool, says what to fetch, and says what to do with it. Those three parts are all a connector prompt needs.
+
+Two habits. Name the tool when you know which one has the answer; otherwise Claude may guess or ask. And still read the result the way you read any draft: connectors fetch faithfully, but a stale record in Salesforce is still stale.
+
+If you do not have the connector, paste the material. Your practice prompts will say so: pull from Salesforce if you have it; otherwise paste the summary.`,
       keyPoints: [
-        "Three things to hand over: the material you have, the facts that must appear, anything Claude would have to guess.",
-        "Paste the notes rather than describing them, with personal details swapped out.",
-        "Claude drafts; the decisions on the call stay with you.",
+        "A connector prompt has three parts: name the tool, say what to fetch, say what to do with it.",
+        "Pulling reads the whole record; pasting gives Claude only the snapshot you trimmed.",
+        "Read the result as you would any draft; a stale record is still stale.",
       ],
       example: {
         title: "Try this",
-        text: "Pick one thing you have to write this week. Before you ask Claude for it, type three facts it would have to guess without you, then ask.",
+        text: "If you have Salesforce or Gong connected, ask: \"Using Salesforce, pull the account notes for my next customer meeting and list anything I promised last time.\" If not, paste the notes and ask the same question.",
       },
       check: {
-        question: "Your talking points came back with a contract date you never mentioned. What went wrong?",
+        question: "Which prompt makes best use of a connector?",
         options: [
-          "Claude looked it up",
-          "The prompt left out the facts, so Claude filled the gap",
-          "The notes were too long",
-          "Nothing; it is usually right about dates",
+          "\"Here is a transcript I copied from Gong. List open items.\"",
+          "\"Using Gong, pull my last two calls with Acme and list the open items with owners.\"",
+          "\"Find some calls and tell me what happened.\"",
+          "\"Summarise Acme.\"",
         ],
         answer: 1,
-        explanation: "Claude cannot see your contract. When a fact is missing from the prompt it writes something plausible in its place.",
+        explanation: "It names the tool, says exactly what to fetch, and says what to do with it; the others either paste a trimmed snapshot or leave Claude guessing.",
       },
       competencies: ["L1.description", "L1.delegation"],
     },
     {
-      slug: "l1-accept-if",
+      slug: "l1-guess-first",
       rung: 1,
-      title: "Decide what you'd accept before you read it",
-      promise: "You will write a ten-second line that turns reading a draft into checking it.",
-      minutes: 3,
-      scene: "check-output",
-      body: `When a draft looks tidy it is easy to nod through it. The fix is a habit that takes ten seconds: before you read the output, write one line saying what you would accept.
+      title: "Guess first, then look",
+      promise: "You will state what you expect before you read the output, and see why that one sentence changes how you read.",
+      minutes: 4,
+      scene: "predict-then-see",
+      body: `Before you read any output, write down what you expect. One sentence, with a rough confidence. "I think this will be about eighty percent usable but it will miss that the customer wants everything on one page."
 
-You have asked for the outline of the monthly report. Before reading, you type:
+It feels like a small ritual. It changes everything about how you read.
 
-"Accept if: eight slides or fewer, goals before results, mentions the delayed Q3 launch."
+When you read without a prediction, you skim. The draft looks plausible, the sentences are grammatical, and your eye slides down the page nodding. Errors that a fresh reader would spot go straight through.
 
-Now you read against that line instead of just reading. The outline has nine slides, results first, and the launch is not there. Nothing about it looked wrong on the page; the line found three things to change. Your follow-up writes itself: "Cut to eight slides, put goals before results, add a slide on the delayed Q3 launch."
+When you have a prediction, you are checking. Did it miss what I thought it would miss? Did it get the tone I asked for? The output becomes a test of your guess, not just a thing to accept or reject. When you are confidently wrong, the surprise sticks, and you will describe the task better next time.
 
-Keep the line short and concrete. Length, order, the one thing it must include, the one thing it must not. "Sounds good" is not a bar. "Under 150 words and no prices" is.
+Over weeks, your guesses get sharper. You learn where Claude is reliable for your work and where it wobbles. That is the actual skill: knowing when to trust the draft and when to slow down.
 
-If the draft clears the line, send it. If it does not, you already know what to say next. Either way you spent ten seconds and skipped the vague re-read.`,
+Keep the sentence somewhere you will see it again, at the top of the chat or on a sticky note. The gap between what you expected and what you got is where the learning happens.`,
       keyPoints: [
-        "Before you read, type one line starting \"Accept if:\".",
-        "Make it concrete: length, order, one thing it must include, one thing it must not.",
-        "Whatever fails the line becomes your follow-up message.",
+        "Write one sentence about what you expect, with a rough confidence, before you look.",
+        "A guess turns skimming into checking; you are testing a guess, not nodding along.",
+        "Being confidently wrong is useful: the surprise is what makes the lesson stick.",
       ],
       example: {
         title: "Try this",
-        text: "Before your next Claude request, type one line starting \"Accept if:\" with a length and one thing it must include. Run it, then read the draft against your line.",
+        text: "Before your next prompt runs, type one line at the top of it: \"I expect this to get X right and Y wrong.\" Read the output looking for X and Y first.",
       },
       check: {
-        question: "Which is a usable \"Accept if\" line for a customer follow-up email?",
+        question: "Why write down what you expect before reading the output?",
         options: [
-          "Accept if it's good",
-          "Accept if under 120 words, confirms the Friday quote, no prices",
-          "Accept if Claude sounds confident",
-          "Accept if it's longer than my usual emails",
+          "To time how fast you type",
+          "So you read as a checker rather than a skimmer, and learn from the gap",
+          "So Claude knows what you want",
+          "To compare yourself with teammates",
         ],
         answer: 1,
-        explanation: "It names a length, one thing that must be in, and one thing that must be out. You can check each in seconds.",
+        explanation: "The guess makes you read actively, and the gap between guess and result is what sharpens your sense of where Claude is reliable.",
       },
       competencies: ["L1.discernment"],
     },
     {
-      slug: "l1-check-numbers",
+      slug: "l1-check-output",
       rung: 1,
-      title: "Check every number and date",
-      promise: "You will spot the figure Claude invented before it reaches a customer.",
-      minutes: 3,
+      title: "Checking an output like a colleague's draft",
+      promise: "You will check facts, gaps and tone in a fixed order and write down what would fix it.",
+      minutes: 4,
       scene: "check-output",
-      body: `Claude writes with the same confidence whether a figure came from your notes or from nowhere. A wrong date in a customer email is your problem, not Claude's, so every number, date and name gets checked before it goes out.
+      body: `Read Claude's draft the way you would read a bright new colleague's: grateful for the head start, responsible for what goes out.
 
-Here is a paragraph from a renewal reminder Claude drafted:
+Check in four passes, in this order.
 
-"Your current agreement runs until 31 October and includes 25 user licences. As discussed, renewing before 15 October keeps your current pricing."
+**Facts.** Every number, date, rule and name. Claude can state a price, a policy detail or a deadline with total confidence and be wrong. Verify against the source: the contract, the policy page, your notes, the record in your CRM. Anything you cannot verify comes out.
 
-You gave it the October renewal date. You did not give it a licence count or an early-renewal deadline. Those two details are made up: they read naturally, they are the kind of thing such an email would say, and they are wrong.
+**Gaps.** What did you ask for that is not here? What would the customer ask that this does not answer? A draft can be accurate and still incomplete.
 
-How to spot them: go through the draft and underline anything that is a number, date, name or rule. For each one ask, did I give it this? If yes, check it matches. If no, it came from nowhere, so take it out or replace it with the real figure from your contract or your notes.
+**Tone.** Does it sound like the firm? Look for phrases you would never say, filler openings, and false warmth. Read one paragraph aloud if you are unsure.
 
-Smooth writing is not evidence. A sentence that reads well can still be wrong.`,
+**What you would change.** Write it down in a sentence or two. "Second paragraph too long; missed the renewal deadline; sounds like a brochure." That list is what the next prompt is built from.
+
+Two things to avoid. Do not accept because it reads smoothly; fluency is not accuracy. Do not reject because one line is off; fix the line. Your job is to find the real issues and say what would fix them.`,
       keyPoints: [
-        "Underline every number, date, name and rule in the draft.",
-        "For each one ask: did I give it this? If not, it is made up.",
-        "Take invented figures out or replace them from the source; never leave them because they sound right.",
+        "Four passes in order: facts, gaps, tone, what you would change.",
+        "Verify every number and date against a source; anything you cannot verify comes out.",
+        "Fluent is not the same as right, and one bad line does not mean a bad draft.",
       ],
       example: {
         title: "Try this",
-        text: "Ask Claude to draft a short renewal reminder and give it only one fact: the renewal date. Underline every number and date in the draft and count how many you did not provide.",
+        text: "Take one draft Claude gave you this week. Underline every number and date, and check each against its source. Then write one sentence on what you would change.",
       },
       check: {
-        question: "A draft says \"renewing before 15 October keeps your pricing\". You never mentioned 15 October. What do you do?",
+        question: "The draft quotes a deadline from your policy and it reads confidently. What do you do?",
         options: [
-          "Leave it; it sounds right",
-          "Take it out, or replace it with the real date from the contract",
+          "Trust it; Claude is usually right about dates",
+          "Check it against the source before it stays in",
+          "Delete the whole draft and start again",
           "Ask Claude if it is sure",
-          "Start a new chat",
         ],
         answer: 1,
-        explanation: "You did not give it that date, so it came from nowhere. Confident wording is not a source; the contract is.",
+        explanation: "Numbers and dates get verified against a source every time; confidence in the prose is not evidence.",
       },
       competencies: ["L1.discernment", "L1.diligence"],
     },
     {
-      slug: "l1-two-line-fix",
+      slug: "l1-iterate",
       rung: 1,
-      title: "Fix the draft with a two-line follow-up",
-      promise: "You will turn a nearly-right draft into a finished one with one short message.",
-      minutes: 3,
+      title: "Iterating instead of starting over",
+      promise: "You will turn your notes on a draft into two or three specific instructions and know when a fresh start is actually the fix.",
+      minutes: 4,
       scene: "prompt-anatomy",
-      body: `The first draft is rarely the last, and a new chat throws away everything Claude already knows about the job. One follow-up message fixes it, if you say exactly what to change.
+      body: `The first draft is rarely the last. The mistake is to throw it away and start a fresh chat. Claude already has your context; use it.
 
-First draft of a customer follow-up:
+Iterate by telling Claude what to change, specifically. Not "make it better" but "keep the structure, cut the second paragraph to two sentences, and change the opening so it does not start with I hope this finds you well." Point at the part, say what is wrong, say what right looks like.
 
-"I hope this email finds you well. I wanted to reach out following our productive conversation earlier today, during which we discussed a number of important topics relating to your upcoming renewal..."
+Three iteration moves cover most situations.
 
-The weak follow-up: "Make it better." Claude changes things at random.
+**Tighten**: "Same content, half the length."
 
-The follow-up that works:
+**Redirect**: "You have written this for a colleague. Rewrite it for a customer who is unhappy about a delay."
 
-"Cut the opener and get to the point in the first sentence. Half the length, and say plainly that the revised quote comes Friday."
+**Fill**: "Add a short paragraph on what happens if they miss the renewal deadline."
 
-Point at the part, say what is wrong, say what right looks like. Three moves cover most cases: shorter ("same content, half the length"), different reader ("rewrite this for a customer annoyed about the delay"), missing piece ("add one line on what happens if they miss the date").
+Two or three rounds is normal. If you are on round five and still unhappy, the problem is usually the original description. Stop, reread your first message, and ask which of the five parts was missing. Then start again with a better first message, not a sixth patch.
 
-Two or three rounds is normal. On round five, stop: the first message probably left out who it is for or what done looks like. Fix that instead of sending a sixth patch.`,
+Keep the notes you wrote in the last lesson visible while you iterate. Each item becomes one instruction. When the list is empty, you are done.`,
       keyPoints: [
         "Point at the part, say what is wrong, say what right looks like.",
-        "Three moves cover most drafts: shorter, different reader, missing piece.",
-        "Round five means the first message was the problem; rewrite it instead of patching again.",
+        "Three moves cover most cases: tighten, redirect, fill.",
+        "Round five means the first message was the problem; fix that instead of patching again.",
       ],
       example: {
         title: "Try this",
-        text: "Take any draft Claude gave you and reply with exactly two lines: what to cut, and what to add.",
+        text: "Paste your last email draft and ask for a version half the length. Then ask for one more change, pointing at the exact sentence. Two rounds, done.",
       },
       check: {
-        question: "The draft is too long and misses the Friday deadline. Which follow-up works?",
+        question: "You are on the fifth round of edits and the draft still is not right. What is the most likely fix?",
         options: [
-          "Make it better",
-          "Try again",
-          "Half the length, and add that the revised quote comes Friday",
-          "Start a new chat with the same prompt",
+          "A sixth, more forceful instruction",
+          "Switching to Claude Code",
+          "Rereading your first message and starting again with a better description",
+          "Accepting the draft as it is",
         ],
         answer: 2,
-        explanation: "It names what to cut and what to add. \"Make it better\" leaves Claude guessing what you disliked.",
+        explanation: "Repeated patching usually means the original description was missing a part; a better first message beats another patch.",
       },
       competencies: ["L1.description", "L1.delegation"],
+    },
+    {
+      slug: "l1-when-not",
+      rung: 1,
+      title: "When not to use Claude",
+      promise: "You will say out loud which parts of a task stay with you, and recognise the tasks that should not go to Claude at all.",
+      minutes: 4,
+      scene: "four-d",
+      body: `Delegation includes deciding not to delegate. Some work should stay with you, and knowing which is a sign of skill, not reluctance.
+
+**Keep the judgement.** Whether to offer a discount, how to handle a customer who is upset, what to say when a colleague has had bad news. Claude can help you think, draft options, or check your reasoning, but the call is yours.
+
+**Keep the relationship.** Anything the customer will hear as your voice on a personal matter should be written by you. A drafted condolence note sounds like one.
+
+**Keep the forbidden classes out.** If a step needs a payment card number or a personal identifier from your firm's list, do that part yourself or redact it. Everything else about the task can still go in.
+
+**Skip it when it is faster to do it yourself.** A two-line reply does not need a prompt.
+
+**Skip it when you cannot check it.** If you do not know enough to tell whether the output is right, you are not delegating, you are gambling. Get the knowledge first or ask a colleague.
+
+A good habit: before you open Claude, say the split out loud. "Claude drafts the structure and the background section. I write the recommendation and the closing." Splitting first makes both halves better.`,
+      keyPoints: [
+        "Keep the judgement, the relationship, and the few forbidden data classes.",
+        "Skip Claude when doing it yourself is faster or when you could not check the result.",
+        "Say the split out loud before you start: what Claude drafts, what you write.",
+      ],
+      example: {
+        title: "Try this",
+        text: "For the next task you take to Claude, write one line first: \"Claude does ___. I do ___.\" Then give Claude only its half.",
+      },
+      check: {
+        question: "Which task is the best candidate to keep entirely with you?",
+        options: [
+          "Turning your meeting bullets into an agenda",
+          "Deciding whether to offer a specific customer a discount",
+          "Reformatting a report outline to the house template",
+          "Summarising a public industry article",
+        ],
+        answer: 1,
+        explanation: "The discount is a judgement about a customer and money; Claude can help you think, but the call stays yours.",
+      },
+      competencies: ["L1.delegation", "L0.boundary"],
     },
   ],
 }
