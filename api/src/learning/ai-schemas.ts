@@ -149,6 +149,11 @@ export const SubmissionGradeSchema = z.object({
     .describe(
       'One short line: one concrete thing to try on the next run of this workflow.',
     ),
+  toolsNamed: z
+    .array(z.string())
+    .describe(
+      'Tools or systems the learner named in their own work as places to pull from or write to (e.g. "Gong", "Salesforce", "Granola"). Proper names only, as written; empty when none.',
+    ),
   securityFindings: z
     .array(SecurityFindingSchema)
     .describe(

@@ -100,8 +100,9 @@ export function initialSurface(ex: ExerciseDetail, spec: PracticeSpec = practice
       const prompt = last?.content ?? ""
       // Sample material rides along as an attachment, the way a file would in Claude; after a sent version, keep exactly what they sent.
       const material = last ? (last.material ?? "") : str(f.material)
+      // Every tool we know about starts switched on, including ones learned since the last try; switching off is per run.
       const available = ex.connectors ?? []
-      const connectors = last?.connectors ?? available
+      const connectors = available
       return { kind: "prompt", prompt, material, attachmentName: material ? (last ? "Attached material" : "Sample material, made up") : null, available, connectors, output: null }
     }
     case "project":

@@ -33,6 +33,17 @@ export function mockArtifactScore(artifactText: string): number {
 }
 
 /** Rung 0: encouraging; pass when there is a usable piece of work (> 120 chars) with no invented figures. */
+/** Mock stand-in for the grader's toolsNamed: proper names after "using" / "from" / "in". */
+function namedTools(artifact: string): string[] {
+  return [
+    ...new Set(
+      [...artifact.matchAll(/\b(?:using|from|in)\s+([A-Z][A-Za-z0-9]+)/g)].map(
+        (m) => m[1],
+      ),
+    ),
+  ].slice(0, 8);
+}
+
 function mockFirstTaskGrade(
   criteria: Criterion[],
   artifact: string,
@@ -67,6 +78,7 @@ function mockFirstTaskGrade(
     tryNext: usable
       ? 'Next run, tell Claude who reads this and what they will do with it.'
       : 'Next run, say what shape you need back so Claude does not stop at an outline.',
+    toolsNamed: namedTools(artifact),
     securityFindings: [],
   };
 }
@@ -101,6 +113,7 @@ registerMockResponder('grader.submission', (call): SubmissionGradeOutput => {
   const where = kindLine[s.kind ?? 'prompt'] ?? 'the work';
   return {
     rubric,
+    toolsNamed: namedTools(artifact),
     worked: strong
       ? `${where.charAt(0).toUpperCase()}${where.slice(1)} names the reader and what good looks like, so what came back is usable.`
       : `You had a go at ${wf} on your own work, which is the habit that matters.`,

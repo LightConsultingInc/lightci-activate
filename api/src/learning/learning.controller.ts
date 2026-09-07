@@ -399,10 +399,22 @@ export class LearningController {
     const gradeView = toGradeView(grade);
     const { feedback, score10, decision } = gradeView.learner;
     const weak = grade.rubric.filter((r) => r.score < 0.75).map((r) => r.label);
+    // Tools the learner worked with: the connectors they switched on and named, plus anything else they named.
+    const content = String(artifact.content ?? '').toLowerCase();
+    const connectorsUsed = (artifact.connectors ?? []).filter((c) =>
+      content.includes(c.toLowerCase()),
+    );
+    const tools = [
+      ...new Set([
+        ...connectorsUsed,
+        ...((grade as Grade & { toolsNamed?: string[] }).toolsNamed ?? []),
+      ]),
+    ];
     await this.memory.record(user.id, orgId, {
       kind: 'submission_graded',
-      note: `Graded "${exercise.title}" (${practice.kind}): ${score10}/10 ${decision}${weak.length ? `; missed: ${weak.join(', ')}` : ''}${feedback.tryNext ? `; next time: ${feedback.tryNext.slice(0, 140)}` : ''}${promotion ? `; promoted to L${promotion.newRung}` : ''}.`,
+      note: `Graded "${exercise.title}" (${practice.kind}): ${score10}/10 ${decision}${weak.length ? `; missed: ${weak.join(', ')}` : ''}${tools.length ? `; tools named: ${tools.join(', ')}` : ''}${feedback.tryNext ? `; next time: ${feedback.tryNext.slice(0, 140)}` : ''}${promotion ? `; promoted to L${promotion.newRung}` : ''}.`,
       data: {
+        tools,
         exerciseTitle: exercise.title,
         score: grade.score,
         score10,
@@ -413,6 +425,7 @@ export class LearningController {
         workSurface: exercise.workSurface,
       },
     });
+    if (tools.length) await this.memory.noteSystems(user.id, orgId, tools);
 
     let nextUp = await this.coach.nextUp(user.id);
     if (grade.decision === 'pass' && !nextUp) {

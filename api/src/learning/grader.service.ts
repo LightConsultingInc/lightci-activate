@@ -166,7 +166,7 @@ export class GraderService {
     submission: Submission,
     person: Person,
     orgId: string | null,
-  ): Promise<Grade> {
+  ): Promise<Grade & { toolsNamed?: string[] }> {
     const artifactType = submission.artifact?.type ?? 'text';
     const practice = practiceOf(exercise);
     const rubric = this.rubricFor(exercise, artifactType);
@@ -272,7 +272,15 @@ export class GraderService {
       model: this.ai.provider === 'mock' ? 'mock' : this.ai.defaultModel,
       gradedByPersonId: null,
     });
-    return this.grades.save(grade);
+    // Not persisted on the grade: the controller folds these into the person's memory (their tools → connectors).
+    const toolsNamed = [
+      ...new Set(
+        (out.toolsNamed ?? [])
+          .map((t) => t.trim())
+          .filter((t) => t.length > 1 && t.length <= 40),
+      ),
+    ].slice(0, 8);
+    return Object.assign(await this.grades.save(grade), { toolsNamed });
   }
 
   // ───────────────────────── review practice (L5) ─────────────────────────

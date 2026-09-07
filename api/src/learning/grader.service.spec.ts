@@ -277,6 +277,7 @@ describe('review practice (L5): gradeReview', () => {
       gradedByPersonId: null,
       gradedAt: new Date(),
       critiqueQuality: null,
+      toolsNamed: [],
       securityFindings: [],
       teachingMoment: 'tm',
     });
@@ -462,6 +463,7 @@ describe('recordChampionGrade', () => {
       gradedByPersonId: null,
       gradedAt: new Date(),
       critiqueQuality: 0.7,
+      toolsNamed: [],
       securityFindings: [],
       teachingMoment: 'tm',
     });

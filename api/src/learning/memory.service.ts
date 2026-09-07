@@ -27,6 +27,8 @@ export interface MemoryEvent {
   note: string;
   at?: string;
   data?: {
+    /** Tools the learner named in their work (fed straight into `systems`, then offered as connectors). */
+    tools?: string[];
     exerciseTitle?: string;
     score?: number;
     decision?: 'pass' | 'revise';
@@ -167,6 +169,24 @@ export class MemoryService {
   }
 
   /** Append one event; synthesise when it is an interview completion or ≥ 3 events have accrued since the last synthesis. */
+  /**
+   * Fold tools the learner named in their work into the memory's systems at once (no version bump, so no
+   * lesson re-personalisation), so the practice composer offers them as connectors from the next exercise.
+   */
+  async noteSystems(
+    personId: string,
+    orgId: string | null,
+    tools: string[],
+  ): Promise<void> {
+    if (!orgId) return;
+    const clean = dedupe(tools).filter((t) => t.length <= 40);
+    if (clean.length === 0) return;
+    const layer = (await this.layerFor(personId, orgId, true)) as ContextLayer;
+    const before = layer.systems?.length ?? 0;
+    layer.systems = dedupe([...(layer.systems ?? []), ...clean]).slice(0, 24);
+    if (layer.systems.length !== before) await this.layers.save(layer);
+  }
+
   async record(
     personId: string,
     orgId: string | null,

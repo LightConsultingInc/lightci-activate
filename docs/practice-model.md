@@ -66,3 +66,7 @@ Connectors let Claude read (and, when allowed, write to) the tools people alread
 - Each person then connects their own account once: Settings › Connectors › Connect, then sign in to that tool. Access is per-user delegated OAuth, so Claude sees only what that person could open.
 - In a chat, connectors live under the **+** button beside the message box (Connectors submenu), each with an on/off switch for that conversation; "Manage connectors" leads back to Settings.
 - Sources: support.claude.com articles 11176164 ("Use connectors to extend Claude's capabilities") and 14503689 ("MCP connectors").
+
+## Tools the learner names become connectors (2026-09-07)
+
+The practice composer offers the person's own tools as connectors. That list is computed live from three places: the intake profile and workflow maps, and the `systems` list on the person's Coach memory. When a practice is graded, the Grader returns `toolsNamed` (tools the learner named in their work) and the controller folds those, plus any switched-on connector they actually named, straight into the memory's `systems` (no version bump) and into the graded event's note. So a learner who writes "pull this from Notion" once sees Notion offered as a connector on their next exercise, and the memory synthesis keeps it.
