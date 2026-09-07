@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils"
 /**
  * One lesson: title, promise and minutes, the body, three key points, an example and a one-question
  * check (both tailored to the learner's own work when the API has an interview to draw on), then next lesson.
+ * The example and check never show a skeleton: the generic content renders at once and swaps to the
+ * tailored version when it lands (instantly when the module's readiness says it is already prepared).
  */
 export function LessonView({ code, slug }: { code: string; slug: string }) {
   const rung = parseModuleCode(code)

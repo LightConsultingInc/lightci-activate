@@ -169,7 +169,7 @@ export class MasteryService {
     }));
     const predictions: Prediction[] = mine.map((a) => ({
       confidence: clamp01(a.submission.expectationConfidence),
-      outcome: a.grade.decision === 'pass' ? 1 : 0,
+      outcome: (a.grade.decision === 'pass' ? 1 : 0) as 0 | 1,
     }));
     const critiques = mine
       .map((a) => a.grade.critiqueQuality)
@@ -265,7 +265,7 @@ export class MasteryService {
       };
     const predictions = artifacts.map((a) => ({
       confidence: clamp01(a.submission.expectationConfidence),
-      outcome: a.grade.decision === 'pass' ? 1 : 0,
+      outcome: (a.grade.decision === 'pass' ? 1 : 0) as 0 | 1,
     }));
     const critiques = artifacts
       .map((a) => a.grade.critiqueQuality)

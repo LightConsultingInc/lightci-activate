@@ -157,14 +157,16 @@ export class CoachService {
       workflowMapId?: string | null;
       skillId?: string | null;
       competencyCode?: string | null;
+      rung?: number;
+      moduleCode?: string | null;
     } = {},
   ): Promise<Exercise> {
     const report = await this.mastery.report(person.id);
-    const rung = report.rung;
+    const rung = opts.rung ?? report.rung;
     if (rung === 0 && !opts.kind && !opts.skillId)
       return this.generateFirstRealTask(person, orgId);
     const memory = await this.memory.get(person.id, orgId);
-    const unlocked = report.competencies.filter((c) => c.status !== 'locked');
+    const unlocked = report.competencies.filter((c) => c.status !== 'locked' || (opts.rung !== undefined && c.rung === opts.rung));
     const target = this.pickTarget(
       unlocked,
       rung,
@@ -340,6 +342,8 @@ export class CoachService {
       );
     }
     const exercise = this.exercises.create(draft);
+    if (opts.moduleCode)
+      exercise.starter = { ...exercise.starter, practice: { moduleCode: opts.moduleCode, preparedAt: new Date().toISOString(), aheadOfPlacement: rung > report.rung } };
     const saved = await this.exercises.save(exercise);
     this.logger.log(
       `Coach generated "${saved.title}" (${saved.competencyCodes.join(',')}) for ${person.id}`,

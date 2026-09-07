@@ -9,6 +9,7 @@ import { MODULES, moduleFor } from "@/content/lessons"
 import type { Rung } from "@/content/lessons/types"
 import { useExercises, useLadder } from "@/hooks/learner/queries"
 import { useLessonProgress } from "@/hooks/learner/use-lesson-progress"
+import { useModuleReadiness } from "@/hooks/learner/use-module-readiness"
 import { HoursBackSparkline } from "../hours-back-sparkline"
 import { RevisitSheet } from "../revisit-sheet"
 import { moduleProgress, moduleState } from "../modules/module-state"
@@ -25,6 +26,12 @@ export function HomeView() {
   const exercises = useExercises()
   const { isDone } = useLessonProgress()
   const [revisit, setRevisit] = useState<RevisitSummary | null>(null)
+
+  // Start tailoring the current module (and the next one once the current is done) as soon as home loads.
+  const rungNow = Math.max(0, Math.min(5, q.data?.rung ?? 0))
+  const currentDone = q.data ? moduleState(q.data, rungNow) === "done" : false
+  useModuleReadiness(`L${rungNow}`, { prepare: true, enabled: Boolean(q.data) })
+  useModuleReadiness(`L${Math.min(5, rungNow + 1)}`, { prepare: true, enabled: Boolean(q.data) && currentDone && rungNow < 5 })
 
   if (q.isPending) return <HomeSkeleton />
   if (q.isError) return <ErrorState title="Couldn't load your path" detail={q.error.message} retry={() => q.refetch()} />

@@ -106,6 +106,7 @@ export class LessonsService {
     orgId: string | null,
     slug: string,
     lesson: GenericLesson,
+    moduleCode: string | null = null,
   ): Promise<PersonalisedLesson> {
     const situation = await this.situationFor(person, orgId);
     if (!situation)
@@ -118,6 +119,7 @@ export class LessonsService {
     const cached = await this.rows.findOne({
       where: { personId: person.id, lessonSlug: slug },
     });
+    if (cached && cached.memoryVersion === memory.version && moduleCode && cached.moduleCode !== moduleCode) await this.rows.save(Object.assign(cached, { moduleCode }));
     if (cached && cached.memoryVersion === memory.version)
       return {
         example: cached.example,
@@ -220,6 +222,7 @@ This call rewrites one lesson's example and check for one learner. The example m
             check,
             model,
             memoryVersion: memory.version,
+            moduleCode: moduleCode ?? cached.moduleCode ?? null,
           })
         : this.rows.create({
             personId: person.id,
@@ -228,6 +231,7 @@ This call rewrites one lesson's example and check for one learner. The example m
             check,
             model,
             memoryVersion: memory.version,
+            moduleCode,
           }),
     );
     return { example: row.example, check: row.check, personalised: true };

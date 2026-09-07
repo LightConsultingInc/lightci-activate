@@ -29,5 +29,7 @@ export class LessonPersonalisation {
   @Column('text', { nullable: true }) model: string | null;
   /** Memory version the rewrite was based on; regenerated when the person's memory moves on. */
   @Column('int', { default: 0 }) memoryVersion: number;
+  /** Module the lesson belongs to (e.g. "L1"), recorded when prepared ahead so readiness can be computed without the content. */
+  @Column('text', { nullable: true }) moduleCode: string | null;
   @CreateDateColumn({ type: 'timestamptz' }) createdAt: Date;
 }

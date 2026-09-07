@@ -294,6 +294,14 @@ export type LadderView = {
   coachNotes: { note: string; tags: string[]; createdAt: string }[]
 }
 
+/** POST /modules/:code/prepare and GET /modules/:code/readiness: how far personalisation of a module has got. */
+export type ModuleReadiness = {
+  status: "ready" | "preparing"
+  lessons: { total: number; ready: number }
+  practice: { ready: boolean }
+  memoryVersion: number
+}
+
 /** GET /memory/me: Coach's living picture of the person. */
 export type PersonMemory = {
   summary: string

@@ -3,9 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { Lesson } from "@/content/lessons/types"
+import { MODULES } from "@/content/lessons"
 import { api, ApiError } from "@/lib/api"
 import type {
-  Artifact, Baseline, CompetencyCatalogEntry, ExerciseDetail, LessonPersonalised, PersonMemory, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
+  Artifact, Baseline, CompetencyCatalogEntry, ExerciseDetail, LessonPersonalised, ModuleReadiness, PersonMemory, ExerciseSummary, HistoryItem, InterviewComplete, InterviewView, LadderView,
   Measurement, MySkills, RealtimeSession, RevisitAnswer, RunBody, RunResult, SkillDetail, SubmitResult, VoiceTranscriptTurn, WorkflowDetail, WorkflowSchema, WorkflowSummary,
 } from "./types"
 
@@ -18,6 +19,7 @@ export const keys = {
   lessonPersonalised: (slug: string, memoryVersion?: number) => (memoryVersion == null ? (["lesson-personalised", slug] as const) : (["lesson-personalised", slug, memoryVersion] as const)),
   memory: ["memory", "me"] as const,
   whyMe: (code: string) => ["module", code, "why-me"] as const,
+  readiness: (code: string) => ["module", code, "readiness"] as const,
   history: ["history"] as const,
   workflows: ["workflows", "mine"] as const,
   workflow: (id: string) => ["workflow", id] as const,
@@ -61,6 +63,28 @@ export const useMemory = () =>
 /** One line on why a module matters for this person. Null on 404. */
 export const useWhyMe = (code: string) =>
   useQuery({ queryKey: keys.whyMe(code), queryFn: () => optional(api.get<{ line: string }>(`/api/modules/${encodeURIComponent(code)}/why-me`)), staleTime: 5 * 60_000, retry: false })
+
+// ─────────────────────────── Module preparation ───────────────────────────
+/** The generic lesson objects the API personalises on top of (it has no copy of the content). */
+function genericLessons(code: string) {
+  const mod = MODULES.find((m) => m.code === code)
+  return (mod?.lessons ?? []).map(({ slug, rung, title, promise, body, keyPoints, example, check }) => ({ slug, rung, title, promise, body, keyPoints, example, check }))
+}
+
+/** Ask the API to start tailoring a module. Non-blocking and idempotent; null when the endpoint is not there yet. */
+export function prepareModule(code: string): Promise<ModuleReadiness | null> {
+  return optional(api.post<ModuleReadiness>(`/api/modules/${encodeURIComponent(code)}/prepare`, { lessons: genericLessons(code) })).catch(() => null)
+}
+
+/** Readiness of a module's personalisation; polls every 3s while preparing. Null on 404. */
+export const useModuleReadinessQuery = (code: string, enabled = true) =>
+  useQuery({
+    queryKey: keys.readiness(code),
+    queryFn: () => optional(api.get<ModuleReadiness>(`/api/modules/${encodeURIComponent(code)}/readiness`)),
+    enabled,
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.status === "preparing" ? 3000 : false),
+  })
 
 // ─────────────────────────── Lessons ───────────────────────────
 /**
@@ -264,7 +288,9 @@ export function useCompleteInterview(id: string | null) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.post<InterviewComplete>(`/api/interviews/${id}/complete`),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Start tailoring the placed module straight away; the module page shows the progress banner.
+      if (data.placement) void prepareModule(`L${Math.max(0, Math.min(5, data.placement.rung))}`)
       qc.invalidateQueries({ queryKey: keys.ladder })
       qc.invalidateQueries({ queryKey: keys.workflows })
       qc.invalidateQueries({ queryKey: ["me"] })

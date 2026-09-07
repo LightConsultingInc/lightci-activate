@@ -11,6 +11,7 @@ import { Grain } from "@/components/brand/grain"
 import { rungColor } from "@/components/brand/rung"
 import { moduleFor } from "@/content/lessons"
 import { useLadder, useWhyMe } from "@/hooks/learner/queries"
+import { useModuleReadiness } from "@/hooks/learner/use-module-readiness"
 import { ProgressRing } from "./progress-ring"
 import { moduleProgress, moduleState, parseModuleCode } from "./module-state"
 import { LearnTab } from "./learn-tab"
@@ -25,6 +26,7 @@ export function ModuleView({ code }: { code: string }) {
   const rung = parseModuleCode(code)
   const ladder = useLadder()
   const whyMe = useWhyMe(code)
+  const readiness = useModuleReadiness(code, { prepare: true, enabled: rung != null })
   const router = useRouter()
   const pathname = usePathname()
   const sp = useSearchParams()
@@ -78,6 +80,18 @@ export function ModuleView({ code }: { code: string }) {
           </div>
         </div>
       </header>
+
+      {readiness.preparing && (
+        <div className="rounded-xl border bg-card px-4 py-3" data-testid="module-preparing" role="status">
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <p>Getting this module ready for you<span className="text-muted-foreground"> — {readiness.lessonsReady} of {readiness.lessonsTotal} lessons tailored</span></p>
+            <span className="tabular text-xs text-muted-foreground">{readiness.lessonsTotal ? Math.round((readiness.lessonsReady / readiness.lessonsTotal) * 100) : 0}%</span>
+          </div>
+          <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted" role="meter" aria-valuenow={readiness.lessonsReady} aria-valuemin={0} aria-valuemax={readiness.lessonsTotal || 1} aria-label="Lessons tailored">
+            <div className="h-full rounded-full bg-glow transition-[width] duration-700" style={{ width: `${readiness.lessonsTotal ? (readiness.lessonsReady / readiness.lessonsTotal) * 100 : 0}%` }} />
+          </div>
+        </div>
+      )}
 
       {ladder.isError && <ErrorState title="Couldn't load your progress" detail={ladder.error.message} retry={() => ladder.refetch()} />}
 

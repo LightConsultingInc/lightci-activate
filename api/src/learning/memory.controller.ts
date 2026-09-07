@@ -3,6 +3,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, OrgId } from '../common/decorators';
 import { Person } from '../orgs/entities/person.entity';
 import { MemoryService, type PersonMemory } from './memory.service';
+import { ModulePrepService } from './module-prep.service';
 
 export type MemoryView = Pick<
   PersonMemory,
@@ -12,12 +13,15 @@ export type MemoryView = Pick<
   | 'preferences'
   | 'version'
   | 'updatedAt'
-> & { anchorWorkflows: string[]; eventCount: number };
+> & { anchorWorkflows: string[]; eventCount: number; preparedModules: string[] };
 
 @ApiTags('Learning')
 @Controller()
 export class MemoryController {
-  constructor(private readonly memory: MemoryService) {}
+  constructor(
+    private readonly memory: MemoryService,
+    private readonly prep: ModulePrepService,
+  ) {}
 
   @Get('memory/me')
   @ApiOperation({
@@ -28,8 +32,12 @@ export class MemoryController {
     @CurrentUser() user: Person,
     @OrgId() orgId: string,
   ): Promise<MemoryView> {
-    const m = await this.memory.get(user.id, orgId);
+    const [m, preparedModules] = await Promise.all([
+      this.memory.get(user.id, orgId),
+      this.prep.preparedModules(user, orgId),
+    ]);
     return {
+      preparedModules,
       summary: m.summary,
       strengths: m.strengths,
       struggles: m.struggles,
