@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { rungMeta } from "@/components/brand/rung"
 import { ErrorState } from "@/components/shell/empty-state"
 import { Chip } from "../chips"
-import { PracticeInput, canRun, canSubmit, clearOutput, initialSurface, kindLabel, practiceSpec, toArtifact, toRunBody, withRunResult, type SurfaceState } from "../artifact-editors"
+import { PracticeInput, canRun, canSubmit, clearOutput, initialSurface, kindLabel, policyReminder, practiceSpec, toArtifact, toRunBody, withRunResult, type SurfaceState } from "../artifact-editors"
+import { useMe } from "@/hooks/use-me"
 import { SkipMenu } from "./skip-menu"
 import { Nudge } from "./nudge"
 import { RunOutput } from "./run-output"
@@ -49,6 +50,9 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
   const submit = useSubmit(ex.id)
 
   const spec = useMemo(() => practiceSpec(ex), [ex])
+  const me = useMe()
+  const boundary = (me.org?.settings as { boundary?: { forbiddenDataClasses?: string[] } } | undefined)?.boundary
+  const reminder = policyReminder(boundary?.forbiddenDataClasses, (ex as { dataReminder?: string | null }).dataReminder)
   const moduleCode = rungMeta(ex.rung).code
   const finished = ex.status === "passed"
   const lastGraded = useMemo(() => [...ex.submissions].reverse().find((s) => s.grade || s.score10 != null), [ex.submissions])
@@ -123,7 +127,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
           <p className="eyebrow">{kindLabel(spec.kind)}</p>
           {locked && <Chip tone="neutral"><Lock className="size-3" /> Sent</Chip>}
         </div>
-        <PracticeInput value={surface} onChange={setSurface} disabled={locked} review={ex.review} rung={ex.rung} />
+        <PracticeInput value={surface} onChange={setSurface} disabled={locked} review={ex.review} rung={ex.rung} reminder={reminder} />
         {!isReview && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button onClick={doRun} disabled={locked || run.isPending || !runnable.ok} data-testid="run-button">
