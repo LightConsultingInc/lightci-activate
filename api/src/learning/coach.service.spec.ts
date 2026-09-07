@@ -131,7 +131,10 @@ describe('CoachService rung 0: one real task', () => {
     expect(practice.kind).toBe('prompt');
     expect(practice.ask).toBe(ex.brief);
     expect(practice.workflowName).toBe('RMD letters');
-    expect(practice.prefill.prompt).toContain('I am a Financial planner');
+    expect(practice.prefill.prompt).toContain("I'm a Financial planner");
+    // Run must produce the thing itself: the starter never asks Claude to stop and ask first.
+    expect(practice.prefill.prompt).not.toMatch(/ask me .*question/i);
+    expect(practice.prefill.prompt.split('\n').filter(Boolean)).toHaveLength(3);
     expect(practice.prefill.prompt).toContain(
       'Household summary, Prior letter',
     );

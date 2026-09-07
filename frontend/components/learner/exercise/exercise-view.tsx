@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { rungMeta } from "@/components/brand/rung"
 import { ErrorState } from "@/components/shell/empty-state"
 import { Chip } from "../chips"
-import { PracticeInput, canRun, canSubmit, clearOutput, initialSurface, kindLabel, policyReminder, practiceSpec, toArtifact, toRunBody, withRunResult, type SurfaceState } from "../artifact-editors"
+import { PracticeInput, canRun, canSubmit, clearOutput, hasOutput, initialSurface, kindLabel, policyReminder, practiceSpec, toArtifact, toRunBody, withRunResult, type SurfaceState } from "../artifact-editors"
 import { useMe } from "@/hooks/use-me"
 import { SkipMenu } from "./skip-menu"
 import { Nudge } from "./nudge"
@@ -71,19 +71,15 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
 
   const runnable = canRun(surface)
   const submittable = canSubmit(surface)
-  const locked = result !== null || finished || submit.isPending
+  const busy = run.isPending || submit.isPending
+  const locked = result !== null || finished || busy
   const isReview = surface.kind === "review"
+  const hasRun = hasOutput(surface)
 
-  const doRun = () => {
-    const body = toRunBody(surface)
-    if (!body || !runnable.ok) return
-    run.mutate(body, { onSuccess: (r) => setSurface((s) => withRunResult(s, r)) })
-  }
-
-  const doSubmit = () => {
-    if (!submittable.ok) return
+  /** Grade what is on the surface: Coach's three lines, a score, pass or try again. */
+  const grade = (s: SurfaceState) =>
     submit.mutate(
-      { artifact: toArtifact(surface) },
+      { artifact: toArtifact(s) },
       {
         onSuccess: (res) => {
           setResult({ feedback: res.feedback, score10: res.score10, decision: res.decision, nextUp: res.nextUp, promotion: res.promotion, agreement: res.agreement })
@@ -91,6 +87,24 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
         },
       },
     )
+
+  /** One press: Claude does the task, the output appears, then Coach's feedback lands under it. */
+  const doRun = () => {
+    const body = toRunBody(surface)
+    if (!body || !runnable.ok) return
+    run.mutate(body, {
+      onSuccess: (r) => {
+        const next = withRunResult(surface, r)
+        setSurface(next)
+        grade(next)
+      },
+    })
+  }
+
+  /** Review practice has nothing to run: score it and send. */
+  const doSubmit = () => {
+    if (!submittable.ok) return
+    grade(surface)
   }
 
   /** Keep the draft, drop the output and the feedback. */
@@ -130,24 +144,25 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
         <PracticeInput value={surface} onChange={setSurface} disabled={locked} review={ex.review} rung={ex.rung} reminder={reminder} />
         {!isReview && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button onClick={doRun} disabled={locked || run.isPending || !runnable.ok} data-testid="run-button">
-              <Play data-icon="inline-start" /> {run.isPending ? "Running…" : submittable.ok ? "Run again" : "Run"}
+            <Button size="lg" onClick={doRun} disabled={locked || !runnable.ok} data-testid="run-button">
+              <Play data-icon="inline-start" /> {run.isPending ? "Claude is working…" : submit.isPending ? "Coach is reading it…" : hasRun ? "Run again" : "Run"}
             </Button>
             {!runnable.ok && !locked && runnable.reason && <p className="text-xs text-muted-foreground">{runnable.reason}</p>}
+            {!locked && runnable.ok && <p className="text-xs text-muted-foreground">Claude does the task, then Coach tells you what worked and what to change.</p>}
+          </div>
+        )}
+        {isReview && !locked && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button size="lg" onClick={doSubmit} disabled={!submittable.ok || submit.isPending} data-testid="submit-button">
+              <Send data-icon="inline-start" /> {submit.isPending ? "Getting feedback…" : "Submit for feedback"}
+            </Button>
+            {!submittable.ok && submittable.reason && <p className="text-xs text-muted-foreground">{submittable.reason}</p>}
           </div>
         )}
       </section>
 
       <RunOutput surface={surface} />
 
-      {!locked && (
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {!submittable.ok && submittable.reason && <p className="text-xs text-muted-foreground">{submittable.reason}</p>}
-          <Button size="lg" onClick={doSubmit} disabled={!submittable.ok || submit.isPending} data-testid="submit-button">
-            <Send data-icon="inline-start" /> {submit.isPending ? "Getting feedback…" : "Submit for feedback"}
-          </Button>
-        </div>
-      )}
       {submit.isPending && <p className="text-right text-xs text-muted-foreground" data-testid="submit-pending">Coach is reading it…</p>}
 
       {result && <FeedbackCard result={result} moduleCode={moduleCode} onTryAgain={finished ? undefined : tryAgain} />}

@@ -401,13 +401,13 @@ export class CoachService {
       : '';
     const primarySystem = wf?.systems?.[0] ?? situation?.systems?.[0] ?? null;
     const inputSlot = primarySystem
-      ? `[Using the ${primarySystem} connector, pull ${inputs}; if you don't have it, paste them here.]`
-      : '[Paste your inputs here.]';
+      ? `Here's the ${inputs}: [paste them here, or say "using the ${primarySystem} connector, pull them"]`
+      : `Here's the ${inputs}: [paste them here]`;
+    // Three short lines and one slot (docs/practice-model.md). Never "ask me a question first": Run
+    // must produce the thing itself, with [placeholders] where the learner left gaps.
     const starterPrompt = [
-      `I am a ${role}. Help me with ${task}.${systems}`,
-      `Inputs I will give you: ${inputs}.`,
-      `What I need back: ${outputs}, in the shape we use for ${task}.`,
-      'Work from the inputs I give you. Put [placeholders] where something is missing rather than guessing. If anything is unclear, ask me one question before you start.',
+      `I'm a ${role}. Help me with ${task}.${systems}`,
+      `I need back ${outputs}, in the shape we use for ${task}. Work only from what I give you below; where a fact is missing, leave a [placeholder] rather than guessing.`,
       '',
       inputSlot,
     ].join('\n');

@@ -11,6 +11,8 @@ Every practice item is framed on one of the learner's own workflows (from the in
 3. **The output**, produced by us when they press Run: the learner sees what Claude actually made.
 4. **Feedback**: three short lines from Coach (what worked, what to change, one thing to try), a score out of 10, and a "Try again" button that keeps their draft. Passing is decided from the score.
 
+Run and feedback are **one press** (changed 2026-09-07): the learner presses Run, Claude's output appears, and Coach's feedback lands under it without a second step. Every Run is therefore an attempt. Only review practice (L5), which has nothing to run, keeps a Submit button. Run never stops at a clarifying question: when the prompt promised material that never arrived, Claude still produces the deliverable with [slots] and ends with "To finish this I still need …", and Coach's feedback says what to paste before the next run. Prompt practice pre-fills a short, plainly fictional sample of the workflow's material under the starter so the first Run has something to work from; the learner swaps in their own.
+
 Nothing else. No prediction note, no self-check list, no confidence slider, no worked-example gating, no "do it in Claude and paste it back". The words expectation, critique, calibration, competency, rung, mastery, scribe never appear.
 
 | Module | The ask | Input | What Run does |

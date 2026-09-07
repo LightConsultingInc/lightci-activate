@@ -51,7 +51,7 @@ export const NextExerciseSchema = z.object({
     .string()
     .nullable()
     .describe(
-      'prompt surface, optional: a short example of the material the learner would paste (placeholders only). Null otherwise.',
+      'prompt surface: 80–160 words of plainly made-up sample material of the kind this workflow uses, headed "Sample material, made up. Swap in your own."; no real firms or people. Null for other surfaces.',
     ),
   prefillInstructions: z
     .string()

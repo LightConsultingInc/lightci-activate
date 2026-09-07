@@ -29,14 +29,19 @@ test.describe("practice: ask, run, submit, feedback", () => {
     await expect(page.getByTestId("exercise-view")).toBeVisible()
   }
 
-  test("one screen: the ask, the input, Run and Submit; none of the old beats", async ({ page }) => {
+  test("one screen: the ask, the input, one Run that also brings feedback; none of the old beats", async ({ page }) => {
     await openNextUp(page)
     await expect(page.getByTestId("exercise-ask")).not.toBeEmpty()
     await expect(page.getByTestId("exercise-minutes")).toContainText(/\d+ min/)
     const surface = page.getByTestId("work-surface")
     await expect(surface).toHaveAttribute("data-surface", /^(prompt|project|skill|workflow|review)$/)
-    await expect(page.getByTestId("submit-button")).toBeDisabled()
-    if ((await surface.getAttribute("data-surface")) !== "review") await expect(page.getByTestId("run-button")).toBeVisible()
+    if ((await surface.getAttribute("data-surface")) === "review") {
+      await expect(page.getByTestId("submit-button")).toBeDisabled()
+    } else {
+      await expect(page.getByTestId("run-button")).toBeVisible()
+      // Run and feedback are one action: there is no separate submit step.
+      await expect(page.getByTestId("submit-button")).toHaveCount(0)
+    }
 
     // Nothing from the expectation → check → result design survives.
     for (const id of ["beats", "beat-build", "coach-panel", "expectation-input", "confidence-slider", "self-check", "open-in-claude-button", "mode-badge", "stepper", "work-continue"]) {
@@ -63,7 +68,7 @@ test.describe("practice: ask, run, submit, feedback", () => {
     await expect(page.getByTestId("hints-count")).toContainText(`${revealed + 1}/${total} revealed`)
   })
 
-  test("edit the prompt, Run shows the output, Submit shows the feedback card; Try again keeps the draft", async ({ page }) => {
+  test("edit the prompt, Run shows the output and then the feedback card; Try again keeps the draft", async ({ page }) => {
     await page.goto(`/exercise/${exerciseId}`)
     await expect(page.getByTestId("exercise-view")).toBeVisible()
     test.skip((await page.getByTestId("work-surface").getAttribute("data-surface")) !== "prompt", "Marcus's next practice is not a prompt")
@@ -73,7 +78,6 @@ test.describe("practice: ask, run, submit, feedback", () => {
     await expect(input).not.toHaveValue("") // pre-filled from his workflow
     await input.fill(PROMPT)
     await expect(page.getByTestId("run-output")).toHaveCount(0)
-    await expect(page.getByTestId("submit-button")).toBeDisabled()
 
     await page.getByTestId("run-button").click()
     const output = page.getByTestId("run-output")
@@ -81,9 +85,8 @@ test.describe("practice: ask, run, submit, feedback", () => {
     await expect(output).toHaveAttribute("data-kind", "prompt")
     // Works with the mock provider and a real model alike: something substantial came back.
     expect(((await output.textContent()) ?? "").length).toBeGreaterThan(60)
-    await expect(page.getByTestId("submit-button")).toBeEnabled()
 
-    await page.getByTestId("submit-button").click()
+    // No second press: the feedback follows the output on its own.
     const card = page.getByTestId("feedback-card")
     await expect(card).toBeVisible({ timeout: 60_000 })
     await expect(card.getByTestId("feedback-score")).toHaveText(/^(10|\d)$/)
@@ -97,7 +100,6 @@ test.describe("practice: ask, run, submit, feedback", () => {
     await expectToast(page, /\/10/)
     // The input is read-only while the feedback shows.
     await expect(input).toBeDisabled()
-    await expect(page.getByTestId("submit-button")).toHaveCount(0)
 
     if (decision === "try_again") {
       await card.getByTestId("try-again-button").click()
@@ -105,7 +107,6 @@ test.describe("practice: ask, run, submit, feedback", () => {
       await expect(page.getByTestId("run-output")).toHaveCount(0)
       await expect(input).toBeEnabled()
       await expect(input).toHaveValue(PROMPT)
-      await expect(page.getByTestId("submit-button")).toBeDisabled()
       await expect(page.getByTestId("run-button")).toBeEnabled()
     } else {
       await expect(page.getByTestId("exercise-view")).toHaveAttribute("data-status", "passed")
@@ -208,7 +209,8 @@ test.describe("practice layout", () => {
       }
       await expect(hint).toBeDisabled()
     }
-    await page.getByTestId("submit-button").scrollIntoViewIfNeeded()
-    await expect(page.getByTestId("submit-button")).toBeInViewport()
+    const action = page.getByTestId("run-button").or(page.getByTestId("submit-button")).first()
+    await action.scrollIntoViewIfNeeded()
+    await expect(action).toBeInViewport()
   })
 })
