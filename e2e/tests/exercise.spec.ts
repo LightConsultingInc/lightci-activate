@@ -89,7 +89,7 @@ test.describe("practice: ask, run, submit, feedback", () => {
     // No second press: the feedback follows the output on its own.
     const card = page.getByTestId("feedback-card")
     await expect(card).toBeVisible({ timeout: 60_000 })
-    await expect(card.getByTestId("feedback-score")).toHaveText(/^(10|\d)$/)
+    await expect(card.getByTestId("feedback-score")).toHaveText(/^(10|\d(\.\d)?)$/)
     const chip = card.getByTestId("decision-chip")
     decision = ((await chip.getAttribute("data-decision")) ?? "") as typeof decision
     expect(["pass", "try_again"]).toContain(decision)
@@ -97,7 +97,6 @@ test.describe("practice: ask, run, submit, feedback", () => {
     await expect(chip).toHaveText(decision === "pass" ? "Pass" : "Try again")
     for (const id of ["feedback-worked", "feedback-change", "feedback-next"]) await expect(card.getByTestId(id)).not.toBeEmpty()
     await expect(card.getByTestId("back-to-module-button")).toHaveAttribute("href", /\/modules\/L[0-5]\?tab=practice/)
-    await expectToast(page, /\/10/)
     // The input is read-only while the feedback shows.
     await expect(input).toBeDisabled()
 

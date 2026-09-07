@@ -30,7 +30,9 @@ type Props = {
 export function FeedbackCard({ result, moduleCode, onTryAgain, className }: Props) {
   const reduced = useReducedMotion()
   const pass = result.decision === "pass"
-  const score = Math.max(0, Math.min(10, Math.round(result.score10)))
+  // The exact score, one decimal at most: "6.7" beats a rounded "7" sitting next to "Try again".
+  const clamped = Math.max(0, Math.min(10, result.score10))
+  const score = Number.isInteger(clamped) ? String(clamped) : clamped.toFixed(1).replace(/\.0$/, "")
   return (
     <div className="space-y-4">
       {result.promotion?.newRung != null && <PromotionCelebration newRung={result.promotion.newRung} />}
@@ -59,7 +61,7 @@ export function FeedbackCard({ result, moduleCode, onTryAgain, className }: Prop
           </div>
         </header>
 
-        <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+        <dl className="mt-5 grid gap-3">
           <Line label="What worked" text={result.feedback.worked} testId="feedback-worked" />
           <Line label="What to change" text={result.feedback.change} testId="feedback-change" />
           <Line label="Try next" text={result.feedback.tryNext} testId="feedback-next" />

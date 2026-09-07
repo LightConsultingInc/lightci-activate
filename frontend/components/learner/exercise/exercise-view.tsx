@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { toast } from "sonner"
-import { ArrowLeft, Clock, Lock, Play, Send } from "lucide-react"
+import { ArrowLeft, Clock, Loader2, Lock, Play, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { rungMeta } from "@/components/brand/rung"
@@ -60,6 +59,12 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
   const [surface, setSurface] = useState<SurfaceState>(() => initialSurface(ex, spec))
   const [result, setResult] = useState<FeedbackResult | null>(() => (finished ? resultFromSubmission(lastGraded) : null))
   const startedRef = useRef(false)
+  const resultsRef = useRef<HTMLDivElement>(null)
+
+  // The score must never hide below the fold: bring the results column into view as soon as it fills.
+  useEffect(() => {
+    if (result || run.isPending) resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+  }, [result, run.isPending])
 
   useEffect(() => {
     if (ex.status === "queued" && !startedRef.current) {
@@ -75,6 +80,8 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
   const locked = result !== null || finished || busy
   const isReview = surface.kind === "review"
   const hasRun = hasOutput(surface)
+  // Once something is running or came back, the page widens into two columns: your work on the left, what came back on the right.
+  const showResults = hasRun || result !== null || busy
 
   /** Grade what is on the surface: Coach's three lines, a score, pass or try again. */
   const grade = (s: SurfaceState) =>
@@ -82,8 +89,10 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
       { artifact: toArtifact(s) },
       {
         onSuccess: (res) => {
-          setResult({ feedback: res.feedback, score10: res.score10, decision: res.decision, nextUp: res.nextUp, promotion: res.promotion, agreement: res.agreement })
-          toast[res.decision === "pass" ? "success" : "message"](res.decision === "pass" ? `${res.score10}/10. Nice work.` : `${res.score10}/10. Have another go when you're ready.`)
+          // The score card is on screen now, so no toast: one number, one place.
+          // On "try again" the API's next-up is this same item; a link to the page you are on would do nothing.
+          const nextUp = res.nextUp && res.nextUp.id !== ex.id ? res.nextUp : null
+          setResult({ feedback: res.feedback, score10: res.score10, decision: res.decision, nextUp, promotion: res.promotion, agreement: res.agreement })
         },
       },
     )
@@ -118,7 +127,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
   const earlier = result ? ex.submissions.filter((s) => s.id !== latestId) : ex.submissions
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6" data-testid="exercise-view" data-status={ex.status} data-kind={spec.kind}>
+    <div className={cn("mx-auto space-y-6", showResults ? "max-w-6xl" : "max-w-4xl")} data-testid="exercise-view" data-status={ex.status} data-kind={spec.kind} data-layout={showResults ? "two-column" : "single"}>
       <header className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <Link href={`/modules/${moduleCode}?tab=practice`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" data-testid="exercise-back">
@@ -136,7 +145,8 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
         </div>
       </header>
 
-      <section className={cn("rounded-xl border bg-card p-5", locked && "opacity-90")} data-testid="work-surface" data-surface={spec.kind} data-locked={locked}>
+      <div className={cn(showResults && "grid gap-6 lg:grid-cols-2 lg:items-start")}>
+      <section className={cn("rounded-xl border bg-card p-5 lg:order-1", locked && "opacity-90")} data-testid="work-surface" data-surface={spec.kind} data-locked={locked}>
         <div className="mb-4 flex items-center justify-between">
           <p className="eyebrow">{kindLabel(spec.kind)}</p>
           {locked && <Chip tone="neutral"><Lock className="size-3" /> Sent</Chip>}
@@ -161,13 +171,26 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
         )}
       </section>
 
-      <RunOutput surface={surface} />
-
-      {submit.isPending && <p className="text-right text-xs text-muted-foreground" data-testid="submit-pending">Coach is reading it…</p>}
-
-      {result && <FeedbackCard result={result} moduleCode={moduleCode} onTryAgain={finished ? undefined : tryAgain} />}
+      {showResults && (
+        <div ref={resultsRef} className="order-first space-y-6 scroll-mt-20 lg:order-2" data-testid="results-column">
+          {run.isPending && <PendingCard testId="run-pending">Claude is working on it…</PendingCard>}
+          {submit.isPending && <PendingCard testId="submit-pending">Coach is reading it…</PendingCard>}
+          {result && <FeedbackCard result={result} moduleCode={moduleCode} onTryAgain={finished ? undefined : tryAgain} />}
+          <RunOutput surface={surface} />
+        </div>
+      )}
+      </div>
 
       <EarlierTries submissions={earlier} />
+    </div>
+  )
+}
+
+/** A quiet card that holds the score's place while Claude or Coach is working. */
+function PendingCard({ children, testId }: { children: React.ReactNode; testId: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border bg-card p-5 text-sm text-muted-foreground" data-testid={testId} role="status">
+      <Loader2 className="size-4 animate-spin text-glow-foreground" /> {children}
     </div>
   )
 }

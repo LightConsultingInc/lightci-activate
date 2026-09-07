@@ -86,7 +86,8 @@ export function initialSurface(ex: ExerciseDetail, spec: PracticeSpec = practice
     case "prompt":
       {
         const prompt = last?.content ?? str(f.prompt)
-        const material = last?.material ?? str(f.material)
+        // The sample material belongs to the first draft only; once the learner has sent a version, keep exactly what they sent.
+        const material = last ? (last.material ?? "") : str(f.material)
         // One box: any separately stored material is appended so nothing is hidden behind a toggle.
         return { kind: "prompt", prompt: material && !prompt.includes(material) ? `${prompt.trimEnd()}\n\n${material}` : prompt, material: "", output: null }
       }
