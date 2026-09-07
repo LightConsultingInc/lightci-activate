@@ -102,10 +102,10 @@ export function ModuleView({ code }: { code: string }) {
           <TabsTrigger value="feedback" className="flex-none px-3" data-testid="module-tab-feedback"><MessageSquareText data-icon="inline-start" /> Feedback</TabsTrigger>
         </TabsList>
         <TabsContent value="learn" className="pt-4" data-testid="module-panel-learn">
-          <LearnTab module={mod} />
+          <LearnTab module={mod} isLessonReady={readiness.isLessonReady} />
         </TabsContent>
         <TabsContent value="practice" className="pt-4" data-testid="module-panel-practice">
-          <PracticeTab module={mod} />
+          <PracticeTab module={mod} practiceReady={readiness.practiceReady} />
         </TabsContent>
         <TabsContent value="feedback" className="pt-4" data-testid="module-panel-feedback">
           {ladder.isPending ? <div className="space-y-3"><Skeleton className="h-24" /><Skeleton className="h-40" /></div> : ladder.data ? <FeedbackTab module={mod} ladder={ladder.data} /> : null}

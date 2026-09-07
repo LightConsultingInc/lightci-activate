@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, Check, Clock, Lightbulb, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, Clock, Lightbulb, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/shell/empty-state"
 import { Paper } from "@/components/brand/grain"
@@ -26,7 +26,7 @@ export function LessonView({ code, slug }: { code: string; slug: string }) {
   const rung = parseModuleCode(code)
   const lesson = lessonBySlug(slug)
   // Landing straight on a lesson must also start (and follow) the module preparation.
-  useModuleReadiness(lesson ? `L${lesson.rung}` : "L0", { prepare: true, enabled: Boolean(lesson) })
+  const readiness = useModuleReadiness(lesson ? `L${lesson.rung}` : "L0", { prepare: true, enabled: Boolean(lesson) })
   const { isDone, markDone } = useLessonProgress()
   const memory = useMemory()
   const personalised = useLessonPersonalised(lesson, memory.data?.version)
@@ -38,6 +38,20 @@ export function LessonView({ code, slug }: { code: string; slug: string }) {
   const idx = mod.lessons.findIndex((l) => l.slug === slug)
   const next = mod.lessons[idx + 1] ?? null
   const done = isDone(slug)
+  // Arrived by URL while this lesson is still being tailored: wait for it rather than showing a version that will change.
+  if (!readiness.isLessonReady(slug)) {
+    return (
+      <article className="mx-auto max-w-3xl space-y-6 animate-rise" data-testid="lesson-view" data-slug={slug} data-waiting="true">
+        <Link href={`/modules/${mod.code}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" data-testid="lesson-back">
+          <ArrowLeft className="size-3" /> {mod.code} {mod.name}
+        </Link>
+        <h1 className="font-display text-3xl font-medium leading-tight md:text-4xl" data-testid="lesson-title">{lesson.title}</h1>
+        <div className="flex items-center gap-3 rounded-xl border border-dashed bg-card/60 p-5 text-sm text-muted-foreground" role="status" data-testid="lesson-waiting">
+          <Loader2 className="size-4 animate-spin text-glow-foreground" /> Tailoring this lesson to your work. It opens in a moment.
+        </div>
+      </article>
+    )
+  }
   // Static content while loading (or if the endpoint fails); the tailored version once it lands.
   const example = personalised.data?.example ?? lesson.example
   const check = personalised.data?.check ?? lesson.check

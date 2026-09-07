@@ -128,9 +128,11 @@ test.describe("module page", () => {
 
   test("Learn tab lists lessons and a lesson page reads through to its check", async ({ page }) => {
     const code = await openCurrentModule(page)
-    const lessons = page.getByTestId("lesson-card")
-    const count = await lessons.count()
-    expect(count).toBeGreaterThanOrEqual(3)
+    const cards = page.getByTestId("lesson-card")
+    expect(await cards.count()).toBeGreaterThanOrEqual(3)
+    // A lesson still being tailored is a waiting card, not a link; wait for the first one that opens.
+    const lessons = page.locator('a[data-testid="lesson-card"]')
+    await expect(lessons.first()).toBeVisible({ timeout: 60_000 })
     await expect(lessons.first()).toContainText(/\d+ min/)
     const slug = (await lessons.first().getAttribute("data-slug"))!
     await expect(lessons.first()).toHaveAttribute("href", `/modules/${code}/learn/${slug}`)

@@ -297,9 +297,11 @@ export type LadderView = {
 /** POST /modules/:code/prepare and GET /modules/:code/readiness: how far personalisation of a module has got. */
 export type ModuleReadiness = {
   status: "ready" | "preparing"
-  lessons: { total: number; ready: number }
+  lessons: { total: number; ready: number; readySlugs?: string[] }
   practice: { ready: boolean }
   memoryVersion: number
+  /** True while the background job for this module is running. */
+  inProgress?: boolean
 }
 
 /** GET /memory/me: Coach's living picture of the person. */

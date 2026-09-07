@@ -12,7 +12,7 @@ import { MemoryService } from './memory.service';
 
 export interface ModuleReadiness {
   status: 'ready' | 'preparing';
-  lessons: { total: number; ready: number };
+  lessons: { total: number; ready: number; readySlugs: string[] };
   practice: { ready: boolean };
   memoryVersion: number;
   /** True while the background job for this person+module is running. */
@@ -66,11 +66,12 @@ export class ModulePrepService {
     const rung = moduleRung(code);
     const practiceReady = rung === null ? true : (await this.exercises.count({ where: { personId: person.id, rung, status: In(PRACTICE_STATUSES) } })) > 0;
     const total = all.size;
-    const readyCount = [...all].filter((s) => ready.has(s)).length;
+    const readySlugs = [...all].filter((s) => ready.has(s)).sort();
+    const readyCount = readySlugs.length;
     const inProgress = this.jobs.has(this.key(person.id, code));
     return {
       status: total > 0 && readyCount === total && practiceReady && !inProgress ? 'ready' : 'preparing',
-      lessons: { total, ready: readyCount },
+      lessons: { total, ready: readyCount, readySlugs },
       practice: { ready: practiceReady },
       memoryVersion: memory.version,
       inProgress,

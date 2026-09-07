@@ -1,13 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { Check, Clock, Play } from "lucide-react"
+import { Check, Clock, Loader2, Play } from "lucide-react"
 import { useLessonProgress } from "@/hooks/learner/use-lesson-progress"
 import { cn } from "@/lib/utils"
 import type { Module } from "@/content/lessons/types"
 
-/** The module's lessons: title, promise, minutes, and a tick once the check is done. */
-export function LearnTab({ module }: { module: Module }) {
+/**
+ * The module's lessons: title, promise, minutes, and a tick once the check is done. While the module is
+ * being tailored, a lesson whose version has not landed yet waits (not clickable) instead of opening generic.
+ */
+export function LearnTab({ module, isLessonReady = () => true }: { module: Module; isLessonReady?: (slug: string) => boolean }) {
   const { isDone } = useLessonProgress()
   const done = module.lessons.filter((l) => isDone(l.slug)).length
   const total = module.lessons.reduce((s, l) => s + l.minutes, 0)
@@ -21,6 +24,23 @@ export function LearnTab({ module }: { module: Module }) {
       <ol className="grid gap-3 md:grid-cols-2">
         {module.lessons.map((l, i) => {
           const d = isDone(l.slug)
+          const waiting = !isLessonReady(l.slug)
+          if (waiting) {
+            return (
+              <li key={l.slug}>
+                <div className="flex h-full gap-4 rounded-xl border border-dashed bg-card/60 p-4" data-testid="lesson-card" data-slug={l.slug} data-done={d} data-waiting="true" aria-disabled="true">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full border bg-muted text-muted-foreground"><Loader2 className="size-4 animate-spin" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="font-medium leading-snug text-muted-foreground">{l.title}</span>
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground"><Clock className="size-3" /> {l.minutes} min</span>
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">Tailoring this one to your work. It opens in a moment.</span>
+                  </span>
+                </div>
+              </li>
+            )
+          }
           return (
             <li key={l.slug}>
               <Link

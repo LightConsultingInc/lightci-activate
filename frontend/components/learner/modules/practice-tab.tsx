@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Clock } from "lucide-react"
+import { ArrowRight, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState, ErrorState } from "@/components/shell/empty-state"
@@ -39,7 +39,7 @@ export const askOf = (e: ExerciseSummary) => e.ask?.trim() || e.title
 export const workflowOf = (e: ExerciseSummary) => e.workflowName?.trim() || e.contextTag || null
 
 /** The module's practice, each on one of the learner's own workflows. */
-export function PracticeTab({ module }: { module: Module }) {
+export function PracticeTab({ module, practiceReady = true }: { module: Module; practiceReady?: boolean }) {
   const q = useExercises("queued,active,passed,revise")
   if (q.isPending) return <div className="space-y-3" data-testid="practice-loading"><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
   if (q.isError) return <ErrorState title="Couldn't load your practice" detail={q.error.message} retry={() => q.refetch()} />
@@ -51,7 +51,11 @@ export function PracticeTab({ module }: { module: Module }) {
         <p className="eyebrow mb-1">What practice looks like here</p>
         <p className="text-sm leading-relaxed">{module.practice}</p>
       </Paper>
-      {mine.length === 0 ? (
+      {mine.length === 0 && !practiceReady ? (
+        <div className="flex items-center gap-3 rounded-xl border border-dashed bg-card/60 p-5 text-sm text-muted-foreground" data-testid="practice-preparing" role="status">
+          <Loader2 className="size-4 animate-spin text-glow-foreground" /> Coach is setting up your practice from the work you named at intake. It opens in a moment.
+        </div>
+      ) : mine.length === 0 ? (
         <EmptyState title="No practice here yet" description={`Coach adds practice for ${module.code} from the work you named at intake, once you reach this module. Lessons are open any time.`} />
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">

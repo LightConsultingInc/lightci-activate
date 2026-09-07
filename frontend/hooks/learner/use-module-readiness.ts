@@ -37,11 +37,18 @@ export function useModuleReadiness(code: string, { prepare = false, enabled = tr
   }, [q.data?.lessons.ready, qc])
 
   const data = q.data ?? null
+  const inProgress = data?.inProgress === true
+  const readySlugs = new Set(data?.lessons.readySlugs ?? [])
   return {
     readiness: data,
     preparing: data?.status === "preparing",
     ready: data?.status === "ready",
+    /** The job is running right now. Only then do we hold lessons and practice back; a stalled job never locks anyone out. */
+    inProgress,
     lessonsReady: data?.lessons.ready ?? 0,
     lessonsTotal: data?.lessons.total ?? 0,
+    /** A lesson waits only while the job is running and its tailored version has not landed. */
+    isLessonReady: (slug: string) => !inProgress || readySlugs.has(slug),
+    practiceReady: !inProgress || data?.practice.ready === true,
   }
 }
