@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Query, Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { IsArray } from 'class-validator';
 import { CurrentUser, OrgId } from '../common/decorators';
@@ -34,7 +34,9 @@ export class ModulesController {
 
   @Get(':code/readiness')
   @ApiOperation({ summary: 'Readiness of a prepared module without starting work.' })
-  async readiness(@CurrentUser() user: Person, @OrgId() orgId: string, @Param('code') code: string): Promise<ModuleReadiness> {
-    return this.prep.readiness(user, orgId, code.slice(0, 40));
+  async readiness(@CurrentUser() user: Person, @OrgId() orgId: string, @Param('code') code: string, @Query('slugs') slugs?: string): Promise<ModuleReadiness> {
+    // The client knows the module's full lesson list; without it "ready" could only mean "every lesson we have seen so far".
+    const expected = (slugs ?? '').split(',').map((s) => s.trim().slice(0, 80)).filter(Boolean).slice(0, 50);
+    return this.prep.readiness(user, orgId, code.slice(0, 40), expected);
   }
 }

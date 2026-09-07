@@ -9,6 +9,7 @@ import { Paper } from "@/components/brand/grain"
 import { lessonBySlug, moduleFor } from "@/content/lessons"
 import { useLessonProgress } from "@/hooks/learner/use-lesson-progress"
 import { useLessonChecked, useLessonPersonalised, useMemory } from "@/hooks/learner/queries"
+import { useModuleReadiness } from "@/hooks/learner/use-module-readiness"
 import { MarkdownLite } from "../markdown-lite"
 import { parseModuleCode } from "./module-state"
 import { cn } from "@/lib/utils"
@@ -22,6 +23,8 @@ import { cn } from "@/lib/utils"
 export function LessonView({ code, slug }: { code: string; slug: string }) {
   const rung = parseModuleCode(code)
   const lesson = lessonBySlug(slug)
+  // Landing straight on a lesson must also start (and follow) the module preparation.
+  useModuleReadiness(lesson ? `L${lesson.rung}` : "L0", { prepare: true, enabled: Boolean(lesson) })
   const { isDone, markDone } = useLessonProgress()
   const memory = useMemory()
   const personalised = useLessonPersonalised(lesson, memory.data?.version)

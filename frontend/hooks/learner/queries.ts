@@ -80,7 +80,13 @@ export function prepareModule(code: string): Promise<ModuleReadiness | null> {
 export const useModuleReadinessQuery = (code: string, enabled = true) =>
   useQuery({
     queryKey: keys.readiness(code),
-    queryFn: () => optional(api.get<ModuleReadiness>(`/api/modules/${encodeURIComponent(code)}/readiness`)),
+    // Send the module's full lesson list so "ready" means every lesson, not just the ones already personalised.
+    queryFn: () =>
+      optional(
+        api.get<ModuleReadiness>(
+          `/api/modules/${encodeURIComponent(code)}/readiness?slugs=${encodeURIComponent(genericLessons(code).map((l) => l.slug).join(","))}`,
+        ),
+      ),
     enabled,
     retry: false,
     refetchInterval: (q) => (q.state.data?.status === "preparing" ? 3000 : false),

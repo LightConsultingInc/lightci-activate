@@ -103,7 +103,7 @@ export class ModulePrepService {
     await this.jobs.get(this.key(personId, code));
   }
 
-  private async run(person: Person, orgId: string | null, code: string, lessons: ModuleLesson[]): Promise<void> {
+  private async run(person: Person, orgId: string | null, code: string, lessons: ModuleLesson[], pass = 1): Promise<void> {
     const started = Date.now();
     const memory = await this.memory.get(person.id, orgId);
     const existing = await this.rows.find({ where: { personId: person.id, lessonSlug: In(lessons.map((l) => l.slug).concat('__none__')) } });
@@ -128,6 +128,13 @@ export class ModulePrepService {
       }
     }
     this.logger.log(`Prepared module ${code} for ${person.id} in ${Date.now() - started}ms: ${personalised}/${todo.length} lessons personalised (${lessons.length - todo.length} already fresh), practice ${practice}.`);
+    // Memory often moves right after intake (synthesis lands while we work). If it did, go once more so the
+    // learner is not left with a module that is "prepared" at a stale version.
+    const after = await this.memory.get(person.id, orgId);
+    if (after.version !== memory.version && pass < 2) {
+      this.logger.log(`Memory moved v${memory.version}→v${after.version} while preparing ${code}; re-preparing.`);
+      await this.run(person, orgId, code, lessons, pass + 1);
+    }
   }
 
   /** Module codes fully ready for this person at the current memory version (for the home page). */
