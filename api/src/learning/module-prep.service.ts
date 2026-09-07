@@ -57,7 +57,10 @@ export class ModulePrepService {
   /** Current readiness without starting work. `slugs` (from a prepare call) widens `total` to lessons never personalised yet. */
   async readiness(person: Person, orgId: string | null, code: string, slugs: string[] = []): Promise<ModuleReadiness> {
     const memory = await this.memory.get(person.id, orgId);
-    const known = await this.rows.find({ where: { personId: person.id, moduleCode: code } });
+    // Rows created before moduleCode existed carry null; the slug prefix ("l2-…") identifies their module.
+    const known = (await this.rows.find({ where: { personId: person.id } })).filter(
+      (r) => r.moduleCode === code || (!r.moduleCode && r.lessonSlug.toLowerCase().startsWith(`${code.toLowerCase()}-`)),
+    );
     const all = new Set([...known.map((r) => r.lessonSlug), ...slugs]);
     const ready = new Set(known.filter((r) => r.memoryVersion === memory.version).map((r) => r.lessonSlug));
     const rung = moduleRung(code);
