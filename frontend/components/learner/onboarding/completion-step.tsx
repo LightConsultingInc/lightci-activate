@@ -11,6 +11,16 @@ import { MarkdownLite } from "../markdown-lite"
 import { useReducedMotion } from "@/hooks/learner/use-reduced-motion"
 import type { InterviewComplete, WorkflowSummary } from "@/hooks/learner/types"
 
+/** What starting at each level means, said the way a colleague would. */
+const PLAIN_START = [
+  "You'll begin with the basics: what Claude is good for and what to keep out of it.",
+  "You'll begin with writing clear requests and checking what comes back before you use it.",
+  "You'll begin by setting up a Project so Claude remembers how you like a repeated task done.",
+  "You'll begin by turning one of your repeated tasks into a skill your team can reuse.",
+  "You'll begin by mapping a whole workflow and getting it reviewed for the team.",
+  "You'll begin by reviewing other people's work and running the team's queue.",
+]
+
 export function CompletionStep({
   result,
   workflows,
@@ -50,9 +60,7 @@ export function CompletionStep({
                   </span>
                 </h1>
                 <p className="mt-2 max-w-xl text-sm text-paper/70">
-                  {rungMeta(placed.rung).short}. Placement is on evidence, and
-                  every rung after this is passed by artifacts, never by
-                  finishing content.
+                  {PLAIN_START[Math.max(0, Math.min(5, placed.rung))]} You move up by doing real work well, not by finishing lessons.
                 </p>
               </>
             ) : (
@@ -131,9 +139,9 @@ export function CompletionStep({
                   >
                     {w.name}
                   </Link>
-                  {w.baselineMinutesPerWeek != null && (
+                  {w.baselineMinutesPerWeek != null && w.baselineMinutesPerWeek > 0 && (
                     <span className="text-xs text-muted-foreground tabular">
-                      {Math.round(w.baselineMinutesPerWeek)} min/wk
+                      about {Math.round(w.baselineMinutesPerWeek)} min a week
                     </span>
                   )}
                 </li>

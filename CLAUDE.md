@@ -19,3 +19,6 @@ Read `docs/architecture.md` (system), `docs/api-contract.md` (REST shapes, with 
 ## Running
 `./scripts/dev.sh [mock]`; demo sign-ins in `README.md`; `node scripts/workos-demo.mjs` recreates the WorkOS demo org/users; `POST /api/admin/seed/reset` (admin) reseeds.
 Tests: `cd api && yarn test`, `cd frontend && yarn tsc --noEmit && yarn lint`, `cd e2e && yarn test` (stack must be running in mock mode).
+
+## Who uses this (read before writing any user-facing text)
+The learner is a layperson: a salesperson, an account manager, an ops coordinator. They have never heard of rungs, competencies, mastery, artifacts, calibration, scribes or graders, and they should never have to. Every sentence a learner sees must pass this test: would a colleague say it out loud, plainly, in one breath? Prefer "You're starting at L1, Conversational: writing clear requests and checking what comes back" over "Prompting and discernment. Placement is on evidence." Numbers must mean something concrete ("about 40 min a week") or not be shown. When a payload lacks the data for a claim, hide the line rather than showing 0. Admin and sponsor screens may use precise vocabulary, but still define it on first use. The lesson rubric in `docs/practice-model.md` applies to all learner copy, not only lessons.

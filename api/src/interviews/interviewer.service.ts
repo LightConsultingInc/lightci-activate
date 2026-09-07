@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Exercise } from '../learning/entities/exercise.entity';
+import { Baseline } from '../workflows/entities/baseline.entity';
 import { In, IsNull, Repository } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import type { ZodType } from 'zod';
@@ -766,6 +767,22 @@ export class InterviewerService {
         }),
       );
       ids.push(row.id);
+      // The interview's time estimate is the first baseline (spec: "Interviewer estimate + champion sign-off").
+      const minutesPerRun = Number((schema as { minutesPerRun?: unknown }).minutesPerRun ?? 0);
+      const runsPerWeek = Number((schema as { runsPerWeek?: unknown }).runsPerWeek ?? 0);
+      if (minutesPerRun > 0 && runsPerWeek > 0) {
+        await this.baselines.save(
+          this.baselines.create({
+            personId: owner.id,
+            workflowMapId: row.id,
+            task: row.name,
+            method: 'interview_estimate',
+            minutesPerWeek: Math.round(minutesPerRun * runsPerWeek),
+            reworkMinutesPerWeek: 0,
+            approvedByPersonId: null,
+          }),
+        );
+      }
     }
     return ids;
   }
