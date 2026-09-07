@@ -27,7 +27,13 @@ export const SAMPLE_REQUESTS = 3
 export const SAMPLE_REQUEST_LABELS = ["Should fire", "Should not fire", "Borderline"] as const
 /** What each of the two Project file slots is for (L2). */
 export const PROJECT_FILE_LABELS = ["Your template or last finished example", "One-page summary of the rules"] as const
-export const PROMPT_REMINDER = "No names or account details; describe the situation."
+/** Policy reminder, from the firm's own boundary (never a blanket "no names"). Empty when nothing is forbidden. */
+export function policyReminder(forbidden: string[] | undefined, dataReminder?: string | null): string {
+  if (dataReminder) return dataReminder
+  const items = (forbidden ?? []).map((c) => c.replace(/_/g, " ")).filter(Boolean)
+  if (items.length === 0) return ""
+  return `Paste or upload what you need. Your firm's policy keeps these out of Claude: ${items.join(", ")}.`
+}
 const SKILL_TEMPLATE = "---\nname: \ndescription: \n---\n\n"
 
 const str = (v: unknown, d = "") => (typeof v === "string" ? v : d)
@@ -186,10 +192,10 @@ export function canSubmit(s: SurfaceState): { ok: boolean; reason?: string } {
 
 type EditorProps<T extends SurfaceState> = { value: T; onChange: (v: T) => void; disabled?: boolean }
 
-export function PromptInput({ value, onChange, disabled, rung }: EditorProps<PromptSurface> & { rung?: number }) {
+export function PromptInput({ value, onChange, disabled, rung, reminder }: EditorProps<PromptSurface> & { rung?: number; reminder?: string }) {
   return (
     <div className="space-y-3" data-testid="prompt-editor">
-      {rung != null && rung <= 1 && <p className="text-xs text-muted-foreground" data-testid="prompt-reminder">{PROMPT_REMINDER}</p>}
+      {rung != null && rung <= 1 && reminder && <p className="text-xs text-muted-foreground" data-testid="prompt-reminder">{reminder}</p>}
       <Textarea
         value={value.prompt}
         onChange={(e) => onChange({ ...value, prompt: e.target.value })}
@@ -339,9 +345,9 @@ function artifactLabel(t: Artifact["type"]) {
 }
 
 /** The one input for the exercise's kind. */
-export function PracticeInput({ value, onChange, disabled, review, rung }: EditorProps<SurfaceState> & { review?: ExerciseDetail["review"]; rung?: number }) {
+export function PracticeInput({ value, onChange, disabled, review, rung, reminder }: EditorProps<SurfaceState> & { review?: ExerciseDetail["review"]; rung?: number; reminder?: string }) {
   switch (value.kind) {
-    case "prompt": return <PromptInput value={value} onChange={onChange} disabled={disabled} rung={rung} />
+    case "prompt": return <PromptInput value={value} onChange={onChange} disabled={disabled} rung={rung} reminder={reminder} />
     case "project": return <ProjectInput value={value} onChange={onChange} disabled={disabled} />
     case "skill": return <SkillInput value={value} onChange={onChange} disabled={disabled} />
     case "workflow": return <WorkflowInput value={value} onChange={onChange} disabled={disabled} />

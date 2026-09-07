@@ -41,3 +41,11 @@ A bad lesson:
 - covers two or more ideas, or runs long;
 - tells the reader to go do something in another tool and come back;
 - talks about the reader's judgement, predictions, or how they will be measured.
+
+## Data stance (corrected 2026-09-07)
+
+Claude Enterprise is a governed workspace. Pasting documents, uploading files and using connectors (Salesforce, Gong, Google Drive, Confluence, and any MCP server the firm has approved) is encouraged and is how Claude does real work. The only line is the firm's own policy, which Activate holds as the org boundary: the named forbidden data classes (typically personal identifiers, health data, payment card data, account numbers, anything regulated) and secrets. Lessons and Coach must teach the policy, not fear: "your firm allows X, keeps out Y; here is how to check" rather than "describe the situation, not the person" as a blanket rule. "Describe the situation" is a useful habit only for the specific classes the policy forbids. Reminders shown to the learner come from the org boundary, never from a hard-coded list.
+
+## Connectors are part of the curriculum
+
+Connectors let Claude read (and, when allowed, write to) the tools people already use. They appear in every module: L0 explains what a connector is and how to see which ones the firm has turned on; L1 teaches asking Claude to pull from a connector instead of pasting; L2 teaches a Project that uses connected sources; L3 teaches a skill that calls a connector; L4 maps which steps read from which system and which steps a person keeps; L5 covers reviewing skills that touch systems of record. Practice prefills may say "pull this from Salesforce if you have the connector; otherwise paste the summary".
