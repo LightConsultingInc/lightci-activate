@@ -1,5 +1,5 @@
 import { Roles } from '../common/decorators';
-import { Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SeedService } from './seed.service';
 
@@ -26,6 +26,24 @@ export class SeedController {
       truncated: result.truncated.length,
       tables: result.truncated,
     };
+  }
+
+  @Post('populate/:orgId')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      "Fill an existing org with the demo firm's teams, people, skills, usage and readouts, renamed for that firm. Touches nothing already in the org.",
+  })
+  async populate(
+    @Param('orgId') orgId: string,
+    @Body() body: { firmName?: string; shortName?: string; domain?: string },
+  ): Promise<{ ok: true; rows: number; people: number; skills: number }> {
+    const r = await this.seed.populateOrg(orgId, {
+      firmName: body?.firmName ?? 'Demo Firm',
+      shortName: body?.shortName ?? body?.firmName?.split(' ')[0] ?? 'Demo',
+      domain: body?.domain ?? 'demo.local',
+    });
+    return { ok: true, ...r };
   }
 
   @Post()

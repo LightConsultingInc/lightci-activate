@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { rmSync } from 'fs';
 import { resolve } from 'path';
 import {
@@ -76,6 +82,8 @@ import {
   DEMO_EXERCISES,
   DEMO_INTERVIEWS,
   DEMO_ORG,
+  DEMO_BOUNDARY,
+  DEMO_MARKETPLACE,
   DEMO_PEOPLE,
   DEMO_PROMOTIONS,
   DEMO_READOUTS,
@@ -1625,6 +1633,165 @@ export class SeedService implements OnApplicationBootstrap {
     this.logger.log(
       `Seeded ${DEMO_ORG.name}: ${total} rows in ${Date.now() - started}ms (${SEED_VERSION}).`,
     );
+  }
+
+  /**
+   * Fill an existing (usually fresh) org with the demo firm's teams, people, skills, practice history,
+   * usage, baselines and readouts, renamed for that firm, so Library, Team and Mission Control look live.
+   * Nothing already in the org is touched: no existing person, exercise, memory or workflow is modified.
+   */
+  async populateOrg(
+    orgId: string,
+    theme: { firmName: string; shortName: string; domain: string },
+  ): Promise<{ rows: number; people: number; skills: number }> {
+    const orgs = this.dataSource.getRepository(Org);
+    const org = await orgs.findOne({ where: { id: orgId } });
+    if (!org) throw new NotFoundException(`No org ${orgId}`);
+    const plan = buildSeedPlan(new Date());
+    const oldOrgId = plan.org[0].id as string;
+
+    // New names for the demo people, so nothing reads like the Meridian demo.
+    const NAMES: Record<string, string> = {
+      'Priya Nair': 'Maya Okonkwo',
+      'Marcus Reid': 'Leo Brandt',
+      'Daniel Okafor': 'Samuel Adeyemi',
+      'Elena Marsh': 'Claire Whitmore',
+      'Zain Lakhani': 'Jordan Ellis',
+      'Hannah Whitfield': 'Aisha Rahman',
+      'Rajesh Menon': 'Arjun Kapoor',
+      'Grace Lindqvist': 'Ingrid Solberg',
+      'Owen Castellano': 'Mateo Ruiz',
+      'Sofia Alvarez': 'Camila Reyes',
+      'Nathan Brooks': 'Ethan Cole',
+      'Isabelle Fontaine': 'Noor Haddad',
+      'Kevin Osei': 'Kwame Mensah',
+      'Laura Chen': 'Mei Tanaka',
+      'Tom Becker': 'Felix Bauer',
+      'Amara Diallo': 'Zuri Achebe',
+      'Jonas Petersen': 'Lars Nygaard',
+      'Megan Tully': 'Fiona Doyle',
+      'Victor Alonso': 'Rafael Costa',
+    };
+    const firstNames = Object.entries(NAMES).map(
+      ([from, to]) => [from.split(' ')[0], to.split(' ')[0]] as const,
+    );
+    const emailOf = (name: string) =>
+      `${name
+        .toLowerCase()
+        .replace(/[^a-z ]/g, '')
+        .trim()
+        .replace(/\s+/g, '.')}@${theme.domain}`;
+    const replaceText = (v: string): string => {
+      let out = v;
+      for (const [from, to] of Object.entries(NAMES))
+        out = out.split(from).join(to);
+      for (const [from, to] of firstNames)
+        out = out.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
+      out = out
+        .split('Meridian Wealth Partners')
+        .join(theme.firmName)
+        .split('meridianwealth.demo')
+        .join(theme.domain)
+        .replace(/\bMeridian\b/g, theme.shortName);
+      return out;
+    };
+    // The plan's RNG is seeded, so its ids match the demo firm already in the database: give every row a
+    // fresh id and rewrite every reference to it (foreign keys and ids embedded in JSON alike).
+    const idMap = new Map<string, string>();
+    for (const list of Object.values(plan) as unknown[][])
+      for (const row of list) {
+        const id = (row as { id?: unknown }).id;
+        if (typeof id === 'string' && !idMap.has(id))
+          idMap.set(id, randomUUID());
+      }
+    const UUID_RE =
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+    const reId = (v: string): string =>
+      idMap.has(v)
+        ? idMap.get(v)!
+        : v.length > 36 && v.includes('-')
+          ? v.replace(UUID_RE, (m) => idMap.get(m) ?? m)
+          : v;
+    const walk = (v: unknown): unknown => {
+      if (typeof v === 'string') return replaceText(reId(v));
+      if (Array.isArray(v)) return v.map(walk);
+      if (v && typeof v === 'object' && !(v instanceof Date)) {
+        const o: Record<string, unknown> = {};
+        for (const [k, val] of Object.entries(v as Record<string, unknown>))
+          o[k] = k === 'orgId' && val === oldOrgId ? orgId : walk(val);
+        return o;
+      }
+      return v;
+    };
+    const remap = <T>(rows: T[]): T[] => rows.map((r) => walk(r) as T);
+
+    const people = remap(plan.people).map((p) => ({
+      ...p,
+      orgId,
+      email: emailOf(p.name as string),
+      workosUserId: null,
+    }));
+    const existingCost = await this.dataSource
+      .getRepository(CostInput)
+      .count({ where: { orgId } });
+
+    let rows = 0;
+    await this.dataSource.transaction(async (m) => {
+      const put = async <T extends ObjectLiteral>(
+        target: EntityTarget<T>,
+        list: Row<T>[],
+      ) => {
+        await insertAll(m, target, list);
+        rows += list.length;
+      };
+      await put(Team, remap(plan.teams));
+      await put(Person, people as Row<Person>[]);
+      await put(ContextSource, remap(plan.contextSources));
+      await put(ContextLayer, remap(plan.contextLayers));
+      await put(Placement, remap(plan.placements));
+      await put(InterviewSession, remap(plan.interviews));
+      await put(WorkflowMap, remap(plan.workflows));
+      await put(Skill, remap(plan.skills));
+      await put(SkillVersion, remap(plan.skillVersions));
+      await put(Exercise, remap(plan.exercises));
+      await put(Submission, remap(plan.submissions));
+      await put(Grade, remap(plan.grades));
+      await put(SkillAdoption, remap(plan.adoptions));
+      await put(SkillAssignment, remap(plan.assignments));
+      await put(SkillComment, remap(plan.comments));
+      await put(PromotionRequest, remap(plan.promotions));
+      await put(Revisit, remap(plan.revisits));
+      await put(CoachNote, remap(plan.coachNotes));
+      await put(Baseline, remap(plan.baselines));
+      await put(Measurement, remap(plan.measurements));
+      await put(UsageSnapshot, remap(plan.usage));
+      await put(SkillUsage, remap(plan.skillUsage));
+      await put(MasterySnapshot, remap(plan.mastery));
+      await put(Escalation, remap(plan.escalations));
+      await put(Wave, remap(plan.waves));
+      await put(Readout, remap(plan.readouts));
+      if (existingCost === 0) await put(CostInput, remap(plan.cost));
+      await put(AuditLog, remap(plan.audit));
+      await put(AgentRun, remap(plan.agentRuns));
+      // The library and the policy reminders need a marketplace and a boundary; add them only if the org has none.
+      const settings = { ...(org.settings ?? {}) };
+      if (!settings.boundary) settings.boundary = DEMO_BOUNDARY;
+      await m.update(
+        Org,
+        { id: orgId },
+        {
+          settings,
+          ...(org.marketplaceRepo ? {} : { marketplaceRepo: DEMO_MARKETPLACE }),
+          ...(org.sponsorName
+            ? {}
+            : { sponsorName: `${NAMES['Elena Marsh']}, COO` }),
+        },
+      );
+    });
+    this.logger.log(
+      `Populated ${theme.firmName} (${orgId}) with ${rows} demo rows.`,
+    );
+    return { rows, people: people.length, skills: plan.skills.length };
   }
 
   /** Wipe every entity table (not migrations) and reseed. */
