@@ -13,6 +13,11 @@ node scripts/workos-demo.mjs            # one-time: demo WorkOS org + sign-in us
 ./scripts/dev.sh                        # postgres :5439, api :4310, web :3000 (seeds the demo org on first boot)
 ```
 
+### Make a fresh client org look live
+
+`node api/dist/seed/populate.cli.js <orgId> "<Firm Name>" <ShortName> <email-domain>` (or `POST /api/admin/seed/populate/:orgId` as an admin) fills an existing org with the demo firm's teams, people, skills, practice history, usage, baselines and readouts, renamed for that firm. It touches nothing already in the org: your own person, exercises, memory and workflows stay as they are. Run `cd api && yarn build` first.
+
+
 Sign in at http://localhost:3000 with a demo user (password `Activate-demo-2026!`):
 
 | Person | Email | Role |
