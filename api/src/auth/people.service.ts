@@ -84,8 +84,9 @@ export class PeopleService {
     const domain = email.split('@')[1] ?? '';
     const isLead = LEAD_DOMAINS.includes(domain);
 
-    let orgId: string | null = person?.orgId ?? null;
-    if (!orgId && workosOrganizationId) {
+    // LightCI leads are never bound to one client: they switch orgs per request (X-Activate-Org).
+    let orgId: string | null = isLead ? null : (person?.orgId ?? null);
+    if (!isLead && !orgId && workosOrganizationId) {
       const org = await em
         .getRepository(Org)
         .findOne({ where: { workosOrganizationId } });
@@ -118,7 +119,8 @@ export class PeopleService {
       person.avatarUrl = profile.profilePictureUrl;
     if (isLead && !person.roles.includes('lead'))
       person.roles = [...person.roles, 'lead'];
-    if (!person.orgId && orgId) person.orgId = orgId;
+    if (isLead) person.orgId = null;
+    else if (!person.orgId && orgId) person.orgId = orgId;
     person.status = 'active';
     person.lastSeenAt = new Date();
     return repo.save(person);
