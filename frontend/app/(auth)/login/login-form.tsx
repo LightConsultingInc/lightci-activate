@@ -6,15 +6,39 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { signInWithPassword, type SignInResult } from "./actions"
+import { signInWithOrganization, signInWithPassword, type SignInResult } from "./actions"
 
 export function LoginForm({ authError }: { authError: boolean }) {
   const router = useRouter()
   const [state, action, pending] = useActionState<SignInResult | null, FormData>(signInWithPassword, null)
+  const [orgState, orgAction, orgPending] = useActionState<SignInResult | null, FormData>(signInWithOrganization, null)
 
   useEffect(() => {
-    if (state?.ok) router.replace("/")
-  }, [state, router])
+    if (state?.ok || orgState?.ok) router.replace("/")
+  }, [state, orgState, router])
+
+  // Second step: the account is in more than one organisation, so ask which one to open.
+  const choose = state && !state.ok && "chooseOrg" in state ? state.chooseOrg : null
+  if (choose) {
+    return (
+      <div className="mt-8 space-y-4" data-testid="login-choose-org">
+        <p className="text-sm text-muted-foreground">Your account belongs to more than one organisation. Which one do you want to open?</p>
+        <form action={orgAction} className="space-y-2">
+          <input type="hidden" name="pendingToken" value={choose.pendingToken} />
+          {choose.organizations.map((o) => (
+            <Button key={o.id} type="submit" name="organizationId" value={o.id} variant="outline" className="w-full justify-start" size="lg" disabled={orgPending} data-testid="login-org-option">
+              {o.name}
+            </Button>
+          ))}
+          {choose.organizations.length === 0 && <p className="text-sm text-fail">WorkOS did not list any organisations for this account.</p>}
+        </form>
+        {orgState && !orgState.ok && "error" in orgState && (
+          <p role="alert" className="rounded-md bg-fail-soft px-3 py-2 text-sm text-fail" data-testid="login-error">{orgState.error}</p>
+        )}
+        <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => router.refresh()}>Use a different account</button>
+      </div>
+    )
+  }
 
   return (
     <div className="mt-8 space-y-6">
@@ -27,9 +51,9 @@ export function LoginForm({ authError }: { authError: boolean }) {
           <Label htmlFor="password">Password</Label>
           <Input id="password" name="password" type="password" autoComplete="current-password" required />
         </div>
-        {(state && !state.ok) || authError ? (
+        {(state && !state.ok && "error" in state) || authError ? (
           <p role="alert" className="rounded-md bg-fail-soft px-3 py-2 text-sm text-fail" data-testid="login-error">
-            {state && !state.ok ? state.error : "We could not complete sign-in. Try again."}
+            {state && !state.ok && "error" in state ? state.error : "We could not complete sign-in. Try again."}
           </p>
         ) : null}
         <Button type="submit" className="w-full" size="lg" disabled={pending} data-testid="login-submit">
