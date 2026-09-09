@@ -42,8 +42,9 @@ module "service" {
   environment = merge(
     {
       NODE_ENV          = "production"
-      WEB_URL           = "https://${var.web_domain_name}"
-      CORS_ORIGINS      = "https://${var.web_domain_name}"
+      WEB_URL           = coalesce(var.public_web_url, "https://${var.web_domain_name}")
+      CORS_ORIGINS      = join(",", compact([var.public_web_url, "https://${var.web_domain_name}"]))
+      PUBLIC_API_URL    = "https://${var.domain_name}"
       LIBRARY_REPO_PATH = "/marketplace"
       MCP_APP_HTML      = "/mcp-app/dist/app.html"
       SEED_ON_BOOT      = "true"

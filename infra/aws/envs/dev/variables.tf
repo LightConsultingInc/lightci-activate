@@ -94,3 +94,9 @@ variable "web_secrets" {
   type        = map(string)
   default     = {}
 }
+
+variable "public_web_url" {
+  description = "Where people use the web app (the Vercel-hosted frontend). Drives WEB_URL and is allowed by CORS alongside the ECS web host."
+  type        = string
+  default     = ""
+}

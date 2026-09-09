@@ -4,8 +4,10 @@ vpc_cidr_block     = "10.80.0.0/16"
 enable_nat_gateway = false
 
 # ACM cert for *.lciventure.com; API and web hostnames alias to their ALBs.
-domain_name             = "lightci-activate-api.lciventure.com"
-web_domain_name         = "lightci-activate.lciventure.com"
+domain_name     = "lightci-activate-api.lciventure.com"
+web_domain_name = "lightci-activate.lciventure.com"
+# The frontend people actually use lives on Vercel; the ECS web host stays reachable too.
+public_web_url          = "https://activate.lightci.com"
 certificate_domain_name = "*.lciventure.com"
 hosted_zone_id          = "Z02709411RIL5VJ45VIDP"
 
