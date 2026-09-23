@@ -1564,6 +1564,26 @@ export function generateFillerExercises(rng: Rng): DemoExercise[] {
 
 // ───────────────────────────────────────── the service ─────────────────────────────────────────
 
+/** Tables keyed by personId; used by purges. */
+const PERSON_TABLES = [
+  'agent_runs',
+  'baselines',
+  'coach_notes',
+  'interview_sessions',
+  'lesson_personalisations',
+  'mastery_snapshots',
+  'measurements',
+  'placements',
+  'revisits',
+  'skill_adoptions',
+  'skill_comments',
+  'skill_usage',
+  'usage_snapshots',
+  'submissions',
+  'grades',
+  'exercises',
+] as const;
+
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SeedService.name);
@@ -1599,7 +1619,9 @@ export class SeedService implements OnApplicationBootstrap {
       await insertAll(m, Person, plan.people);
       await insertAll(m, ContextSource, plan.contextSources);
       await insertAll(m, ContextLayer, plan.contextLayers);
-      await insertAll(m, Competency, plan.competencies);
+      // The catalogue is global (unique codes): only the very first seed inserts it.
+      if ((await m.count(Competency)) === 0)
+        await insertAll(m, Competency, plan.competencies);
       await insertAll(m, Placement, plan.placements);
       await insertAll(m, InterviewSession, plan.interviews);
       await insertAll(m, WorkflowMap, plan.workflows);
@@ -1792,6 +1814,159 @@ export class SeedService implements OnApplicationBootstrap {
       `Populated ${theme.firmName} (${orgId}) with ${rows} demo rows.`,
     );
     return { rows, people: people.length, skills: plan.skills.length };
+  }
+
+  /**
+   * Remove one org's demo rows so they can be regenerated with fresh dates. People named in `keepEmails`
+   * survive untouched, along with everything hanging off them (exercises, attempts, memory, workflows,
+   * baselines, notes). With `dropOrg`, the org row itself goes too, so `run()` can reseed the demo firm.
+   * There are no foreign keys, so the deletes need no particular order.
+   */
+  async purgeOrg(
+    orgId: string,
+    opts: { keepEmails?: string[]; dropOrg?: boolean } = {},
+  ): Promise<{ deleted: Record<string, number> }> {
+    const keepEmails = (opts.keepEmails ?? []).map((e) => e.toLowerCase());
+    const q = async (sql: string, params: unknown[] = []): Promise<number> => {
+      const r = (await this.dataSource.query(sql, params)) as unknown;
+      return Array.isArray(r) && typeof r[1] === 'number' ? r[1] : 0;
+    };
+    const ids = async (sql: string, params: unknown[]): Promise<string[]> => {
+      const rows: unknown = await this.dataSource.query(sql, params);
+      return (rows as { id: string }[]).map((r) => r.id);
+    };
+
+    const keep = keepEmails.length
+      ? await ids(
+          `SELECT id FROM people WHERE "orgId" = $1 AND lower(email) = ANY($2)`,
+          [orgId, keepEmails],
+        )
+      : [];
+    // With dropOrg, the plan's org-less people (the LightCI lead) go too; otherwise their rows would block a reseed.
+    const gone = await ids(
+      opts.dropOrg
+        ? `SELECT id FROM people WHERE ("orgId" = $1 OR ("orgId" IS NULL AND lower(email) = ANY($3))) AND NOT (id = ANY($2))`
+        : `SELECT id FROM people WHERE "orgId" = $1 AND NOT (id = ANY($2))`,
+      opts.dropOrg
+        ? [orgId, keep, DEMO_PEOPLE.map((p) => p.email.toLowerCase())]
+        : [orgId, keep],
+    );
+    const teams = await ids(`SELECT id FROM teams WHERE "orgId" = $1`, [orgId]);
+    const skills = await ids(`SELECT id FROM skills WHERE "orgId" = $1`, [
+      orgId,
+    ]);
+    const workflows = await ids(
+      `SELECT id FROM workflow_maps WHERE "orgId" = $1 AND NOT ("ownerPersonId" = ANY($2))`,
+      [orgId, keep],
+    );
+    const exercises = await ids(
+      `SELECT id FROM exercises WHERE "personId" = ANY($1)`,
+      [gone],
+    );
+    const submissions = await ids(
+      `SELECT id FROM submissions WHERE "personId" = ANY($1) OR "exerciseId" = ANY($2)`,
+      [gone, exercises],
+    );
+
+    const deleted: Record<string, number> = {};
+    const del = async (table: string, where: string, params: unknown[]) => {
+      deleted[table] =
+        (deleted[table] ?? 0) +
+        (await q(`DELETE FROM "${table}" WHERE ${where}`, params));
+    };
+    // Rows owned by the people being removed.
+    for (const t of [
+      'agent_runs',
+      'baselines',
+      'coach_notes',
+      'interview_sessions',
+      'lesson_personalisations',
+      'mastery_snapshots',
+      'measurements',
+      'placements',
+      'revisits',
+      'skill_adoptions',
+      'skill_comments',
+      'skill_usage',
+      'usage_snapshots',
+    ])
+      await del(t, `"personId" = ANY($1)`, [gone]);
+    await del('grades', `"personId" = ANY($1) OR "submissionId" = ANY($2)`, [
+      gone,
+      submissions,
+    ]);
+    await del('submissions', `id = ANY($1)`, [submissions]);
+    await del('revisits', `"exerciseId" = ANY($1)`, [exercises]);
+    await del('exercises', `id = ANY($1)`, [exercises]);
+    // Org-level rows (skills, teams, waves…) and anything pointing at them.
+    await del('skill_versions', `"skillId" = ANY($1)`, [skills]);
+    await del('skill_adoptions', `"skillId" = ANY($1)`, [skills]);
+    await del('skill_comments', `"skillId" = ANY($1)`, [skills]);
+    await del('skill_usage', `"skillId" = ANY($1) OR "teamId" = ANY($2)`, [
+      skills,
+      teams,
+    ]);
+    await del('skills', `id = ANY($1)`, [skills]);
+    await del('measurements', `"workflowMapId" = ANY($1)`, [workflows]);
+    await del('baselines', `"workflowMapId" = ANY($1)`, [workflows]);
+    await del('workflow_maps', `id = ANY($1)`, [workflows]);
+    for (const t of [
+      'promotion_requests',
+      'skill_assignments',
+      'readouts',
+      'waves',
+      'escalations',
+      'audit_log',
+    ])
+      await del(t, `"orgId" = $1`, [orgId]);
+    await del(
+      'interview_sessions',
+      `"orgId" = $1 AND NOT ("personId" = ANY($2))`,
+      [orgId, keep],
+    );
+    await del(
+      'usage_snapshots',
+      `"orgId" = $1 AND NOT ("personId" = ANY($2))`,
+      [orgId, keep],
+    );
+    await del('agent_runs', `"orgId" = $1 AND NOT ("personId" = ANY($2))`, [
+      orgId,
+      keep,
+    ]);
+    // Team and company context, but never a kept person's own memory layer.
+    for (const t of ['context_layers', 'context_sources'])
+      await del(
+        t,
+        `"orgId" = $1 AND NOT (layer = 'person' AND "ownerId" = ANY($2))`,
+        [orgId, keep],
+      );
+    await del('teams', `id = ANY($1)`, [teams]);
+    await del('people', `id = ANY($1)`, [gone]);
+    if (opts.dropOrg) {
+      for (const t of ['cost_inputs', 'org_integrations'])
+        await del(t, `"orgId" = $1`, [orgId]);
+      await del('orgs', `id = $1`, [orgId]);
+    }
+    this.logger.warn(
+      `Purged org ${orgId}: ${Object.entries(deleted)
+        .filter(([, n]) => n)
+        .map(([t, n]) => `${t} ${n}`)
+        .join(', ')}; kept ${keep.length} people.`,
+    );
+    return { deleted };
+  }
+
+  /** Delete person-scoped rows whose person no longer exists (left by an interrupted purge), and the plan's org-less people. */
+  async purgeOrphans(): Promise<void> {
+    await this.dataSource.query(
+      `DELETE FROM people WHERE "orgId" IS NULL AND lower(email) = ANY($1)`,
+      [DEMO_PEOPLE.map((p) => p.email.toLowerCase())],
+    );
+    for (const t of PERSON_TABLES)
+      await this.dataSource.query(
+        `DELETE FROM "${t}" WHERE "personId" IS NOT NULL AND "personId" NOT IN (SELECT id FROM people)`,
+      );
+    this.logger.warn('Removed orphaned person-scoped rows.');
   }
 
   /** Wipe every entity table (not migrations) and reseed. */

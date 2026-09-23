@@ -13,6 +13,10 @@ node scripts/workos-demo.mjs            # one-time: demo WorkOS org + sign-in us
 ./scripts/dev.sh                        # postgres :5439, api :4310, web :3000 (seeds the demo org on first boot)
 ```
 
+### Refresh demo data with today's dates
+
+Seeded data is dated relative to the day it was generated, so after a couple of weeks adoption charts trail off to zero. `node api/dist/seed/refresh-demo.cli.js meridian` drops and reseeds the demo firm whole. `node api/dist/seed/refresh-demo.cli.js <org slug or id> "<Firm Name>" <ShortName> <domain> keep@one.com,keep@two.com` purges another org's populated rows, keeping the named people and everything attached to them (exercises, attempts, memory, workflows, baselines), then populates it again. Build the API first.
+
 ### Make a fresh client org look live
 
 `node api/dist/seed/populate.cli.js <orgId> "<Firm Name>" <ShortName> <email-domain>` (or `POST /api/admin/seed/populate/:orgId` as an admin) fills an existing org with the demo firm's teams, people, skills, practice history, usage, baselines and readouts, renamed for that firm. It touches nothing already in the org: your own person, exercises, memory and workflows stay as they are. Run `cd api && yarn build` first.
