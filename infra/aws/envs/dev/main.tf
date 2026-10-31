@@ -42,14 +42,22 @@ module "service" {
   environment = merge(
     {
       NODE_ENV          = "production"
+      ACTIVATE_EDITION  = "cloud"
       WEB_URL           = coalesce(var.public_web_url, "https://${var.web_domain_name}")
       CORS_ORIGINS      = join(",", compact([var.public_web_url, "https://${var.web_domain_name}"]))
       PUBLIC_API_URL    = "https://${var.domain_name}"
       LIBRARY_REPO_PATH = "/marketplace"
       MCP_APP_HTML      = "/mcp-app/dist/app.html"
-      SEED_ON_BOOT      = "true"
-      AI_PROVIDER       = "live"
-      ANTHROPIC_MODEL   = "claude-opus-5"
+      # Dev is a demo cell: the image is built with DEMO_MARKETPLACE=1 and seeds Meridian on boot.
+      # Production builds refuse SEED_ON_BOOT unless ACTIVATE_ALLOW_SEED is set, so say so explicitly.
+      SEED_ON_BOOT        = "true"
+      ACTIVATE_ALLOW_SEED = "true"
+      LEAD_EMAIL_DOMAINS  = "lightci.com"
+      # Until the deploy pipeline runs `activate migrate` as its own step, keep boot-time migrations on.
+      MIGRATIONS_RUN_ON_BOOT = "true"
+      DB_SSL_MODE            = "verify-full"
+      AI_PROVIDER            = "live"
+      ANTHROPIC_MODEL        = "claude-opus-5"
     },
     var.extra_environment,
   )

@@ -54,11 +54,31 @@ resource "aws_secretsmanager_secret" "db" {
   tags = var.tags
 }
 
+# Require TLS on every client connection. The API verifies the RDS CA (DB_SSL_MODE=verify-full)
+# with the bundle it ships; force_ssl makes sure nothing else connects in the clear.
+resource "aws_db_parameter_group" "this" {
+  name   = "${var.name}-pg"
+  family = "${var.engine}${split(".", var.engine_version)[0]}"
+
+  parameter {
+    name         = "rds.force_ssl"
+    value        = var.force_ssl ? "1" : "0"
+    apply_method = "immediate"
+  }
+
+  tags = var.tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "aws_db_instance" "this" {
   identifier                   = "${var.name}-db"
   engine                       = var.engine
   engine_version               = var.engine_version
   instance_class               = var.instance_class
+  parameter_group_name         = aws_db_parameter_group.this.name
   allocated_storage            = var.allocated_storage
   max_allocated_storage        = var.max_allocated_storage
   storage_type                 = var.storage_type

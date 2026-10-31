@@ -1,8 +1,12 @@
 import { join } from 'path';
 
-import { DataSource } from 'typeorm';
+import { DataSource, type DataSourceOptions } from 'typeorm';
+
+type PostgresSsl = Extract<DataSourceOptions, { type: 'postgres' }>['ssl'];
 
 import 'dotenv/config';
+import { buildSslOptions } from './config/db-ssl';
+import { dbSslMode, migrationsRunOnBoot } from './config/env';
 
 interface DbSecret {
   host?: string;
@@ -25,12 +29,14 @@ const DB_USERNAME = DB.username ?? process.env.DB_USERNAME ?? 'postgres';
 const DB_PASSWORD = DB.password ?? process.env.DB_PASSWORD ?? 'postgres';
 const DB_DATABASE = DB.dbname ?? process.env.DB_DATABASE ?? 'lightci_activate';
 
-// The RDS cluster enforces rds.force_ssl, so any non-local connection must
-// use TLS. Local docker Postgres has no server certificate, so keep local
-// connections plain. RDS terminates TLS with an Amazon-internal CA; we rely
-// on transport encryption (the force_ssl goal) rather than CA verification.
-const isLocalDb = DB_HOST === 'localhost' || DB_HOST === '127.0.0.1';
-const DB_SSL = process.env.DB_SSL ? process.env.DB_SSL === 'true' : !isLocalDb;
+// TLS follows libpq's sslmode vocabulary (DB_SSL_MODE). Non-local hosts default
+// to verify-full; RDS hosts verify against the bundled AWS CA unless
+// DB_SSL_CA_FILE points elsewhere. See config/db-ssl.ts.
+const SSL = buildSslOptions(
+  dbSslMode(process.env, DB_HOST),
+  process.env.DB_SSL_CA_FILE,
+  DB_HOST,
+);
 
 const AppDataSource = new DataSource({
   type: 'postgres',
@@ -39,12 +45,15 @@ const AppDataSource = new DataSource({
   username: DB_USERNAME,
   password: DB_PASSWORD,
   database: DB_DATABASE,
-  ssl: DB_SSL ? { rejectUnauthorized: false } : false,
+  // pg forwards these to tls.connect(); its declared type omits checkServerIdentity.
+  ssl: SSL as PostgresSsl,
   synchronize: false,
   entities: [join(__dirname, '**', '*.entity.{ts,js}')],
   subscribers: [join(__dirname, '**', '*.subscriber.{ts,js}')],
   migrations: [join(__dirname, 'database', 'migrations', '*.{ts,js}')],
-  migrationsRun: true,
+  // Development runs migrations on boot. Production runs `activate migrate` as a
+  // step before pods roll (MIGRATIONS_RUN_ON_BOOT=true restores the old behaviour).
+  migrationsRun: migrationsRunOnBoot(),
   migrationsTransactionMode: 'each',
   logging: false,
 });

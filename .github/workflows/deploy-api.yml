@@ -44,13 +44,16 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # API image carries the MCP app bundle and the demo marketplace repo (root build context).
+      # API image carries the MCP app bundle (root build context). Dev is a demo cell, so it also
+      # carries the demo marketplace; release builds leave DEMO_MARKETPLACE at its default of 0.
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: api/Dockerfile
           platforms: linux/amd64
           push: true
+          build-args: |
+            DEMO_MARKETPLACE=1
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.API_ECR_REPOSITORY }}:latest
             ${{ steps.ecr.outputs.registry }}/${{ env.API_ECR_REPOSITORY }}:${{ github.sha }}

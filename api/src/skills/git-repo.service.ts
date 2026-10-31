@@ -3,6 +3,7 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   realpathSync,
   writeFileSync,
 } from 'node:fs';
@@ -44,6 +45,13 @@ export class GitRepoService implements OnModuleInit {
     this.sourcePath = resolveRepoPath(
       process.env.LIBRARY_REPO_PATH ?? '../marketplace',
     );
+    // An empty folder (the release image ships /marketplace empty) counts as no marketplace.
+    if (
+      this.sourcePath &&
+      existsSync(this.sourcePath) &&
+      readdirSync(this.sourcePath).length === 0
+    )
+      this.sourcePath = null;
     this.path = this.sourcePath;
     if (!this.sourcePath || !existsSync(this.sourcePath))
       this.logger.warn(

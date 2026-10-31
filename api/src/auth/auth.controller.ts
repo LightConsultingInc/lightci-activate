@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
 import { Repository } from 'typeorm';
-import { CurrentUser, OrgId, Public } from '../common/decorators';
+import { CurrentUser, OrgId, Public, Roles } from '../common/decorators';
 import { RUNG_META } from '../common/roles';
 import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
@@ -129,6 +129,7 @@ export class AuthController {
   }
 
   @Post('invites')
+  @Roles('champion', 'admin')
   @ApiOperation({
     summary: 'Invite a person by email via WorkOS (org-scoped).',
   })

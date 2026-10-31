@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -8,12 +9,33 @@ import {
 import { Reflector } from '@nestjs/core';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { IS_PUBLIC } from '../common/decorators';
-import { requestContext } from '../common/request-context';
+import { currentStore, requestContext } from '../common/request-context';
 import type { Person } from '../orgs/entities/person.entity';
 import { PeopleService } from './people.service';
 import { WorkosService } from './workos.service';
 
 const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
+
+/** The Express request once the guard has run. */
+export interface AuthedRequest {
+  headers: Record<string, string | string[] | undefined>;
+  user?: Person;
+  orgId?: string | null;
+}
+
+/**
+ * The org a request acts in. Only leads may pick one with `X-Activate-Org`;
+ * everyone else is bound to their own org, and the header is ignored.
+ */
+export function resolveOrgId(
+  user: Person | null | undefined,
+  header: unknown,
+): string | null {
+  const override = typeof header === 'string' && header ? header : null;
+  if (!user) return null;
+  if (user.roles.includes('lead')) return override ?? user.orgId ?? null;
+  return user.orgId ?? null;
+}
 
 interface WorkosClaims extends JWTPayload {
   org_id?: string;
@@ -41,13 +63,16 @@ export class WorkosGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (context.getType() !== 'http') return true;
-    const req = context.switchToHttp().getRequest();
+    const req = context.switchToHttp().getRequest<AuthedRequest>();
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    const token = this.extractToken(req.headers.authorization);
+    const authorization = req.headers.authorization;
+    const token = this.extractToken(
+      typeof authorization === 'string' ? authorization : undefined,
+    );
     let user: Person | null = null;
     // Dev-only impersonation for local MCP clients (see mcp.service.ts / MCP_DEV_USER_EMAIL).
     const devUser =
@@ -72,17 +97,20 @@ export class WorkosGuard implements CanActivate {
 
     if (!user && !isPublic) throw new UnauthorizedException('Sign in required');
 
-    const orgOverride =
-      typeof req.headers['x-activate-org'] === 'string'
-        ? req.headers['x-activate-org']
-        : null;
-    const orgId =
-      user?.roles.includes('lead') && orgOverride
-        ? orgOverride
-        : (user?.orgId ?? orgOverride ?? null);
+    const orgId = resolveOrgId(user, req.headers['x-activate-org']);
+    // Someone who signed in before their company was set up has no org to act in.
+    // Say so plainly instead of letting the header pick one.
+    if (user && !isPublic && !orgId && !user.roles.includes('lead'))
+      throw new ForbiddenException(
+        "Your company isn't set up in Activate yet. Ask your administrator to finish setup, then sign in again.",
+      );
     req.user = user ?? undefined;
     req.orgId = orgId;
-    requestContext.enterWith({ user: user ?? undefined, orgId });
+    requestContext.enterWith({
+      ...currentStore(),
+      user: user ?? undefined,
+      orgId,
+    });
     return true;
   }
 

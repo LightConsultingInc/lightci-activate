@@ -5,10 +5,7 @@ import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
 import type { Role } from '../common/roles';
 import type { WorkosProfile } from './workos.service';
-
-const LEAD_DOMAINS = (process.env.LEAD_EMAIL_DOMAINS ?? 'lightci.com')
-  .split(',')
-  .map((d) => d.trim().toLowerCase());
+import { leadEmailDomains } from '../config/env';
 
 @Injectable()
 export class PeopleService {
@@ -82,7 +79,7 @@ export class PeopleService {
       [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
       email.split('@')[0];
     const domain = email.split('@')[1] ?? '';
-    const isLead = LEAD_DOMAINS.includes(domain);
+    const isLead = leadEmailDomains().includes(domain);
 
     // LightCI leads are never bound to one client: they switch orgs per request (X-Activate-Org).
     let orgId: string | null = isLead ? null : (person?.orgId ?? null);
@@ -110,8 +107,12 @@ export class PeopleService {
         lastSeenAt: new Date(),
         cohortWeek: new Date().toISOString().slice(0, 10),
       });
-      this.logger.log(`Provisioned ${email} (${roles.join(',')})`);
-      return repo.save(person);
+      const saved = await repo.save(person);
+      // Log the row, not the address: addresses stay out of log pipelines.
+      this.logger.log(
+        `Provisioned person ${saved.id} at ${domain} (${roles.join(',')})`,
+      );
+      return saved;
     }
 
     person.workosUserId = person.workosUserId ?? profile.id;

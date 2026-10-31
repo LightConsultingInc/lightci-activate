@@ -42,6 +42,12 @@ variable "instance_class" {
   default = "db.t4g.micro"
 }
 
+variable "force_ssl" {
+  description = "Set rds.force_ssl so every client connection must use TLS."
+  type        = bool
+  default     = true
+}
+
 variable "allocated_storage" {
   type    = number
   default = 20

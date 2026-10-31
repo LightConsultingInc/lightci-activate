@@ -1,0 +1,85 @@
+import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
+import type { Person } from '../orgs/entities/person.entity';
+
+// jose ships ESM only; the JWT path is stubbed here and covered by the identity tests in WS1.
+jest.mock('jose', () => ({
+  createRemoteJWKSet: jest.fn(),
+  jwtVerify: jest.fn(),
+}));
+
+// ts-jest hoists jest.mock above this import.
+import { WorkosGuard, resolveOrgId } from './workos.guard';
+
+const person = (over: Partial<Person>): Person =>
+  ({ id: 'p1', roles: ['learner'], orgId: 'org-a', ...over }) as Person;
+
+describe('resolveOrgId (T0.4)', () => {
+  it('binds everyone but leads to their own org', () => {
+    expect(resolveOrgId(person({}), 'org-b')).toBe('org-a');
+    expect(resolveOrgId(person({ roles: ['admin'] }), 'org-b')).toBe('org-a');
+    expect(resolveOrgId(person({ orgId: null }), 'org-b')).toBeNull();
+  });
+
+  it('lets a lead switch orgs with the header', () => {
+    expect(
+      resolveOrgId(person({ roles: ['lead'], orgId: null }), 'org-b'),
+    ).toBe('org-b');
+    expect(
+      resolveOrgId(person({ roles: ['lead'], orgId: null }), undefined),
+    ).toBeNull();
+    expect(resolveOrgId(person({ roles: ['lead'], orgId: 'home' }), '')).toBe(
+      'home',
+    );
+  });
+
+  it('ignores the header for anonymous requests', () => {
+    expect(resolveOrgId(null, 'org-b')).toBeNull();
+  });
+});
+
+describe('WorkosGuard.canActivate (T0.4)', () => {
+  function build(user: Person | null, isPublic = false) {
+    const reflector = { getAllAndOverride: () => isPublic } as never;
+    const people = { findByEmail: () => Promise.resolve(null) } as never;
+    const workos = { enabled: false } as never;
+    const guard = new WorkosGuard(reflector, people, workos);
+    // Short-circuit token resolution: the JWT path is covered in WS1 identity tests.
+    guard.resolveUser = () => Promise.resolve(user);
+    const req: Record<string, unknown> = {
+      headers: { authorization: 'Bearer t', 'x-activate-org': 'org-b' },
+    };
+    const ctx = {
+      getType: () => 'http',
+      getHandler: () => undefined,
+      getClass: () => undefined,
+      switchToHttp: () => ({ getRequest: () => req }),
+    } as unknown as ExecutionContext;
+    return { guard, ctx, req };
+  }
+
+  it('refuses an org-less non-lead on a protected route with a plain message', async () => {
+    const { guard, ctx } = build(person({ orgId: null }));
+    await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      /isn't set up in Activate yet/,
+    );
+  });
+
+  it('lets an org-less non-lead through a public route with no org', async () => {
+    const { guard, ctx, req } = build(person({ orgId: null }), true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.orgId).toBeNull();
+  });
+
+  it('scopes a member to their own org regardless of the header', async () => {
+    const { guard, ctx, req } = build(person({}));
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.orgId).toBe('org-a');
+  });
+
+  it('scopes a lead to the header org', async () => {
+    const { guard, ctx, req } = build(person({ roles: ['lead'], orgId: null }));
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.orgId).toBe('org-b');
+  });
+});
