@@ -55,7 +55,7 @@
     "prom-client": "^15",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "simple-git": "^3.36.0",
+    "simple-git": "^4.0.2",
     "typeorm": "^1.1.1",
     "uuid": "^14.0.2",
     "yaml": "^2.9.0",
@@ -109,5 +109,8 @@
       "/node_modules/(?!jose/)"
     ]
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "resolutions": {
+    "proxy-addr": "^2.0.8"
+  }
 }
