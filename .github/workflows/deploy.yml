@@ -1,0 +1,71 @@
+name: Deploy cells
+
+# A release tag rolls through LightCI's cells in order: us-prod, then eu-prod. Each cell is a GitHub
+# environment with required reviewers. Per cell: terraform apply with the new image tag, run the
+# one-shot migrate task and wait for exit 0, roll the services, check /api/ready, then bake for
+# 30 minutes with no 5xx from the people load balancer before the next cell starts (T5.6).
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release to deploy (without the v)
+        required: true
+      cells:
+        description: Comma-separated cells to deploy (us,eu)
+        default: us,eu
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  BAKE_MINUTES: "30"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      cells: ${{ steps.v.outputs.cells }}
+    steps:
+      - id: v
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"; echo "cells=${{ inputs.cells }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"; echo "cells=us,eu" >> "$GITHUB_OUTPUT"
+          fi
+      - name: The release must exist (signed images, chart, notes)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "v${{ steps.v.outputs.version }}" --repo ${{ github.repository }} > /dev/null
+
+  us-prod:
+    needs: version
+    if: contains(needs.version.outputs.cells, 'us')
+    uses: ./.github/workflows/deploy-cell.yml
+    with:
+      cell: us
+      region: us-east-1
+      root: infra/aws/envs/us-prod
+      version: ${{ needs.version.outputs.version }}
+      api_url: https://api.activate.lightci.com
+      bake_minutes: 30
+    secrets:
+      role_arn: ${{ secrets.AWS_DEPLOY_ROLE_US }}
+
+  eu-prod:
+    needs: [version, us-prod]
+    if: contains(needs.version.outputs.cells, 'eu') && (needs.us-prod.result == 'success' || needs.us-prod.result == 'skipped')
+    uses: ./.github/workflows/deploy-cell.yml
+    with:
+      cell: eu
+      region: eu-central-1
+      root: infra/aws/envs/eu-prod
+      version: ${{ needs.version.outputs.version }}
+      api_url: https://api.eu.activate.lightci.com
+      bake_minutes: 30
+    secrets:
+      role_arn: ${{ secrets.AWS_DEPLOY_ROLE_EU }}

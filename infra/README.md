@@ -9,7 +9,7 @@ infra/
   config/              # ignored deploy env files + checked-in examples
   aws/
     modules/           # reusable building blocks (network, database, service)
-    envs/{dev,prod}/   # root modules — `terraform apply` runs here
+    envs/{dev,us-prod,eu-prod}/   # root modules — `terraform apply` runs here (the prod cells use deploy/terraform/aws)
   scripts/deploy.sh    # terraform + image push + ECS rollout wrapper
   helm/langfuse/       # Helm chart for self-hosted Langfuse (LLM observability)
 ```
@@ -67,3 +67,15 @@ and set the "Sign-in endpoint" (initiate login URI) to `https://lightci-activate
 ## MCP connector
 
 Claude Enterprise owners add `https://lightci-activate-api.lciventure.com/mcp` as an org-level custom connector. The server publishes OAuth protected-resource metadata pointing at WorkOS; users sign in with their firm identity.
+
+
+## Production cells (us-prod, eu-prod)
+
+`envs/us-prod` (us-east-1, 10.90.0.0/16) and `envs/eu-prod` (eu-central-1, 10.100.0.0/16) run the cloud edition from the same module customers use, `deploy/terraform/aws`. Each cell is self-contained in its region: state bucket and lock table (`backend.tf`), Secrets Manager entries, KMS, RDS with Multi-AZ and 35-day PITR, EFS, logs. Before the first `terraform apply` in a cell:
+
+1. Create the state bucket and lock table named in `backend.tf`.
+2. Create the secrets referenced in `terraform.tfvars`: the cell's WorkOS environment (`{"api-key","client-id"}`), the Anthropic key, the encryption key (`openssl rand -base64 32`, backed up with the database), the GHCR pull credentials, and for the US cell the OpenAI key (voice stays off in the EU cell).
+3. Put the lightci.com hosted zone id in `terraform.tfvars`.
+4. In GitHub: environments `us-prod` and `eu-prod` with required reviewers; secrets `AWS_DEPLOY_ROLE_US` / `AWS_DEPLOY_ROLE_EU` (OIDC roles the workflow assumes).
+
+`.github/workflows/deploy.yml` then rolls every release tag through us-prod and eu-prod in order: apply, snapshot, migrate task, roll, `/api/ready`, a 30-minute bake with no 5xx. `infra/cells.json` is the list the website's sign-in router reads.
