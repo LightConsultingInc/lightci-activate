@@ -119,8 +119,16 @@ export const useLeadClient = (id: string) => useQuery({ queryKey: ["lead", "clie
 export function useLeadMutations() {
   const qc = useQueryClient()
   const done = () => qc.invalidateQueries({ queryKey: ["lead"] })
-  const provision = useMutation({ mutationFn: (body: { name: string; slug: string; workosOrganizationId?: string; industry?: string; sponsorName?: string; seats: number }) => api.post<Org>("/api/lead/clients", body), onSuccess: done })
+  const provision = useMutation({
+    mutationFn: (body: { name: string; slug: string; emailDomains?: string; createIdentityOrganization?: boolean; workosOrganizationId?: string; industry?: string; sponsorName?: string; seats: number }) =>
+      api.post<Org>("/api/lead/clients", body),
+    onSuccess: done,
+  })
+  /** One-time Admin Portal link so the client's IT admin connects SSO or their directory themselves. */
+  const portalLink = useMutation({
+    mutationFn: ({ id, intent }: { id: string; intent: "sso" | "dsync" }) => api.post<{ url: string; intent: "sso" | "dsync" }>(`/api/lead/clients/${id}/portal-link`, { intent, returnUrl: window.location.origin }),
+  })
   const resolve = useMutation({ mutationFn: ({ id, resolution }: { id: string; resolution: string }) => api.post<Escalation>(`/api/escalations/${id}/resolve`, { resolution }), onSuccess: done })
   const assign = useMutation({ mutationFn: ({ id, personId }: { id: string; personId: string }) => api.post<Escalation>(`/api/escalations/${id}/assign`, { personId }), onSuccess: done })
-  return { provision, resolve, assign }
+  return { provision, portalLink, resolve, assign }
 }

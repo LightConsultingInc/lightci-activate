@@ -14,7 +14,13 @@ export interface ComplianceBoundary {
   humanReviewPoints: string[];
 }
 
+/** How sign-ins from this org's identity provider become Activate roles (see auth/role-mapping.ts). */
+export interface IdentitySettings {
+  roleMapping?: Partial<Record<'admin' | 'sponsor' | 'champion', string[]>>;
+}
+
 export interface OrgSettings {
+  identity?: IdentitySettings;
   usagePolicy?: string;
   boundary?: ComplianceBoundary;
   leaderboardsEnabled?: boolean;
@@ -43,6 +49,8 @@ export class Org {
   @Index({ unique: true })
   @Column('text', { nullable: true })
   workosOrganizationId: string | null;
+  /** Email domains that belong to this company; sign-in routes them to its SSO. */
+  @Column('text', { array: true, default: '{}' }) emailDomains: string[];
   @Column('text', { default: 'lightci_hosted' }) residencyMode:
     'client_hosted' | 'lightci_hosted';
   @Column('text', { nullable: true }) industry: string | null;

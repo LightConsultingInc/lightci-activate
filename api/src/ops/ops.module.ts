@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClaudeEnterpriseModule } from '../claude-enterprise/claude-enterprise.module';
 import { OrgsModule } from '../orgs/orgs.module';
+import { AuthModule } from '../auth/auth.module';
 import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
 import { Team } from '../orgs/entities/team.entity';
@@ -76,6 +77,7 @@ import { TeamService } from './team.service';
     ]),
     ClaudeEnterpriseModule,
     OrgsModule,
+    AuthModule,
   ],
   controllers: [
     TeamController,

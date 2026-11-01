@@ -1,12 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowUpRightIcon, Building2Icon, KeyRoundIcon } from "lucide-react"
+import { toast } from "sonner"
+import { ArrowUpRightIcon, Building2Icon, KeyRoundIcon, ShieldCheckIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/shell/page-header"
-import { useLeadClient } from "@/hooks/mc/use-mc"
+import { useLeadClient, useLeadMutations } from "@/hooks/mc/use-mc"
 import type { IntegrationSummary, LeadClientDetail } from "@/hooks/mc/types"
+import { ApiError } from "@/lib/api"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { Panel, QueryState } from "@/components/mission-control/states"
@@ -27,6 +29,54 @@ export function ClientDetail({ id }: { id: string }) {
 function switchAndGo(orgId: string, href: string) {
   document.cookie = `activate_org=${encodeURIComponent(orgId)}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
   window.location.assign(href)
+}
+
+/**
+ * Single sign-on for this client. LightCI never configures the IdP: the buttons mint a
+ * one-time Admin Portal link that the client's IT admin opens to connect SSO or a directory.
+ */
+function IdentityPanel({ c }: { c: LeadClientDetail }) {
+  const { portalLink } = useLeadMutations()
+  const org = c.org
+  const sso = (c.setup?.steps ?? c.checklist?.steps ?? []).find((s) => s.key === "sso")
+  const open = (intent: "sso" | "dsync") =>
+    portalLink.mutate(
+      { id: org.id, intent },
+      {
+        onSuccess: ({ url }) => {
+          window.open(url, "_blank", "noopener")
+          toast.success(intent === "sso" ? "Single sign-on setup link opened" : "Directory setup link opened", { description: "Send this link to the client's IT admin, or walk through it with them. It works once." })
+        },
+        onError: (err) => toast.error("Couldn't create the setup link", { description: err instanceof ApiError ? err.detail : String(err) }),
+      },
+    )
+  return (
+    <Panel title={<span className="inline-flex items-center gap-2"><ShieldCheckIcon className="size-4" /> Single sign-on</span>} description="The client connects their own identity provider. Roles follow their IdP groups on every sign-in." testId="client-identity">
+      <dl className="grid gap-2 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <dt className="text-muted-foreground">Status</dt>
+          <dd>
+            <Badge variant="outline" className={cn("text-foreground", sso?.done ? "border-pass/40 bg-pass-soft" : "text-muted-foreground")} data-testid="client-sso-status">
+              {!org.workosOrganizationId ? "No identity organisation" : sso?.done ? "Connected" : "Waiting for the client"}
+            </Badge>
+          </dd>
+        </div>
+        <div className="flex items-start justify-between gap-2">
+          <dt className="text-muted-foreground">Email domains</dt>
+          <dd className="text-right font-mono text-xs" data-testid="client-domains">{(org.emailDomains ?? []).length ? (org.emailDomains ?? []).join(", ") : "none yet"}</dd>
+        </div>
+        {sso?.detail && <p className="text-xs text-muted-foreground">{sso.detail}</p>}
+      </dl>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="xs" onClick={() => open("sso")} disabled={!org.workosOrganizationId || portalLink.isPending} data-testid="client-sso-link">
+          Set up single sign-on <ArrowUpRightIcon data-icon="inline-end" />
+        </Button>
+        <Button size="xs" variant="outline" onClick={() => open("dsync")} disabled={!org.workosOrganizationId || portalLink.isPending} data-testid="client-dsync-link">
+          Connect their directory <ArrowUpRightIcon data-icon="inline-end" />
+        </Button>
+      </div>
+    </Panel>
+  )
 }
 
 function Inner({ id }: { id: string }) {
@@ -88,6 +138,7 @@ function Body({ c }: { c: LeadClientDetail }) {
             </div>
           </Panel>
           <div className="space-y-4">
+            <IdentityPanel c={c} />
             <Panel title={<span className="inline-flex items-center gap-2"><KeyRoundIcon className="size-4" /> Integrations</span>} description="Read-only. The client admin uploads keys on their Integrations & Keys page." testId="client-integrations">
               {integrations.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No integration summary returned.</p>

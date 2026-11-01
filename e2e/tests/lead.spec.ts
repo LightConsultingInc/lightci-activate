@@ -1,5 +1,8 @@
 import { test, expect } from "./helpers/fixtures"
+import { API_URL, api } from "./helpers/api"
 import { expectToast, intOf } from "./helpers/ui"
+import { USERS } from "./helpers/users"
+import { readApiEnv, workosPasswordToken } from "./helpers/workos"
 
 const COLUMNS = ["escalations", "approvals", "stalled", "waves"] as const
 
@@ -9,6 +12,8 @@ test.describe("lead console", () => {
   test.use({ role: "lead" })
 
   let clientName = ""
+  let clientDomain = ""
+  let clientId = ""
 
   test("four queue columns render with counts", async ({ page }) => {
     await page.goto("/lead")
@@ -108,20 +113,95 @@ test.describe("lead console", () => {
     await dialog.getByTestId("provision-seats").fill("12")
     await dialog.getByTestId("provision-industry").fill("Wealth management")
     await dialog.getByTestId("provision-sponsor").fill("E2E Sponsor, COO")
+    // Creating the identity organisation needs at least one email domain.
+    await expect(dialog.getByTestId("provision-create-identity")).toBeChecked()
+    await expect(dialog.getByTestId("provision-submit")).toBeDisabled()
+    clientDomain = `${await dialog.getByTestId("provision-slug").inputValue()}.example`
+    await dialog.getByTestId("provision-domains").fill(`${clientDomain}, not a domain`)
     await expect(dialog.getByTestId("provision-submit")).toBeEnabled()
     await dialog.getByTestId("provision-submit").click()
     await expectToast(page, new RegExp(`${clientName} provisioned`))
     await expect(page).toHaveURL(/\/lead\/clients\/[0-9a-f-]{36}/)
+    clientId = page.url().match(/\/lead\/clients\/([0-9a-f-]{36})/)?.[1] ?? ""
     await expect(page.getByTestId("client-detail")).toBeVisible()
     await expect(page.getByRole("heading", { level: 1 })).toContainText(clientName)
     await expect(page.getByTestId("client-detail")).toContainText("of 12 seats")
     await expect(page.getByTestId("setup-checklist")).toBeVisible()
     await expect(page.getByTestId("setup-checklist")).toHaveAttribute("data-total", "8")
 
+    // The identity organisation was really created in WorkOS; the client has not connected SSO yet.
+    const identity = page.getByTestId("client-identity")
+    await expect(identity.getByTestId("client-sso-status")).toHaveText("Waiting for the client")
+    await expect(identity.getByTestId("client-domains")).toHaveText(clientDomain)
+    await expect(page.getByTestId("setup-step-sso")).toHaveAttribute("data-done", "false")
+
     await page.goto("/lead/clients")
     await expect(page.getByTestId("clients-table").getByTestId("client-row").filter({ hasText: clientName })).toBeVisible()
     await page.getByTestId("client-switcher").click()
     await expect(page.getByTestId("client-switcher-option").filter({ hasText: clientName })).toBeVisible()
     await page.keyboard.press("Escape")
+  })
+
+  test("sign-in lookup routes the new client's domain to SSO and the demo org to a password", async ({ page, request }) => {
+    expect(clientId, "provisioning test must run first").toBeTruthy()
+    const detail = await api<{ org: { workosOrganizationId: string | null; emailDomains: string[] } }>(page, "GET", `/api/lead/clients/${clientId}`)
+    expect(detail.org.workosOrganizationId).toMatch(/^org_/)
+    expect(detail.org.emailDomains).toEqual([clientDomain])
+
+    const sso = await (await request.get(`${API_URL}/api/auth/lookup?email=${encodeURIComponent(`someone@${clientDomain}`)}`)).json()
+    expect(sso).toEqual({ mode: "sso", organizationId: detail.org.workosOrganizationId, passwordAllowed: false })
+    const demo = await (await request.get(`${API_URL}/api/auth/lookup?email=priya.nair@meridianwealth.demo`)).json()
+    expect(demo).toEqual({ mode: "password", passwordAllowed: true })
+    const unknown = await (await request.get(`${API_URL}/api/auth/lookup?email=nobody@nowhere-at-all.example`)).json()
+    expect(unknown).toEqual({ mode: "unknown", passwordAllowed: true })
+    const malformed = await (await request.get(`${API_URL}/api/auth/lookup?email=garbage`)).json()
+    expect(malformed).toEqual({ mode: "unknown", passwordAllowed: true })
+  })
+
+  test("the login page sends a company with SSO straight to it", async ({ browser }) => {
+    expect(clientDomain, "provisioning test must run first").toBeTruthy()
+    const ctx = await browser.newContext({ storageState: undefined })
+    const page = await ctx.newPage()
+    await page.goto("/login")
+    await page.getByTestId("login-email").fill(`someone@${clientDomain}`)
+    await page.getByTestId("login-continue").click()
+    // /sign-in redirects to hosted AuthKit for that organisation; the password field never appears.
+    await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 })
+    await expect(page.getByLabel("Password")).toHaveCount(0)
+    await ctx.close()
+  })
+
+  test("the SSO setup button opens a one-time WorkOS Admin Portal link", async ({ page }) => {
+    expect(clientId, "provisioning test must run first").toBeTruthy()
+    await page.goto(`/lead/clients/${clientId}`)
+    const popup = page.waitForEvent("popup")
+    await page.getByTestId("client-sso-link").click()
+    const portal = await popup
+    await portal.waitForLoadState("domcontentloaded")
+    expect(portal.url()).toMatch(/workos\.com/)
+    await portal.close()
+    await expectToast(page, /Single sign-on setup link opened/)
+  })
+
+  test("the sign-in lookup is rate limited", async ({ request }) => {
+    const statuses: number[] = []
+    for (let i = 0; i < 40; i++) {
+      const res = await request.get(`${API_URL}/api/auth/lookup?email=probe${i}@ratelimit.example`, { headers: { "X-Forwarded-For": "203.0.113.77" } })
+      statuses.push(res.status())
+    }
+    expect(statuses.filter((s) => s === 429).length).toBeGreaterThan(0)
+    expect(statuses.slice(0, 30).every((s) => s === 200)).toBe(true)
+  })
+
+  test.afterAll(async ({ request }) => {
+    // Remove the identity organisation this run created in the shared WorkOS test environment.
+    if (!clientId) return
+    const env = readApiEnv()
+    const detail = await (await request.get(`${API_URL}/api/lead/clients/${clientId}`, { headers: { Authorization: `Bearer ${await workosPasswordToken(request, USERS.lead.email)}` } })).json()
+    const workosOrgId = detail?.org?.workosOrganizationId as string | undefined
+    if (workosOrgId && env.WORKOS_API_KEY) {
+      const res = await request.delete(`https://api.workos.com/organizations/${workosOrgId}`, { headers: { Authorization: `Bearer ${env.WORKOS_API_KEY}` } })
+      if (!res.ok() && res.status() !== 404) throw new Error(`WorkOS cleanup failed: ${res.status()} ${await res.text()}`)
+    }
   })
 })

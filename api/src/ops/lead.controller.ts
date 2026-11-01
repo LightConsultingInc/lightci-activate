@@ -1,6 +1,18 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
+
+class PortalLinkDto {
+  @IsIn(['sso', 'dsync']) intent: 'sso' | 'dsync';
+  @IsOptional() @IsString() returnUrl?: string;
+}
 import { CurrentUser, Roles } from '../common/decorators';
 import type { Person } from '../orgs/entities/person.entity';
 import { LeadService } from './lead.service';
@@ -9,6 +21,9 @@ class CreateClientDto {
   @IsString() name: string;
   @IsOptional() @IsString() slug?: string;
   @IsOptional() workosOrganizationId?: string | null;
+  /** Comma-separated or array of the company's email domains. */
+  @IsOptional() emailDomains?: string[] | string;
+  @IsOptional() @IsBoolean() createIdentityOrganization?: boolean;
   @IsOptional() industry?: string | null;
   @IsOptional() sponsorName?: string | null;
   @IsInt() @Min(0) seats: number;
@@ -37,6 +52,21 @@ export class LeadController {
   @ApiOperation({ summary: 'All client orgs with headline adoption numbers.' })
   clients() {
     return this.lead.clients();
+  }
+
+  @Post('clients/:id/portal-link')
+  @ApiOperation({
+    summary:
+      "One-time Admin Portal link for the client's IT admin to connect SSO (`sso`) or a directory (`dsync`).",
+  })
+  portalLink(
+    @CurrentUser() actor: Person,
+    @Param('id') id: string,
+    @Body() dto: PortalLinkDto,
+  ) {
+    const returnUrl =
+      dto.returnUrl ?? `${process.env.WEB_URL ?? 'http://localhost:3000'}/`;
+    return this.lead.portalLink(actor, id, dto.intent, returnUrl);
   }
 
   @Post('clients')

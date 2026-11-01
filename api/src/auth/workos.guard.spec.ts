@@ -1,13 +1,5 @@
 import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
 import type { Person } from '../orgs/entities/person.entity';
-
-// jose ships ESM only; the JWT path is stubbed here and covered by the identity tests in WS1.
-jest.mock('jose', () => ({
-  createRemoteJWKSet: jest.fn(),
-  jwtVerify: jest.fn(),
-}));
-
-// ts-jest hoists jest.mock above this import.
 import { WorkosGuard, resolveOrgId } from './workos.guard';
 
 const person = (over: Partial<Person>): Person =>

@@ -344,6 +344,7 @@ export class OrgService {
 
   async setup(
     orgId: string,
+    extras: { ssoConnections?: number | null } = {},
   ): Promise<{ steps: SetupStep[]; complete: number; total: number }> {
     const org = await this.load(orgId);
     const s = settingsOf(org);
@@ -399,11 +400,21 @@ export class OrgService {
       },
       {
         key: 'sso',
-        label: 'SSO linked (WorkOS organization)',
-        done: Boolean(org.workosOrganizationId),
-        detail: org.workosOrganizationId
-          ? `WorkOS org ${org.workosOrganizationId}; ${people} people`
-          : 'No WorkOS organization id on the org',
+        label: 'Single sign-on connected',
+        // Done when the customer's IdP is connected. When WorkOS cannot be asked
+        // (null), fall back to "an organisation exists" so the step is not stuck.
+        done:
+          extras.ssoConnections === undefined || extras.ssoConnections === null
+            ? Boolean(org.workosOrganizationId)
+            : extras.ssoConnections > 0,
+        detail: !org.workosOrganizationId
+          ? 'No identity organisation yet'
+          : extras.ssoConnections === undefined ||
+              extras.ssoConnections === null
+            ? `Identity organisation linked; ${people} people`
+            : extras.ssoConnections > 0
+              ? `${extras.ssoConnections} active connection(s); ${people} people`
+              : 'Identity organisation linked; the customer has not connected their IdP yet',
       },
       {
         key: 'groups',

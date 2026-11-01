@@ -265,6 +265,7 @@ export type Org = {
   name: string
   slug: string
   workosOrganizationId: string | null
+  emailDomains?: string[]
   residencyMode: "client_hosted" | "lightci_hosted"
   industry: string | null
   sponsorName: string | null

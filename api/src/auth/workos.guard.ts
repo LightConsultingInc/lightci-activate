@@ -132,13 +132,19 @@ export class WorkosGuard implements CanActivate {
     const workosUserId = payload.sub;
     if (!workosUserId) return null;
 
+    const idpRoles = [payload.role, ...(payload.roles ?? [])].filter(
+      (r): r is string => Boolean(r),
+    );
     const existing = await this.people.findByWorkosId(workosUserId);
     if (existing) {
       if (
         !existing.lastSeenAt ||
         Date.now() - existing.lastSeenAt.getTime() > TOUCH_INTERVAL_MS
-      )
+      ) {
         await this.people.touch(existing);
+        // A fresh token means a fresh view of the person's IdP roles.
+        await this.people.syncRoles(existing, idpRoles);
+      }
       // A person provisioned before their company existed (or after a demo reset) is linked as soon as the org row appears.
       if (
         !existing.orgId &&
@@ -154,13 +160,10 @@ export class WorkosGuard implements CanActivate {
       return existing;
     }
     const profile = await this.workos.getUser(workosUserId);
-    const roles = [payload.role, ...(payload.roles ?? [])].filter(
-      (r): r is string => Boolean(r),
-    );
     return this.people.provisionFromWorkos(
       profile,
       payload.org_id ?? null,
-      roles,
+      idpRoles,
     );
   }
 }
