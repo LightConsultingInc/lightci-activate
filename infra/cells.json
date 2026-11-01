@@ -5,18 +5,18 @@
       "id": "us",
       "name": "United States",
       "region": "us-east-1",
-      "web": "https://activate.lightci.com",
-      "api": "https://api.activate.lightci.com",
-      "mcp": "https://mcp.activate.lightci.com",
+      "web": "https://activate.lciventure.com",
+      "api": "https://api.activate.lciventure.com",
+      "mcp": "https://mcp.activate.lciventure.com",
       "modelProvider": "api.anthropic.com"
     },
     {
       "id": "eu",
       "name": "European Union",
       "region": "eu-central-1",
-      "web": "https://eu.activate.lightci.com",
-      "api": "https://api.eu.activate.lightci.com",
-      "mcp": "https://mcp.eu.activate.lightci.com",
+      "web": "https://eu.activate.lciventure.com",
+      "api": "https://api.eu.activate.lciventure.com",
+      "mcp": "https://mcp.eu.activate.lciventure.com",
       "modelProvider": "api.anthropic.com"
     }
   ],

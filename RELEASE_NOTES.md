@@ -40,3 +40,5 @@ Additive: `orgs.emailDomains`, `people.identityIssuer` / `identitySubject`, `ins
 - Nightly jobs run once across the cluster through the job queue; `module.prepare` is a singleton job.
 - Marketplace writes fetch, commit and push to the remote under a database lock; remotes are the source of truth.
 - The web app proxies `/api/*` from its own origin; one web image serves every deployment.
+- Images and the chart are published under `ghcr.io/lightconsultinginc/activate/*` and `ghcr.io/lightconsultinginc/charts/activate` (the GitHub organisation that owns the repository; registry paths are lower case).
+- `deploy/terraform/aws` takes an optional `workos_webhook_secret_arn` (workos mode) so role sync and deactivation webhooks can be verified.

@@ -15,6 +15,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  packages: read
 
 jobs:
   deploy:
@@ -36,6 +37,28 @@ jobs:
           aws-region: ${{ inputs.region }}
       - uses: hashicorp/setup-terraform@v3
         with: { terraform_version: "1.9.8", terraform_wrapper: false }
+      - uses: sigstore/cosign-installer@v3
+      - uses: imjasonh/setup-crane@v0.4
+
+      - name: Verify the release's signatures and mirror the images into the cell's ECR
+        env:
+          GHCR: ghcr.io/lightconsultinginc/activate
+          VERSION: ${{ inputs.version }}
+        run: |
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          ECR="$ACCOUNT.dkr.ecr.${{ inputs.region }}.amazonaws.com/activate"
+          aws ecr get-login-password | crane auth login "${ECR%%/*}" -u AWS --password-stdin
+          echo "${{ github.token }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for img in server web; do
+            cosign verify "$GHCR/$img:$VERSION" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@refs/tags/v$VERSION" > /dev/null
+            if crane digest "$ECR/$img:$VERSION" > /dev/null 2>&1; then
+              echo "$img:$VERSION already mirrored"
+            else
+              crane copy "$GHCR/$img:$VERSION" "$ECR/$img:$VERSION"
+            fi
+          done
 
       - run: terraform init -input=false
       - name: Plan and apply the new task definitions (services keep the old version until rolled)

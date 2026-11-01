@@ -57,12 +57,12 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/lightci/activate/server:1.0.0
+          value: ghcr.io/lightconsultinginc/activate/server:1.0.0
         template: api-deployment.yaml
         documentIndex: 0
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/lightci/activate/web:1.0.0
+          value: ghcr.io/lightconsultinginc/activate/web:1.0.0
         template: web-deployment.yaml
         documentIndex: 0
       - contains:
@@ -83,7 +83,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/lightci/activate/server:1.2.3
+          value: ghcr.io/lightconsultinginc/activate/server:1.2.3
         template: api-deployment.yaml
         documentIndex: 0
 

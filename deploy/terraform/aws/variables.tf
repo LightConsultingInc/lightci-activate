@@ -49,7 +49,7 @@ variable "people_alb_internet_facing" {
 variable "image_registry" {
   description = "Registry path the two images live under (server, web)."
   type        = string
-  default     = "ghcr.io/lightci/activate"
+  default     = "ghcr.io/lightconsultinginc/activate"
 }
 
 variable "image_tag" {
@@ -163,6 +163,12 @@ variable "oidc" {
 
 variable "workos_secret_arn" {
   description = "Secrets Manager secret with keys api-key and client-id (workos mode)."
+  type        = string
+  default     = null
+}
+
+variable "workos_webhook_secret_arn" {
+  description = "Secrets Manager secret holding the WorkOS webhook signing secret (workos mode). Null until the webhook endpoint is registered in WorkOS; role sync and deactivation webhooks are refused until then."
   type        = string
   default     = null
 }

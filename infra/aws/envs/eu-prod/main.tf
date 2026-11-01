@@ -18,7 +18,7 @@ locals {
   }
 }
 
-# Certificates in region, validated through the shared lightci.com zone.
+# Certificates in region, validated through the shared lciventure.com zone.
 resource "aws_acm_certificate" "people" {
   domain_name               = var.web_host
   subject_alternative_names = [var.api_host]
@@ -67,6 +67,35 @@ resource "aws_acm_certificate_validation" "mcp" {
   validation_record_fqdns = [for k, r in aws_route53_record.validation : r.fqdn if k == var.mcp_host]
 }
 
+# Secrets by name: the shells come from infra/aws/bootstrap/eu; values are written once by hand.
+data "aws_caller_identity" "this" {}
+
+data "aws_secretsmanager_secret" "workos" {
+  name = "activate-${var.cell}-workos"
+}
+
+data "aws_secretsmanager_secret" "anthropic" {
+  name = "activate-${var.cell}-anthropic"
+}
+
+data "aws_secretsmanager_secret" "encryption" {
+  name = "activate-${var.cell}-secrets-key"
+}
+
+data "aws_secretsmanager_secret" "extra" {
+  for_each = var.extra_secret_names
+  name     = each.value
+}
+
+data "aws_secretsmanager_secret" "workos_webhook" {
+  count = var.workos_webhook_secret_name == null ? 0 : 1
+  name  = var.workos_webhook_secret_name
+}
+
+locals {
+  image_registry = coalesce(var.image_registry, "${data.aws_caller_identity.this.account_id}.dkr.ecr.${var.region}.amazonaws.com/activate")
+}
+
 module "activate" {
   source = "../../../../deploy/terraform/aws"
 
@@ -80,10 +109,10 @@ module "activate" {
   people_alb_internet_facing = true
   internal_alb_ingress_cidrs = ["0.0.0.0/0"]
 
-  image_registry                  = var.image_registry
-  image_tag                       = var.image_tag
-  registry_credentials_secret_arn = var.registry_credentials_secret_arn
-  cpu_architecture                = "ARM64"
+  # Images are mirrored from GHCR into the cell's own ECR by the deploy workflow; ECS pulls with its task role.
+  image_registry   = local.image_registry
+  image_tag        = var.image_tag
+  cpu_architecture = "ARM64"
 
   web_host                 = var.web_host
   api_host                 = var.api_host
@@ -92,14 +121,15 @@ module "activate" {
   mcp_certificate_arn      = aws_acm_certificate_validation.mcp.certificate_arn
   hosted_zone_id           = var.hosted_zone_id
 
-  edition            = "cloud"
-  lead_email_domains = ["lightci.com"]
-  auth_provider      = "workos"
-  workos_secret_arn  = var.workos_secret_arn
+  edition                   = "cloud"
+  lead_email_domains        = ["lightci.com"]
+  auth_provider             = "workos"
+  workos_secret_arn         = data.aws_secretsmanager_secret.workos.arn
+  workos_webhook_secret_arn = one(data.aws_secretsmanager_secret.workos_webhook[*].arn)
 
-  anthropic_api_key_secret_arn = var.anthropic_api_key_secret_arn
-  encryption_key_secret_arn    = var.encryption_key_secret_arn
-  extra_secrets                = var.extra_secrets
+  anthropic_api_key_secret_arn = data.aws_secretsmanager_secret.anthropic.arn
+  encryption_key_secret_arn    = data.aws_secretsmanager_secret.encryption.arn
+  extra_secrets                = { for k, s in data.aws_secretsmanager_secret.extra : k => s.arn }
   extra_environment            = var.extra_environment
 
   api_desired_count = 2

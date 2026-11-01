@@ -4,7 +4,7 @@
 #   the N schema and serves /api/ready (what a rollback looks like), then N boots and serves too.
 #
 #   scripts/ci/upgrade-path.sh <candidate image> <previous image> [<previous-previous image>]
-# Images are full references (ghcr.io/lightci/activate/server@sha256:... or :1.2.0). With one previous
+# Images are full references (ghcr.io/lightconsultinginc/activate/server@sha256:... or :1.2.0). With one previous
 # image only the N-1 → N step runs. Exits 0 when there is no previous release at all.
 set -euo pipefail
 CANDIDATE="${1:?candidate image}"; PREV="${2:-}"; PREV2="${3:-}"

@@ -28,7 +28,8 @@ resource "aws_efs_file_system" "data" {
 }
 
 resource "aws_efs_mount_target" "data" {
-  for_each        = toset(var.private_subnet_ids)
+  # Keyed by position: subnet ids created in the same apply are unknown at plan time.
+  for_each        = { for i, id in var.private_subnet_ids : tostring(i) => id }
   file_system_id  = aws_efs_file_system.data.id
   subnet_id       = each.value
   security_groups = [aws_security_group.efs.id]

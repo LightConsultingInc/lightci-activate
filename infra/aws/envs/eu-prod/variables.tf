@@ -19,57 +19,46 @@ variable "vpc_cidr_block" {
 }
 
 variable "hosted_zone_id" {
-  description = "Route 53 zone for lightci.com."
+  description = "Route 53 zone the cell's hosts live under (lciventure.com)."
   type        = string
 }
 
 variable "web_host" {
   type    = string
-  default = "eu.activate.lightci.com"
+  default = "eu.activate.lciventure.com"
 }
 
 variable "api_host" {
   type    = string
-  default = "api.eu.activate.lightci.com"
+  default = "api.eu.activate.lciventure.com"
 }
 
 variable "mcp_host" {
   type    = string
-  default = "mcp.eu.activate.lightci.com"
-}
-
-variable "image_registry" {
-  type    = string
-  default = "ghcr.io/lightci/activate"
+  default = "mcp.eu.activate.lciventure.com"
 }
 
 variable "image_tag" {
-  description = "Release to run; the cells deploy workflow passes the tag."
+  description = "Release to run; the cells deploy workflow passes the tag after mirroring the signed images into ECR."
   type        = string
 }
 
-variable "registry_credentials_secret_arn" {
-  type    = string
-  default = null
-}
-
-variable "workos_secret_arn" {
-  description = "Secrets Manager JSON {api-key, client-id} for this cell's WorkOS environment."
+variable "image_registry" {
+  description = "Registry path for the server and web images. Defaults to this account's ECR in the cell's region (infra/aws/bootstrap)."
   type        = string
+  default     = null
 }
 
-variable "anthropic_api_key_secret_arn" {
-  type = string
-}
-
-variable "encryption_key_secret_arn" {
-  type = string
-}
-
-variable "extra_secrets" {
-  description = "Platform fallbacks: OPENAI_API_KEY, CLAUDE_* keys."
+variable "extra_secret_names" {
+  description = "Environment variable -> Secrets Manager secret name in this region (platform fallbacks such as OPENAI_API_KEY)."
   type        = map(string)
   default     = {}
+}
+
+variable "workos_webhook_secret_name" {
+  description = "Secrets Manager secret with the WorkOS webhook signing secret. Null until the webhook endpoint is registered in the WorkOS dashboard."
+  type        = string
+  default     = null
 }
 
 variable "extra_environment" {

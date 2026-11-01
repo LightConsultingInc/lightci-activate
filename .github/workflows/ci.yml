@@ -149,7 +149,7 @@ jobs:
       - name: Validate every root and module without credentials
         run: |
           set -e
-          for d in deploy/terraform/aws infra/aws/modules/* infra/aws/envs/*; do
+          for d in deploy/terraform/aws infra/aws/modules/* infra/aws/envs/* infra/aws/bootstrap/*; do
             echo "== $d"; (cd "$d" && terraform init -backend=false -input=false >/dev/null && terraform validate -no-color)
           done
 
@@ -169,8 +169,8 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - name: Build the release images for this commit
         run: |
-          docker build -f api/Dockerfile -t ghcr.io/lightci/activate/server:smoke .
-          docker build -t ghcr.io/lightci/activate/web:smoke frontend
+          docker build -f api/Dockerfile -t ghcr.io/lightconsultinginc/activate/server:smoke .
+          docker build -t ghcr.io/lightconsultinginc/activate/web:smoke frontend
       - run: ACTIVATE_VERSION=smoke scripts/ci/compose-smoke.sh
         env:
           LICENSE_SIGNING_KEY: ${{ secrets.LICENSE_SIGNING_KEY }}

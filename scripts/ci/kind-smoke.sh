@@ -13,7 +13,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLUSTER="${KIND_CLUSTER:-activate}"
 NS=activate
 TAG="${IMAGE_TAG:-smoke}"
-REG=ghcr.io/lightci/activate
+REG=ghcr.io/lightconsultinginc/activate
 WORK="$(mktemp -d)"
 KEY_FILE="${LICENSE_PRIVATE_KEY_FILE:-}"
 if [[ -z "$KEY_FILE" && -n "${LICENSE_SIGNING_KEY:-}" ]]; then

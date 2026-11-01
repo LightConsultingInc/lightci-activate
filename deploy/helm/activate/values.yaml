@@ -2,7 +2,7 @@
 # the guide's minimum production values.yaml installs unchanged.
 
 global:
-  imageRegistry: ghcr.io/lightci/activate
+  imageRegistry: ghcr.io/lightconsultinginc/activate
   imagePullSecrets: []
   # The chart's appVersion is used when empty. Chart and images are released together, so a tag that
   # differs from appVersion is refused unless allowImageTagMismatch is set (for mirrors that retag).

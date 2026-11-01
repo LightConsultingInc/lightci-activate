@@ -9,38 +9,29 @@ locals {
   # Mirrors deploy/helm/activate/templates/_helpers.tpl (activate.serverEnv).
   server_environment = merge(
     {
-      ACTIVATE_EDITION            = var.edition
-      NODE_ENV                    = "production"
-      PORT                        = "3000"
-      METRICS_PORT                = "9464"
-      LOG_LEVEL                   = var.log_level
-      WEB_URL                     = local.web_url
-      PUBLIC_API_URL              = local.mcp_url
-      CORS_ORIGINS                = local.web_url
-      DB_SSL_MODE                 = "verify-full"
-      MIGRATIONS_RUN_ON_BOOT      = "false"
-      ACTIVATE_ORG_NAME           = var.org.name
-      ACTIVATE_ORG_SLUG           = var.org.slug
-      ACTIVATE_ORG_EMAIL_DOMAINS  = join(",", var.org.email_domains)
-      ACTIVATE_ORG_INITIAL_ADMINS = join(",", var.org.initial_admins)
-      ACTIVATE_ORG_SEATS          = tostring(var.org.seats)
-      AUTH_PROVIDER               = var.auth_provider
-      AUTH_ROLE_MAP               = jsonencode(var.role_mapping)
-      AUTH_PASSWORD_LOGIN         = tostring(var.password_login)
-      LEAD_EMAIL_DOMAINS          = ""
-      AI_PROVIDER                 = "live"
-      ANTHROPIC_MODEL             = var.anthropic_model
-      ANTHROPIC_FAST_MODEL        = var.anthropic_fast_model
-      LIBRARY_PROVIDER            = var.marketplace.provider
-      LIBRARY_REPOSITORY          = var.marketplace.repository
-      LIBRARY_REMOTE_URL          = var.marketplace.remote_url
-      LIBRARY_DEFAULT_BRANCH      = var.marketplace.default_branch
-      LIBRARY_CLONES_DIR          = "/data/marketplace-clones"
-      LIBRARY_WORK_DIR            = "/data/marketplace-work"
-      MCP_APP_HTML                = "/mcp-app/dist/app.html"
-      WORKER_TIMEZONE             = var.worker_timezone
-      TELEMETRY_ENABLED           = "false"
-      UPDATE_CHECK_ENABLED        = tostring(var.update_check_enabled)
+      ACTIVATE_EDITION       = var.edition
+      NODE_ENV               = "production"
+      PORT                   = "3000"
+      METRICS_PORT           = "9464"
+      LOG_LEVEL              = var.log_level
+      WEB_URL                = local.web_url
+      PUBLIC_API_URL         = local.mcp_url
+      CORS_ORIGINS           = local.web_url
+      DB_SSL_MODE            = "verify-full"
+      MIGRATIONS_RUN_ON_BOOT = "false"
+      AUTH_PROVIDER          = var.auth_provider
+      AUTH_ROLE_MAP          = jsonencode(var.role_mapping)
+      AUTH_PASSWORD_LOGIN    = tostring(var.password_login)
+      LEAD_EMAIL_DOMAINS     = ""
+      AI_PROVIDER            = "live"
+      ANTHROPIC_MODEL        = var.anthropic_model
+      ANTHROPIC_FAST_MODEL   = var.anthropic_fast_model
+      LIBRARY_CLONES_DIR     = "/data/marketplace-clones"
+      LIBRARY_WORK_DIR       = "/data/marketplace-work"
+      MCP_APP_HTML           = "/mcp-app/dist/app.html"
+      WORKER_TIMEZONE        = var.worker_timezone
+      TELEMETRY_ENABLED      = "false"
+      UPDATE_CHECK_ENABLED   = tostring(var.update_check_enabled)
     },
     var.org == null ? {} : {
       ACTIVATE_ORG_NAME           = var.org.name
@@ -81,6 +72,7 @@ locals {
       WORKOS_API_KEY                                        = "${var.workos_secret_arn}:api-key::"
       WORKOS_CLIENT_ID                                      = "${var.workos_secret_arn}:client-id::"
     },
+    var.workos_webhook_secret_arn == null ? {} : { WORKOS_WEBHOOK_SECRET = var.workos_webhook_secret_arn },
     { for k, v in var.claude_enterprise_secret_arns : upper("CLAUDE_${k}_API_KEY") => v },
   )
 
