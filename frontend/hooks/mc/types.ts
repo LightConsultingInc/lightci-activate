@@ -241,6 +241,25 @@ export type IntegrationSummary = {
   config: Record<string, string>
 }
 
+/** GET /api/admin/license (self-hosted installs; status "n/a" in the cloud). */
+export type LicenseState = {
+  status: "n/a" | "valid" | "expiring" | "grace" | "expired" | "missing" | "invalid"
+  readOnly: boolean
+  org: string | null
+  licenseId: string | null
+  seats: number | null
+  seatsUsed: number | null
+  premiumSeats: number | null
+  features: string[]
+  issuedAt: string | null
+  expiresAt: string | null
+  graceEndsAt: string | null
+  daysToExpiry: number | null
+  source: "file" | "env" | "upload" | "none"
+  message: string | null
+  error: string | null
+}
+
 export type OrgSettings = {
   usagePolicy?: string
   /** Bumped by PATCH /org when the policy text changes (see org-settings.ts). */
@@ -265,6 +284,7 @@ export type Org = {
   name: string
   slug: string
   workosOrganizationId: string | null
+  emailDomains?: string[]
   residencyMode: "client_hosted" | "lightci_hosted"
   industry: string | null
   sponsorName: string | null
@@ -312,7 +332,7 @@ export type Person = {
 export type SetupStep = { key: string; label: string; done: boolean; detail: string | null }
 export type Setup = { steps: SetupStep[] }
 
-export type MarketplaceStatus = { repo: string | null; branch: string; head: string | null; dirty: boolean; pluginCount: number; skillCount: number; lastSyncAt: string | null; mode: "local" | "github" }
+export type MarketplaceStatus = { repo: string | null; branch: string | null; head: string | null; dirty: boolean; pluginCount: number; skillCount: number; lastSyncAt: string | null; workDir?: string | null; mode: "local" | "local-nested" | "github" | "git"; lastError?: string | null }
 
 // ───────────────────────────── LightCI lead ─────────────────────────────
 
@@ -398,4 +418,17 @@ export type LeadClientDetail = LeadClient & {
   teams?: Team[]
   sponsorName?: string | null
   industry?: string | null
+}
+
+/** GET /api/admin/updates: the running release and whether a newer one is published (self-hosted). */
+export type UpdateStatus = {
+  enabled: boolean
+  current: string
+  latest: string | null
+  updateAvailable: boolean
+  advisory: boolean
+  notesUrl: string | null
+  checkedAt: string | null
+  error: string | null
+  message: string | null
 }

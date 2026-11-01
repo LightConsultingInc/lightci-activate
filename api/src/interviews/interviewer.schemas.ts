@@ -310,7 +310,7 @@ export function stripNulls<T extends Record<string, unknown>>(
   for (const [k, v] of Object.entries(obj)) {
     if (v === null || v === undefined) continue;
     if (Array.isArray(v)) {
-      (out as Record<string, unknown>)[k] = v.map((item) =>
+      (out as Record<string, unknown>)[k] = (v as unknown[]).map((item) =>
         item && typeof item === 'object' && !Array.isArray(item)
           ? stripNulls(item as Record<string, unknown>)
           : item,

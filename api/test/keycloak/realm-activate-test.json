@@ -1,0 +1,223 @@
+{
+  "realm": "activate-test",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 300,
+  "clients": [
+    {
+      "clientId": "activate",
+      "name": "LightCI Activate",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "activate-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:4399/oauth/callback",
+        "http://localhost:4399/oauth/callback",
+        "http://localhost:4310/oauth/callback",
+        "http://127.0.0.1:4310/oauth/callback",
+        "http://localhost:4311/oauth/callback"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles",
+        "web-origins"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups"
+          }
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "activate-admin"
+    },
+    {
+      "name": "activate-sponsor"
+    },
+    {
+      "name": "activate-champion"
+    }
+  ],
+  "users": [
+    {
+      "username": "jane",
+      "email": "jane.doe@acme.test",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/activate-admin",
+        "/activate-sponsor"
+      ]
+    },
+    {
+      "username": "dan",
+      "email": "dan.okafor@acme.test",
+      "firstName": "Dan",
+      "lastName": "Okafor",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/activate-champion"
+      ]
+    },
+    {
+      "username": "sam",
+      "email": "sam.learner@acme.test",
+      "firstName": "Sam",
+      "lastName": "Learner",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "zain",
+      "email": "zain+oidc-lead@lightci.com",
+      "firstName": "Zain",
+      "lastName": "Lakhani",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "priya",
+      "email": "priya.nair@meridianwealth.demo",
+      "firstName": "Priya",
+      "lastName": "Nair",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "marcus",
+      "email": "marcus.reid@meridianwealth.demo",
+      "firstName": "Marcus",
+      "lastName": "Reid",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "daniel",
+      "email": "daniel.okafor@meridianwealth.demo",
+      "firstName": "Daniel",
+      "lastName": "Okafor",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/activate-champion"
+      ]
+    },
+    {
+      "username": "elena",
+      "email": "elena.marsh@meridianwealth.demo",
+      "firstName": "Elena",
+      "lastName": "Marsh",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/activate-admin",
+        "/activate-sponsor"
+      ]
+    },
+    {
+      "username": "zain-lead",
+      "email": "zain+activate-lead@lightci.com",
+      "firstName": "Zain",
+      "lastName": "Lakhani",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Activate-oidc-2026!",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

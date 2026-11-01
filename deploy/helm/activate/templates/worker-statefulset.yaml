@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "activate.fullname" . }}-worker
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  clusterIP: None
+  selector:
+    {{- include "activate.selector" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "activate.fullname" . }}-worker
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  serviceName: {{ include "activate.fullname" . }}-worker
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "activate.selector" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "activate.selector" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+      annotations:
+        checksum/values: {{ toJson .Values | sha256sum | trunc 16 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: worker
+          image: {{ include "activate.serverImage" . }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 3000
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+          env:
+            - name: ACTIVATE_ROLE
+              value: worker
+            {{- include "activate.serverEnv" . | nindent 12 }}
+          {{- include "activate.probes" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "activate.serverVolumeMounts" . | nindent 12 }}
+            - name: data
+              mountPath: /data
+      volumes:
+        {{- include "activate.serverVolumes" . | nindent 8 }}
+        {{- if not .Values.marketplace.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.marketplace.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- if .Values.marketplace.persistence.storageClass }}
+        storageClassName: {{ .Values.marketplace.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.marketplace.persistence.size }}
+  {{- end }}

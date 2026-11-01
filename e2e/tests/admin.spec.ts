@@ -120,8 +120,9 @@ test.describe("company admin", () => {
     const email = `e2e-${Date.now()}@example.com`
     await form.getByTestId("invite-email").fill(email)
     await form.getByTestId("invite-send").click()
-    await expect(toast(page, new RegExp(`Invited ${email}|Couldn't send the invite`)).first()).toBeVisible({ timeout: 30_000 })
-    if (await toast(page, /Invited/).count()) {
+    // WorkOS mode emails the invitation ("Invited …"); OIDC mode has no email step ("… added as invited").
+    await expect(toast(page, new RegExp(`Invited ${email}|${email} added as invited|Couldn't send the invite`)).first()).toBeVisible({ timeout: 30_000 })
+    if (await toast(page, /Invited|added as invited/).count()) {
       await expect(form).toBeHidden()
       await page.getByTestId("people-search").fill(email)
       await expect(page.getByTestId("people-table").getByTestId("person-row")).toHaveCount(1)

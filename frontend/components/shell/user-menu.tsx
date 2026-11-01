@@ -63,6 +63,8 @@ export function UserMenu() {
           {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
           {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
         </DropdownMenuItem>
+        {/* A full navigation on purpose: the route handler clears cookies and redirects. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <DropdownMenuItem render={<a href="/api/auth/sign-out" data-testid="sign-out" />}>
           <LogOut className="size-4" /> Sign out
         </DropdownMenuItem>

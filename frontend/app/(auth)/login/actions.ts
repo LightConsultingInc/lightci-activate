@@ -1,6 +1,7 @@
 "use server"
 
 import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs"
+import { apiUrl, webUrl } from "@/lib/env"
 
 export type OrgChoice = { id: string; name: string }
 export type SignInResult =
@@ -9,11 +10,30 @@ export type SignInResult =
   /** The account belongs to more than one organisation: WorkOS needs to know which one to open. */
   | { ok: false; chooseOrg: { pendingToken: string; organizations: OrgChoice[] } }
 
-const origin = () => new URL(process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI ?? "http://localhost:3000/callback").origin
+/** What the API says about how this address signs in. */
+export type SignInLookup = { mode: "sso" | "password" | "unknown"; organizationId?: string; passwordAllowed: boolean }
+
+const origin = () => webUrl()
 
 function friendly(err: unknown): string {
   const message = err instanceof Error ? err.message : "Sign-in failed."
   return /password|credential|invalid/i.test(message) ? "That email and password did not match." : message
+}
+
+/**
+ * Email-first step. Asks the API how this address signs in so the form can send the person
+ * straight to their company's single sign-on, or show the password field.
+ */
+export async function lookupSignIn(_prev: SignInLookup | null, formData: FormData): Promise<SignInLookup> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase()
+  if (!email.includes("@")) return { mode: "unknown", passwordAllowed: true }
+  try {
+    const res = await fetch(`${apiUrl()}/api/auth/lookup?email=${encodeURIComponent(email)}`, { cache: "no-store" })
+    if (!res.ok) return { mode: "unknown", passwordAllowed: true }
+    return (await res.json()) as SignInLookup
+  } catch {
+    return { mode: "unknown", passwordAllowed: true }
+  }
 }
 
 /** Email + password sign-in through WorkOS User Management (no redirect needed). */

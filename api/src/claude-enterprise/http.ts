@@ -211,9 +211,16 @@ export function retryAfterMs(header: string | null): number | undefined {
   return Number.isNaN(at) ? undefined : Math.max(0, at - Date.now());
 }
 
-async function safeJson(res: Response): Promise<any | null> {
+/** The parts of an Anthropic error envelope we read; every field is optional on the wire. */
+interface ErrorBody {
+  error?: { type?: string; message?: string };
+  request_id?: string | null;
+}
+
+async function safeJson(res: Response): Promise<ErrorBody | null> {
   try {
-    return await res.json();
+    const body: unknown = await res.json();
+    return body !== null && typeof body === 'object' ? body : null;
   } catch {
     return null;
   }

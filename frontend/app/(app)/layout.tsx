@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/auth"
 import { MeProvider } from "@/hooks/use-me"
 import { AppSidebar } from "@/components/shell/app-sidebar"
 import { Topbar } from "@/components/shell/topbar"
+import { LicenseBanner } from "@/components/shell/license-banner"
+import { UpdateBanner } from "@/components/shell/update-banner"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +25,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppSidebar />
         <SidebarInset>
           <Topbar />
+          <LicenseBanner />
+          <UpdateBanner />
           <main className="flex-1 px-4 py-6 md:px-8 md:py-8" data-testid="page-main">
             <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>

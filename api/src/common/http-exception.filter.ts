@@ -21,6 +21,17 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         : HttpStatus.INTERNAL_SERVER_ERROR;
     const body =
       exception instanceof HttpException ? exception.getResponse() : null;
+    // OAuth 2.0 errors (RFC 6749 §5.2) keep their own shape: clients key on `error`.
+    if (
+      body &&
+      typeof body === 'object' &&
+      typeof (body as { error?: unknown }).error === 'string' &&
+      typeof (body as { error_description?: unknown }).error_description ===
+        'string'
+    ) {
+      res.status(status).json(body);
+      return;
+    }
     const detail =
       typeof body === 'string'
         ? body

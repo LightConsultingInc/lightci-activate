@@ -433,6 +433,7 @@ export const DEMO_ORG = {
   name: 'Meridian Wealth Partners',
   slug: 'meridian',
   workosOrganizationId: WORKOS.organizationId,
+  emailDomains: ['meridianwealth.demo'],
   residencyMode: 'lightci_hosted' as const,
   industry: 'Wealth management (PE-backed)',
   sponsorName: 'Elena Marsh, COO',

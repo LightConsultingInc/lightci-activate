@@ -18,7 +18,7 @@ import { checkBoundary } from './boundary';
 import { PromotionRequest } from './entities/promotion-request.entity';
 import { SkillComment } from './entities/skill-comment.entity';
 import { SkillVersion } from './entities/skill-version.entity';
-import { type ActivateManifest, Skill } from './entities/skill.entity';
+import { Skill } from './entities/skill.entity';
 import { GitRepoService, diffSummary } from './git-repo.service';
 import { LibraryService } from './library.service';
 import type { PromotionDetail, PromotionView } from './skills.types';
@@ -316,16 +316,18 @@ export class PromoterService {
     tests: string,
     highExposure: boolean,
   ): Promise<{ number: number | null; url: string | null }> {
-    if (this.git.githubMode) {
-      const pushed = await this.git.pushBranch(branch);
+    const repo = await this.git.repoFor(orgId);
+    if (repo.githubMode) {
+      // The draft branch was pushed when it was written; make sure it is on the remote.
+      const pushed = await this.git.pushBranch(orgId, branch);
       if (pushed) {
         try {
           const res = await fetch(
-            `https://api.github.com/repos/${process.env.GITHUB_REPO}/pulls`,
+            `https://api.github.com/repos/${repo.config.owner}/${repo.config.repo}/pulls`,
             {
               method: 'POST',
               headers: {
-                Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                Authorization: `Bearer ${repo.config.token}`,
                 Accept: 'application/vnd.github+json',
                 'Content-Type': 'application/json',
                 'User-Agent': 'lightci-activate',
@@ -333,7 +335,7 @@ export class PromoterService {
               body: JSON.stringify({
                 title: `${skill.slug} v${version}: ${skill.name}`,
                 head: branch,
-                base: this.git.defaultBranch,
+                base: repo.config.defaultBranch,
                 body: [
                   summary,
                   '',
@@ -419,7 +421,7 @@ export class PromoterService {
     const previousSkillMd =
       previous?.skillMd ??
       (skill
-        ? ((await this.library.repoSkill(skill.slug))?.skillMd ?? null)
+        ? ((await this.library.repoSkill(orgId, skill.slug))?.skillMd ?? null)
         : null);
     return {
       ...view,

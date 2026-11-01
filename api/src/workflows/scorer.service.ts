@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { AiService } from '../ai/ai.service';
@@ -169,8 +168,7 @@ export class ScorerService {
     return { scored, skipped: total - maps.length };
   }
 
-  /** Nightly rescoring of candidates across all orgs (03:15 server time). */
-  @Cron('15 3 * * *', { name: 'scorer.nightly' })
+  /** Nightly rescoring of candidates across all orgs (job `nightly.scorer`, 03:15). */
   async nightly(): Promise<void> {
     if (process.env.SCORER_NIGHTLY === 'off') return;
     const orgs = await this.orgs.find({ select: { id: true, name: true } });

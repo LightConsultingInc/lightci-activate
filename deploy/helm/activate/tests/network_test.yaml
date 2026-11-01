@@ -1,0 +1,131 @@
+# Exposure: who may reach what (T4.2, the guide's Networking section).
+suite: ingress, network policy and metrics
+release:
+  name: activate
+  namespace: activate
+templates:
+  - ingress.yaml
+  - networkpolicy.yaml
+  - servicemonitor.yaml
+  - api-deployment.yaml
+  - worker-statefulset.yaml
+tests:
+  - it: the internal ingress carries web and api hosts; the connector host restricts /mcp to Anthropic but leaves sign-in open
+    template: ingress.yaml
+    asserts:
+      - hasDocuments: { count: 3 }
+      - equal:
+          path: spec.rules[0].host
+          value: activate.example.com
+        documentIndex: 0
+      - equal:
+          path: spec.rules[1].host
+          value: api.activate.example.com
+        documentIndex: 0
+      - equal:
+          path: spec.rules[0].host
+          value: mcp.activate.example.com
+        documentIndex: 1
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /mcp
+        documentIndex: 1
+      - lengthEqual:
+          path: spec.rules[0].http.paths
+          count: 1
+        documentIndex: 1
+      - equal:
+          path: metadata.annotations['nginx.ingress.kubernetes.io/whitelist-source-range']
+          value: "160.79.104.0/23,2607:6bc0::/48"
+        documentIndex: 1
+      # People sign in through /oauth on the connector host and Claude reads discovery there: no IP restriction.
+      - equal:
+          path: spec.rules[0].host
+          value: mcp.activate.example.com
+        documentIndex: 2
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /oauth
+        documentIndex: 2
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /.well-known
+        documentIndex: 2
+      - notExists:
+          path: metadata.annotations
+        documentIndex: 2
+
+  - it: ingress objects can be switched off for a customer's own gateway
+    template: ingress.yaml
+    set: { ingress.internal.enabled: false, ingress.mcp.enabled: false }
+    asserts:
+      - hasDocuments: { count: 0 }
+
+  - it: default deny applies, web talks only to api, servers only to DNS, database and 443
+    template: networkpolicy.yaml
+    asserts:
+      - hasDocuments: { count: 3 }
+      - equal: { path: spec.policyTypes, value: [Ingress, Egress] }
+        documentIndex: 0
+      - equal:
+          path: spec.egress[0].to[0].podSelector.matchLabels['app.kubernetes.io/component']
+          value: api
+        documentIndex: 1
+      - contains:
+          path: spec.egress
+          content: { ports: [{ port: 5432, protocol: TCP }] }
+        documentIndex: 2
+      - contains:
+          path: spec.ingress
+          content: { ports: [{ port: 9464, protocol: TCP }] }
+        documentIndex: 2
+
+  - it: extra egress CIDRs are added for clusters that deny egress by default
+    template: networkpolicy.yaml
+    documentIndex: 2
+    set: { networkPolicy.egressCIDRs: ["203.0.113.0/24"] }
+    asserts:
+      - contains:
+          path: spec.egress
+          content: { to: [{ ipBlock: { cidr: 203.0.113.0/24 } }] }
+
+  - it: metrics live on their own port, on both roles, and the ServiceMonitor scrapes it
+    set: { metrics.serviceMonitor.enabled: true }
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: { name: metrics, containerPort: 9464 }
+        template: api-deployment.yaml
+        documentIndex: 0
+      - contains:
+          path: spec.ports
+          content: { name: metrics, port: 9464, targetPort: metrics }
+        template: api-deployment.yaml
+        documentIndex: 1
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: { name: metrics, containerPort: 9464 }
+        template: worker-statefulset.yaml
+        documentIndex: 1
+      - equal:
+          path: spec.endpoints[0].port
+          value: metrics
+        template: servicemonitor.yaml
+      - equal:
+          path: spec.endpoints[0].path
+          value: /metrics
+        template: servicemonitor.yaml
+
+  - it: the ServiceMonitor is absent unless asked for
+    template: servicemonitor.yaml
+    asserts:
+      - hasDocuments: { count: 0 }
+
+  - it: an identity provider on a non-standard port is allowed explicitly
+    template: networkpolicy.yaml
+    documentIndex: 2
+    set: { networkPolicy.extraEgressPorts: [8443] }
+    asserts:
+      - contains:
+          path: spec.egress
+          content: { ports: [{ port: 8443, protocol: TCP }] }

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "activate-local": {
+      "type": "http",
+      "url": "http://localhost:4310/mcp",
+      "headers": {
+        "X-Activate-Dev-User": "zain@northgateadvisory.demo"
+      }
+    }
+  }
+}

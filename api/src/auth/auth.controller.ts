@@ -1,9 +1,20 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
+import { LookupService, type SignInLookup } from './lookup.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
 import { Repository } from 'typeorm';
-import { CurrentUser, OrgId, Public } from '../common/decorators';
+import { CurrentUser, OrgId, Public, Roles } from '../common/decorators';
 import { RUNG_META } from '../common/roles';
 import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
@@ -47,17 +58,46 @@ export interface MeResponse {
   orgs: { id: string; name: string; slug: string }[]; // for leads switching orgs
 }
 
+/** The caller's address for rate limiting: first hop of X-Forwarded-For behind a load balancer, else the socket. */
+function clientKey(req: Request): string {
+  const fwd = req.headers['x-forwarded-for'];
+  const first = Array.isArray(fwd) ? fwd[0] : fwd?.split(',')[0];
+  return (first?.trim() || req.ip || req.socket?.remoteAddress) ?? 'unknown';
+}
+
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly people: PeopleService,
     private readonly workos: WorkosService,
+    private readonly lookupService: LookupService,
     @InjectRepository(Org) private readonly orgs: Repository<Org>,
     @InjectRepository(Team) private readonly teams: Repository<Team>,
     @InjectRepository(Placement)
     private readonly placements: Repository<Placement>,
   ) {}
+
+  @Get('lookup')
+  @Public()
+  @ApiOperation({
+    summary:
+      'How a person signs in, from their email alone: their company SSO, a password, or unknown.',
+  })
+  async lookup(
+    @Query('email') email: string | undefined,
+    @Req() req: Request,
+  ): Promise<SignInLookup> {
+    const key = clientKey(req);
+    if (!this.lookupService.limiter.take(key))
+      throw new HttpException(
+        'Too many sign-in lookups. Try again in a minute.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    if (!email || !email.includes('@'))
+      return { mode: 'unknown', passwordAllowed: true };
+    return this.lookupService.lookup(email);
+  }
 
   @Get('me')
   @Public()
@@ -129,6 +169,7 @@ export class AuthController {
   }
 
   @Post('invites')
+  @Roles('champion', 'admin')
   @ApiOperation({
     summary: 'Invite a person by email via WorkOS (org-scoped).',
   })

@@ -18,7 +18,7 @@ const call = (task: string, mockSeed: Record<string, unknown>) => ({
 
 describe('learning mock responders', () => {
   it('coach.next-exercise is schema-valid, targets the weakest competency and picks an unused context', () => {
-    const out = mockResponder<any>(
+    const out = mockResponder(
       call('coach.next-exercise', {
         rung: 1,
         weakestCode: 'L1.description',
@@ -41,7 +41,7 @@ describe('learning mock responders', () => {
     expect(out.workflowName).toBe('Monday pack');
     expect(out.prefillPrompt).toBeNull(); // never pre-written
     expect(out.prefillSkillMd).toBeNull();
-    const skill = mockResponder<any>(
+    const skill = mockResponder(
       call('coach.next-exercise', {
         rung: 3,
         workSurface: 'skill',
@@ -58,7 +58,7 @@ describe('learning mock responders', () => {
     expect(mockArtifactScore('x'.repeat(300) + ' expected')).toBe(0.86);
     expect(mockArtifactScore('short expected')).toBe(0.62);
     expect(mockArtifactScore('y'.repeat(300))).toBe(0.62);
-    const out = mockResponder<any>(
+    const out = mockResponder(
       call('grader.submission', {
         criteria: [{ criterion: 'a.b', label: 'B' }],
         artifactText: 'short',
@@ -75,7 +75,7 @@ describe('learning mock responders', () => {
   });
 
   it('grader.skill and grader.revisit are schema-valid', () => {
-    const skill = mockResponder<any>(
+    const skill = mockResponder(
       call('grader.skill', {
         criteria: [{ criterion: 'skill.trigger_clarity', label: 'Trigger' }],
         skillMd: 'short',
@@ -85,7 +85,7 @@ describe('learning mock responders', () => {
     );
     expect(skill.sampleCaseVerdicts).toHaveLength(1);
     expect(skill.rubric[0].score).toBeLessThan(0.7);
-    const rev = mockResponder<any>(
+    const rev = mockResponder(
       call('grader.revisit', { response: 'x'.repeat(80) }),
       RevisitGradeSchema,
     );
@@ -107,7 +107,7 @@ describe('learning mock responders', () => {
       undefined,
     );
     expect(project.text).toContain('sop.md');
-    const fired = mockResponder<any>(
+    const fired = mockResponder(
       call('coach.run.skill', {
         skillMd: 'description: Use when preparing the Monday pack from notes.',
         request: 'Prepare the Monday pack please',
@@ -115,7 +115,7 @@ describe('learning mock responders', () => {
       SkillRunSchema,
     );
     expect(fired.fired).toBe(true);
-    const notFired = mockResponder<any>(
+    const notFired = mockResponder(
       call('coach.run.skill', {
         skillMd: 'description: Use when preparing the Monday pack from notes.',
         request: 'Write a limerick',

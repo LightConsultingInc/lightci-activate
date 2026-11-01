@@ -1,0 +1,112 @@
+name: Deploy one cell
+
+on:
+  workflow_call:
+    inputs:
+      cell: { type: string, required: true }
+      region: { type: string, required: true }
+      root: { type: string, required: true }
+      version: { type: string, required: true }
+      api_url: { type: string, required: true }
+      bake_minutes: { type: number, default: 30 }
+    secrets:
+      role_arn: { required: true }
+
+permissions:
+  id-token: write
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: ${{ inputs.cell }}-prod ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.cell }}-prod
+    concurrency:
+      group: deploy-${{ inputs.cell }}
+      cancel-in-progress: false
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: ${{ inputs.root }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.role_arn }}
+          aws-region: ${{ inputs.region }}
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.9.8", terraform_wrapper: false }
+      - uses: sigstore/cosign-installer@v3
+      - uses: imjasonh/setup-crane@v0.4
+
+      - name: Verify the release's signatures and mirror the images into the cell's ECR
+        env:
+          GHCR: ghcr.io/lightconsultinginc/activate
+          VERSION: ${{ inputs.version }}
+        run: |
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          ECR="$ACCOUNT.dkr.ecr.${{ inputs.region }}.amazonaws.com/activate"
+          aws ecr get-login-password | crane auth login "${ECR%%/*}" -u AWS --password-stdin
+          echo "${{ github.token }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for img in server web; do
+            cosign verify "$GHCR/$img:$VERSION" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@refs/tags/v$VERSION" > /dev/null
+            if crane digest "$ECR/$img:$VERSION" > /dev/null 2>&1; then
+              echo "$img:$VERSION already mirrored"
+            else
+              crane copy "$GHCR/$img:$VERSION" "$ECR/$img:$VERSION"
+            fi
+          done
+
+      - run: terraform init -input=false
+      - name: Plan and apply the new task definitions (services keep the old version until rolled)
+        run: |
+          terraform plan -input=false -var image_tag=${{ inputs.version }} -out tfplan
+          terraform apply -input=false tfplan
+      - id: out
+        run: |
+          echo "cluster=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "migrate=$(terraform output -raw migrate_command)" >> "$GITHUB_OUTPUT"
+
+      - name: Snapshot the database before migrating
+        run: |
+          DB_ID=$(aws rds describe-db-instances --query "DBInstances[?starts_with(DBInstanceIdentifier, 'activate-${{ inputs.cell }}')].DBInstanceIdentifier" --output text | head -1)
+          SNAP="activate-${{ inputs.cell }}-pre-${{ inputs.version }}-$(date -u +%Y%m%d%H%M)"
+          aws rds create-db-snapshot --db-instance-identifier "$DB_ID" --db-snapshot-identifier "${SNAP//./-}" > /dev/null
+          aws rds wait db-snapshot-completed --db-snapshot-identifier "${SNAP//./-}"
+
+      - name: Run activate migrate as a one-shot task and wait for exit 0
+        run: |
+          TASK=$(${{ steps.out.outputs.migrate }} --query 'tasks[0].taskArn' --output text)
+          aws ecs wait tasks-stopped --cluster "${{ steps.out.outputs.cluster }}" --tasks "$TASK"
+          CODE=$(aws ecs describe-tasks --cluster "${{ steps.out.outputs.cluster }}" --tasks "$TASK" --query 'tasks[0].containers[0].exitCode' --output text)
+          echo "migrate exit code: $CODE"
+          test "$CODE" = "0"
+
+      - name: Roll api, worker and web onto the new task definitions
+        run: |
+          C="${{ steps.out.outputs.cluster }}"
+          for svc in api worker web; do
+            aws ecs update-service --cluster "$C" --service "$C-$svc" --force-new-deployment > /dev/null
+          done
+          aws ecs wait services-stable --cluster "$C" --services "$C-api" "$C-worker" "$C-web"
+
+      - name: Ready, version and bake
+        run: |
+          for _ in $(seq 1 30); do curl -fsS "${{ inputs.api_url }}/api/ready" > /dev/null && break; sleep 10; done
+          curl -fsS "${{ inputs.api_url }}/api/ready"
+          echo
+          echo "Baking for ${{ inputs.bake_minutes }} minutes; any 5xx from the people load balancer fails the promotion."
+          ALB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='${{ steps.out.outputs.cluster }}-internal'].LoadBalancerArn" --output text)
+          DIM=$(echo "$ALB" | sed 's#.*loadbalancer/##')
+          END=$(( $(date +%s) + ${{ inputs.bake_minutes }} * 60 ))
+          while [ "$(date +%s)" -lt "$END" ]; do
+            sleep 300
+            SUM=$(aws cloudwatch get-metric-statistics --namespace AWS/ApplicationELB --metric-name HTTPCode_Target_5XX_Count \
+              --dimensions Name=LoadBalancer,Value="$DIM" --start-time "$(date -u -d '-5 minutes' +%FT%TZ)" --end-time "$(date -u +%FT%TZ)" \
+              --period 300 --statistics Sum --query 'Datapoints[0].Sum' --output text)
+            echo "$(date -u +%T) 5xx in the last 5 minutes: ${SUM:-0}"
+            if [ "${SUM:-None}" != "None" ] && [ "${SUM%.*}" -gt 0 ]; then echo "5xx seen during bake; stopping the rollout here."; exit 1; fi
+          done

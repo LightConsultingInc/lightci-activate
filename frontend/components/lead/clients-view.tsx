@@ -83,10 +83,12 @@ const slugify = (s: string) => s.toLowerCase().replace(/&/g, " and ").replace(/[
 function ProvisionDialog({ onCreated }: { onCreated: (id: string) => void }) {
   const { provision } = useLeadMutations()
   const [open, setOpen] = useState(false)
-  const [f, setF] = useState({ name: "", slug: "", workosOrganizationId: "", industry: "", sponsorName: "", seats: 25 })
+  const [f, setF] = useState({ name: "", slug: "", emailDomains: "", workosOrganizationId: "", industry: "", sponsorName: "", seats: 25 })
+  const [createIdentity, setCreateIdentity] = useState(true)
+  const [linkExisting, setLinkExisting] = useState(false)
   const [slugTouched, setSlugTouched] = useState(false)
   const set = (k: keyof typeof f, v: string | number) => setF((s) => ({ ...s, [k]: v, ...(k === "name" && !slugTouched ? { slug: slugify(String(v)) } : {}) }))
-  const valid = f.name.trim().length > 1 && /^[a-z0-9-]{2,}$/.test(f.slug) && f.seats > 0
+  const valid = f.name.trim().length > 1 && /^[a-z0-9-]{2,}$/.test(f.slug) && f.seats > 0 && (!createIdentity || linkExisting || f.emailDomains.trim().length > 0)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm" data-testid="provision-open" />}>
@@ -95,14 +97,23 @@ function ProvisionDialog({ onCreated }: { onCreated: (id: string) => void }) {
       <DialogContent className="sm:max-w-md" data-testid="provision-dialog">
         <DialogHeader>
           <DialogTitle>Provision a client</DialogTitle>
-          <DialogDescription>Creates the Activate org. The client&apos;s admin then uploads their Claude Enterprise keys and links the marketplace repo from the setup checklist.</DialogDescription>
+          <DialogDescription>Creates the Activate org and, by default, the client&apos;s identity organisation so their IT team can connect single sign-on themselves. The client&apos;s admin then uploads their Claude Enterprise keys and links the marketplace repo from the setup checklist.</DialogDescription>
         </DialogHeader>
         <form
           className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault()
             provision.mutate(
-              { name: f.name.trim(), slug: f.slug, workosOrganizationId: f.workosOrganizationId.trim() || undefined, industry: f.industry.trim() || undefined, sponsorName: f.sponsorName.trim() || undefined, seats: Number(f.seats) },
+              {
+                name: f.name.trim(),
+                slug: f.slug,
+                emailDomains: f.emailDomains.trim() || undefined,
+                createIdentityOrganization: linkExisting ? false : createIdentity,
+                workosOrganizationId: linkExisting ? f.workosOrganizationId.trim() || undefined : undefined,
+                industry: f.industry.trim() || undefined,
+                sponsorName: f.sponsorName.trim() || undefined,
+                seats: Number(f.seats),
+              },
               {
                 onSuccess: (org) => {
                   toast.success(`${org.name} provisioned`, { description: "Next: the checklist on the client page." })
@@ -117,7 +128,24 @@ function ProvisionDialog({ onCreated }: { onCreated: (id: string) => void }) {
         >
           <div className="grid gap-1"><Label htmlFor="pv-name" className="text-xs">Company name</Label><Input id="pv-name" required value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Meridian Wealth Partners" data-testid="provision-name" /></div>
           <div className="grid gap-1"><Label htmlFor="pv-slug" className="text-xs">Slug</Label><Input id="pv-slug" required value={f.slug} onChange={(e) => { setSlugTouched(true); set("slug", slugify(e.target.value)) }} placeholder="meridian" className="font-mono" data-testid="provision-slug" /><p className="text-[11px] text-muted-foreground">Used for the marketplace repo name: <span className="font-mono">{f.slug || "<slug>"}-claude-marketplace</span></p></div>
-          <div className="grid gap-1"><Label htmlFor="pv-workos" className="text-xs">WorkOS organisation id <span className="text-muted-foreground">(optional)</span></Label><Input id="pv-workos" value={f.workosOrganizationId} onChange={(e) => set("workosOrganizationId", e.target.value)} placeholder="org_01H…" className="font-mono" data-testid="provision-workos" /></div>
+          <div className="grid gap-1">
+            <Label htmlFor="pv-domains" className="text-xs">Company email domains</Label>
+            <Input id="pv-domains" value={f.emailDomains} onChange={(e) => set("emailDomains", e.target.value)} placeholder="acme.com, acme.co.uk" className="font-mono" data-testid="provision-domains" />
+            <p className="text-[11px] text-muted-foreground">People with these addresses are sent to this client&apos;s single sign-on.</p>
+          </div>
+          <div className="grid gap-2 rounded-lg border p-3 text-xs" data-testid="provision-identity">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="size-3.5" checked={createIdentity && !linkExisting} disabled={linkExisting} onChange={(e) => setCreateIdentity(e.target.checked)} data-testid="provision-create-identity" />
+              <span>Create the identity organisation now (their IT admin connects SSO from a link you send them)</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="size-3.5" checked={linkExisting} onChange={(e) => setLinkExisting(e.target.checked)} data-testid="provision-link-existing" />
+              <span>Link an existing WorkOS organisation instead</span>
+            </label>
+            {linkExisting && (
+              <Input id="pv-workos" value={f.workosOrganizationId} onChange={(e) => set("workosOrganizationId", e.target.value)} placeholder="org_01H…" className="font-mono" data-testid="provision-workos" />
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1"><Label htmlFor="pv-industry" className="text-xs">Industry</Label><Input id="pv-industry" value={f.industry} onChange={(e) => set("industry", e.target.value)} placeholder="Wealth management" data-testid="provision-industry" /></div>
             <div className="grid gap-1"><Label htmlFor="pv-seats" className="text-xs">Seats</Label><Input id="pv-seats" type="number" min={1} required value={f.seats} onChange={(e) => set("seats", Number(e.target.value))} className="tabular" data-testid="provision-seats" /></div>

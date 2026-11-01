@@ -1,15 +1,21 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
+import { BootstrapModule } from './bootstrap/bootstrap.module';
+import { LicenseModule } from './license/license.module';
 import { ClaudeEnterpriseModule } from './claude-enterprise/claude-enterprise.module';
+import { seedEnabled } from './config/env';
+import { MetricsModule } from './metrics/metrics.module';
+import { UpdatesModule } from './updates/updates.module';
 import { McpModule } from './mcp/mcp.module';
 import { SeedModule } from './seed/seed.module';
 import { ContextModule } from './context/context.module';
 import { HealthcheckModule } from './healthcheck/healthcheck.module';
 import { InterviewsModule } from './interviews/interviews.module';
+import { JobsModule } from './jobs/jobs.module';
 import { LearningModule } from './learning/learning.module';
+import { LoggingModule } from './logging/logging.module';
 import { OpsModule } from './ops/ops.module';
 import { OrgsModule } from './orgs/orgs.module';
 import { SkillsModule } from './skills/skills.module';
@@ -18,8 +24,13 @@ import { WorkflowsModule } from './workflows/workflows.module';
 
 @Module({
   imports: [
+    LoggingModule,
     TypeOrmModule.forRoot({ ...AppDataSource.options, autoLoadEntities: true }),
-    ScheduleModule.forRoot(),
+    JobsModule,
+    MetricsModule,
+    UpdatesModule,
+    LicenseModule,
+    BootstrapModule,
     HealthcheckModule,
     AiModule,
     AuthModule,
@@ -32,7 +43,9 @@ import { WorkflowsModule } from './workflows/workflows.module';
     InterviewsModule,
     ClaudeEnterpriseModule,
     McpModule,
-    SeedModule,
+    // Demo seed (routes and SEED_ON_BOOT) exists only where seedEnabled() allows it:
+    // cloud non-production, or an explicit ACTIVATE_ALLOW_SEED=true.
+    ...(seedEnabled() ? [SeedModule] : []),
   ],
 })
 export class AppModule {}

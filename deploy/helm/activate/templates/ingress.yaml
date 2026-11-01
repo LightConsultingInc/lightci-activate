@@ -1,0 +1,113 @@
+{{- if .Values.ingress.internal.enabled }}
+{{/* Employees on your network: the web app and the API. */}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "activate.fullname" . }}-internal
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+  {{- with .Values.ingress.internal.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.internal.className | quote }}
+  {{- if .Values.ingress.internal.tls.secretName }}
+  tls:
+    - hosts:
+        - {{ .Values.global.hosts.web | quote }}
+        - {{ .Values.global.hosts.api | quote }}
+      secretName: {{ .Values.ingress.internal.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.global.hosts.web | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "activate.fullname" . }}-web
+                port: { name: http }
+    - host: {{ .Values.global.hosts.api | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "activate.fullname" . }}-api
+                port: { name: http }
+{{- end }}
+{{- if .Values.ingress.mcp.enabled }}
+---
+{{/*
+Claude Enterprise calls the connector (/mcp) from Anthropic's infrastructure, so that path accepts
+inbound HTTPS only from those addresses (the published ranges by default). Sign-in runs on the same
+host: Claude sends the person's browser to /oauth/authorize and the identity provider returns it to
+/oauth/callback, and Claude reads /.well-known discovery, so those paths are open to everyone and
+carry no secrets of their own (PKCE, short-lived codes, client authentication at the token endpoint).
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "activate.fullname" . }}-mcp
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.ingress.mcp.sourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ join "," .Values.ingress.mcp.sourceRanges | quote }}
+    {{- end }}
+    {{- with .Values.ingress.mcp.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.mcp.className | quote }}
+  {{- if .Values.ingress.mcp.tls.secretName }}
+  tls:
+    - hosts:
+        - {{ .Values.global.hosts.mcp | quote }}
+      secretName: {{ .Values.ingress.mcp.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.global.hosts.mcp | quote }}
+      http:
+        paths:
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "activate.fullname" . }}-api
+                port: { name: http }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "activate.fullname" . }}-oauth
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+  {{- with .Values.ingress.mcp.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.mcp.className | quote }}
+  {{- if .Values.ingress.mcp.tls.secretName }}
+  tls:
+    - hosts:
+        - {{ .Values.global.hosts.mcp | quote }}
+      secretName: {{ .Values.ingress.mcp.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.global.hosts.mcp | quote }}
+      http:
+        paths:
+          {{- range list "/oauth" "/.well-known" }}
+          - path: {{ . }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "activate.fullname" $ }}-api
+                port: { name: http }
+          {{- end }}
+{{- end }}

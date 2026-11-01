@@ -1,0 +1,99 @@
+# Upgrades: migrate before pods roll, bootstrap once, state survives (T4.2, T7).
+suite: migrate, bootstrap and persistence
+release:
+  name: activate
+  namespace: activate
+templates:
+  - migrate-job.yaml
+  - worker-statefulset.yaml
+  - api-deployment.yaml
+  - web-deployment.yaml
+tests:
+  - it: migrations run as a pre-install and pre-upgrade hook ahead of bootstrap
+    template: migrate-job.yaml
+    asserts:
+      - hasDocuments: { count: 2 }
+      - equal:
+          path: 'metadata.annotations["helm.sh/hook"]'
+          value: "pre-install,pre-upgrade"
+        documentIndex: 0
+      - equal:
+          path: 'metadata.annotations["helm.sh/hook-weight"]'
+          value: "-5"
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: [activate, migrate]
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: [activate, bootstrap]
+        documentIndex: 1
+      - equal:
+          path: metadata.annotations['helm.sh/hook']
+          value: post-install,post-upgrade
+        documentIndex: 1
+      - equal: { path: spec.template.spec.restartPolicy, value: Never }
+        documentIndex: 0
+
+  - it: the worker keeps marketplace clones on a volume claim by default
+    template: worker-statefulset.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: data
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 5Gi
+
+  - it: without persistence the worker uses an emptyDir and still mounts /data
+    template: worker-statefulset.yaml
+    documentIndex: 1
+    set: { marketplace.persistence.enabled: false }
+    asserts:
+      - notExists: { path: spec.volumeClaimTemplates }
+      - contains:
+          path: spec.template.spec.volumes
+          content: { name: data, emptyDir: {} }
+
+  - it: autoscaling replaces fixed replicas and a disruption budget protects both tiers
+    asserts:
+      - notExists: { path: spec.replicas }
+        template: api-deployment.yaml
+        documentIndex: 0
+      - isKind: { of: HorizontalPodAutoscaler }
+        template: api-deployment.yaml
+        documentIndex: 2
+      - isKind: { of: PodDisruptionBudget }
+        template: api-deployment.yaml
+        documentIndex: 3
+      - isKind: { of: PodDisruptionBudget }
+        template: web-deployment.yaml
+        documentIndex: 3
+
+  - it: fixed replicas apply when autoscaling is off
+    template: api-deployment.yaml
+    set: { api.autoscaling.enabled: false, api.replicas: 3 }
+    asserts:
+      - equal: { path: spec.replicas, value: 3 }
+        documentIndex: 0
+      - hasDocuments: { count: 3 }
+
+  - it: the web app is told where it lives and proxies the API from its own origin
+    template: web-deployment.yaml
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: WEB_URL, value: https://activate.example.com }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: API_URL, value: http://activate-api:3000 }
+      # The browser is sent to the API's public host to sign in, never to the in-cluster address.
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: PUBLIC_API_URL, value: https://api.activate.example.com }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: AUTH_PROVIDER, value: oidc }

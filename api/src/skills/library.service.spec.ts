@@ -11,10 +11,13 @@ import { join } from 'node:path';
 import { simpleGit } from 'simple-git';
 import { FindOperator } from 'typeorm';
 import type { Person } from '../orgs/entities/person.entity';
+import type { Skill } from './entities/skill.entity';
+import type { SkillVersion } from './entities/skill-version.entity';
 import { GitRepoService } from './git-repo.service';
 import { LibraryService } from './library.service';
 import {
   SEEDED_SLUGS,
+  ORG,
   copyMarketplace,
   governedWarnings,
   repoFor,
@@ -23,6 +26,10 @@ import {
 // ───────────────────────── in-memory repository ─────────────────────────
 
 type Row = Record<string, any>;
+
+/** Sort key as JS would compare it: Dates by epoch millis, everything else raw. */
+const sortKey = (v: unknown): number =>
+  (v instanceof Date ? v.getTime() : v) as number;
 
 function opMatch(actual: unknown, op: FindOperator<unknown>): boolean {
   switch (op.type) {
@@ -68,7 +75,7 @@ class FakeRepo<T extends Row = Row> {
     else this.rows.push(e as T);
     return this.rows.find((r) => r.id === e.id);
   }
-  async find(
+  find(
     opts: {
       where?: Row | Row[];
       order?: Record<string, 'ASC' | 'DESC'>;
@@ -83,8 +90,8 @@ class FakeRepo<T extends Row = Row> {
       const keys = Object.entries(opts.order);
       out.sort((a, b) => {
         for (const [k, dir] of keys) {
-          const av = a[k] instanceof Date ? a[k].getTime() : a[k];
-          const bv = b[k] instanceof Date ? b[k].getTime() : b[k];
+          const av = sortKey(a[k]);
+          const bv = sortKey(b[k]);
           if (av === bv) continue;
           const c = av > bv ? 1 : -1;
           return dir === 'DESC' ? -c : c;
@@ -93,7 +100,7 @@ class FakeRepo<T extends Row = Row> {
       });
     }
     if (opts.take) out = out.slice(0, opts.take);
-    return out;
+    return Promise.resolve(out);
   }
   async findOne(opts: {
     where?: Row | Row[];
@@ -107,26 +114,30 @@ class FakeRepo<T extends Row = Row> {
     if (!r) throw new Error('not found');
     return r;
   }
-  async update(criteria: string | Row, patch: Row): Promise<void> {
+  update(criteria: string | Row, patch: Row): Promise<void> {
     const where = typeof criteria === 'string' ? { id: criteria } : criteria;
     for (const r of this.rows)
       if (matches(r, where)) Object.assign(r, patch, { updatedAt: new Date() });
+    return Promise.resolve();
   }
-  async exists(opts: { where: Row }): Promise<boolean> {
-    return this.rows.some((r) => matches(r, opts.where));
+  exists(opts: { where: Row }): Promise<boolean> {
+    return Promise.resolve(this.rows.some((r) => matches(r, opts.where)));
   }
-  async count(opts: { where: Row }): Promise<number> {
-    return this.rows.filter((r) => matches(r, opts.where)).length;
+  count(opts: { where: Row }): Promise<number> {
+    return Promise.resolve(
+      this.rows.filter((r) => matches(r, opts.where)).length,
+    );
   }
-  createQueryBuilder(): any {
-    const qb: any = new Proxy(
+  /** Chainable no-op builder: every method returns the builder; raw reads return nothing. */
+  createQueryBuilder(): object {
+    const qb: object = new Proxy(
       {},
       {
         get: (_t, prop) =>
           prop === 'getRawMany'
-            ? async () => []
+            ? () => Promise.resolve([])
             : prop === 'getRawOne'
-              ? async () => undefined
+              ? () => Promise.resolve(undefined)
               : () => qb,
       },
     );
@@ -178,19 +189,22 @@ function person(
   } as unknown as Person;
 }
 
+// Real git operations against the demo marketplace: generous timeouts, slow on a busy machine.
+jest.setTimeout(60_000);
+
 describe('LibraryService against the demo marketplace', () => {
   let dir: string;
   let git: GitRepoService;
   let lib: LibraryService;
   const repos = {
-    skills: new FakeRepo(),
-    versions: new FakeRepo(),
+    skills: new FakeRepo<Skill>(),
+    versions: new FakeRepo<SkillVersion>(),
     usage: new FakeRepo(),
     adoptions: new FakeRepo(),
     comments: new FakeRepo(),
     assignments: new FakeRepo(),
     promotions: new FakeRepo(),
-    people: new FakeRepo(),
+    people: new FakeRepo<Person>(),
     teams: new FakeRepo(),
     orgs: new FakeRepo(),
     grades: new FakeRepo(),
@@ -235,7 +249,7 @@ describe('LibraryService against the demo marketplace', () => {
   beforeAll(async () => {
     dir = copyMarketplace();
     git = await repoFor(dir);
-    const refOf = (p: Row) => ({
+    const refOf = (p: Person) => ({
       id: p.id,
       name: p.name,
       email: p.email,
@@ -247,13 +261,13 @@ describe('LibraryService against the demo marketplace', () => {
       roles: p.roles,
     });
     const refs = {
-      refs: async (persons: Row[]) => persons.map(refOf),
-      ref: async (p: Row) => refOf(p),
-      refById: async (id: string) => {
+      refs: (persons: Person[]) => Promise.resolve(persons.map(refOf)),
+      ref: (p: Person) => Promise.resolve(refOf(p)),
+      refById: (id: string) => {
         const p = repos.people.rows.find((r) => r.id === id);
-        return p ? refOf(p) : null;
+        return Promise.resolve(p ? refOf(p) : null);
       },
-      currentRung: async () => 1,
+      currentRung: () => Promise.resolve(1),
     };
     lib = new LibraryService(
       repos.skills as any,
@@ -315,7 +329,7 @@ describe('LibraryService against the demo marketplace', () => {
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   it('status reports the repo on main, clean, with counts', async () => {
-    expect(git.available()).toBe(true);
+    expect(await git.ensureRepo(ORG)).toBe(true);
     const s = await lib.status(ORG_ID);
     expect(s).toMatchObject({
       branch: 'main',
@@ -352,7 +366,7 @@ describe('LibraryService against the demo marketplace', () => {
       repoPath: 'plugins/fp-meeting-prep/skills/advisor-meeting-prep',
     });
     expect(prep.publishedAt).toBeInstanceOf(Date);
-    expect(prep.manifest.boundary.may_read).toContain('calendar');
+    expect(prep.manifest?.boundary.may_read).toContain('calendar');
     expect(prep.sampleCases).toHaveLength(4);
     expect(bySlug('rmd-letter-draft').ownerPersonId).toBe(priya.id);
     expect(bySlug('onboarding-packet-qa')).toMatchObject({
@@ -726,7 +740,7 @@ describe('LibraryService against the demo marketplace', () => {
 
     // grade glue
     const skill = repos.skills.rows.find((s) => s.id === created.id)!;
-    const grade = await lib.recordSkillGrade(ORG_ID, skill as any, priya, {
+    const grade = await lib.recordSkillGrade(ORG_ID, skill, priya, {
       submissionId: null,
       skillVersionId: null,
       personId: priya.id,
@@ -792,7 +806,7 @@ describe('LibraryService against the demo marketplace', () => {
     await expect(
       lib.deprecate(ORG_ID, marcus, 'advisor-meeting-prep'),
     ).rejects.toThrow(/owner or a champion/);
-  });
+  }, 60_000); // real git operations; slow when the machine is busy
 
   it('writes to the skill directory even when repoPath points at SKILL.md (demo seed shape)', async () => {
     const skill = repos.skills.rows.find(

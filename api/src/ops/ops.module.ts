@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClaudeEnterpriseModule } from '../claude-enterprise/claude-enterprise.module';
 import { OrgsModule } from '../orgs/orgs.module';
+import { AuthModule } from '../auth/auth.module';
 import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
 import { Team } from '../orgs/entities/team.entity';
@@ -29,6 +30,7 @@ import { AgentRun } from './entities/agent-run.entity';
 import { AuditLog } from './entities/audit-log.entity';
 import { AnalyticsSyncController } from './analytics-sync.controller';
 import { AnalyticsSyncService } from './analytics-sync.service';
+import { OpsJobs } from './ops.jobs';
 import { AuditorService } from './auditor.service';
 import { EscalationsController } from './escalations.controller';
 import { LeadController } from './lead.controller';
@@ -76,6 +78,7 @@ import { TeamService } from './team.service';
     ]),
     ClaudeEnterpriseModule,
     OrgsModule,
+    AuthModule,
   ],
   controllers: [
     TeamController,
@@ -91,6 +94,7 @@ import { TeamService } from './team.service';
     AuditorService,
     LeadService,
     AnalyticsSyncService,
+    OpsJobs,
   ],
   exports: [
     TypeOrmModule,

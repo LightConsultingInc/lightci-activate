@@ -45,12 +45,11 @@ import {
   type BoundaryDeclaration,
   type SampleCase,
   Skill,
-  type SkillStatus,
 } from './entities/skill.entity';
 import { GitRepoService } from './git-repo.service';
 import {
-  type RepoManifest,
   type RepoSkill,
+  type RepoSkillVersion,
   boundaryToManifest,
   composeSkillMd,
   parseFrontmatter,
@@ -90,8 +89,6 @@ interface CardContext {
   triggerIndex: { id: string; tokens: Set<string> }[];
   now: Date;
 }
-
-const lastSyncAt = new Map<string, string>();
 
 /**
  * The Skill Library. The marketplace repo is the source of truth for *published* skills (sync merges
@@ -181,30 +178,38 @@ export class LibraryService {
   // ───────────────────────── sync from the repo ─────────────────────────
 
   async status(orgId: string): Promise<MarketplaceStatus> {
-    const head = await this.git.head();
+    await this.git.refresh(orgId);
+    const repo = await this.git.repoFor(orgId);
+    const head = await this.git.head(orgId);
     let pluginCount = 0;
     let skillCount = 0;
-    if (await this.git.ensureRepo()) {
-      const read = await readRepoSkills(this.git.path!).catch(() => null);
+    const path = await this.git.pathFor(orgId);
+    if (path) {
+      const read = await readRepoSkills(path).catch(() => null);
       pluginCount = read?.plugins.length ?? 0;
       skillCount = read?.skills.length ?? 0;
     }
+    const org = await this.orgs.findOne({ where: { id: orgId } });
     return {
-      repo: this.git.githubMode
-        ? process.env.GITHUB_REPO!
-        : this.git.sourcePath,
+      repo: repo.path || repo.mode === 'clone' ? repo.label : null,
       branch: head.branch,
       head: head.head,
       dirty: head.dirty,
       pluginCount,
       skillCount,
-      lastSyncAt: lastSyncAt.get(orgId) ?? null,
-      workDir: this.git.mode === 'nested' ? this.git.workDir : null,
-      mode: this.git.githubMode
-        ? 'github'
-        : this.git.mode === 'nested'
-          ? 'local-nested'
-          : 'local',
+      lastSyncAt:
+        (org?.settings as { lastMarketplaceSyncAt?: string } | undefined)
+          ?.lastMarketplaceSyncAt ?? null,
+      workDir: repo.mode === 'nested' ? repo.workDir : null,
+      mode:
+        repo.config.provider === 'github'
+          ? 'github'
+          : repo.config.provider === 'git'
+            ? 'git'
+            : repo.mode === 'nested'
+              ? 'local-nested'
+              : 'local',
+      lastError: repo.lastError,
     };
   }
 
@@ -212,11 +217,15 @@ export class LibraryService {
     orgId: string,
     actorPersonId: string | null = null,
   ): Promise<SyncResult> {
-    if (!(await this.git.ensureRepo()))
+    await this.git.refresh(orgId);
+    const repoPath = await this.git.pathFor(orgId);
+    if (!repoPath) {
+      const repo = await this.git.repoFor(orgId);
       throw new ConflictException(
-        `Marketplace repo not available at ${this.git.path ?? 'LIBRARY_REPO_PATH'}; nothing to sync.`,
+        `Marketplace repo not available (${repo.lastError ?? repo.label}); nothing to sync.`,
       );
-    const read = await readRepoSkills(this.git.path!);
+    }
+    const read = await readRepoSkills(repoPath);
     const result: SyncResult = {
       created: 0,
       updated: 0,
@@ -305,7 +314,9 @@ export class LibraryService {
       skill = await this.skills.save(skill);
 
       // versions from tags (or the declared activate-version from HEAD when the repo has no tags)
-      const repoVersions = rs.versions.length
+      const repoVersions: Array<
+        Omit<RepoSkillVersion, 'tag'> & { tag: string | null }
+      > = rs.versions.length
         ? rs.versions
         : [
             {
@@ -425,7 +436,15 @@ export class LibraryService {
       }
     }
 
-    lastSyncAt.set(orgId, result.syncedAt);
+    // Recorded on the org so every replica reports the same time.
+    const orgRow = await this.orgs.findOne({ where: { id: orgId } });
+    if (orgRow) {
+      orgRow.settings = {
+        ...(orgRow.settings ?? {}),
+        lastMarketplaceSyncAt: result.syncedAt,
+      } as typeof orgRow.settings;
+      await this.orgs.save(orgRow);
+    }
     await this.audit.save(
       this.audit.create({
         orgId,
@@ -1060,10 +1079,13 @@ export class LibraryService {
     message: string,
   ): Promise<string | null> {
     const files = await this.repoFiles(skill, skill.currentVersion);
-    const res = await this.git.writeOnBranch(skill.slug, files, message, {
-      name: author.name,
-      email: author.email,
-    });
+    const res = await this.git.writeOnBranch(
+      skill.orgId,
+      skill.slug,
+      files,
+      message,
+      { name: author.name, email: author.email },
+    );
     return res?.sha ?? null;
   }
 
@@ -1076,6 +1098,7 @@ export class LibraryService {
   ): Promise<string | null> {
     const files = await this.repoFiles(skill, version);
     const res = await this.git.publish(
+      skill.orgId,
       skill.slug,
       files,
       message,
@@ -1682,9 +1705,10 @@ export class LibraryService {
   }
 
   /** Repo-side record for a skill, if present on main (used for previousSkillMd on promotions). */
-  async repoSkill(slug: string): Promise<RepoSkill | null> {
-    if (!(await this.git.ensureRepo())) return null;
-    const read = await readRepoSkills(this.git.path!).catch(() => null);
+  async repoSkill(orgId: string, slug: string): Promise<RepoSkill | null> {
+    const path = await this.git.pathFor(orgId);
+    if (!path) return null;
+    const read = await readRepoSkills(path).catch(() => null);
     return read?.skills.find((s) => s.slug === slug) ?? null;
   }
 }

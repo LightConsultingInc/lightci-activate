@@ -307,7 +307,7 @@ describe('review practice (L5): gradeReview', () => {
     expect(agreement).toEqual({
       learner: 8.5,
       grader: 8.6,
-      note: expect.stringContaining('within a point'),
+      note: expect.stringContaining('within a point') as string,
     });
     expect(grade.decision).toBe('pass');
     expect(grade.rubric.map((r) => r.criterion)).toEqual(
@@ -391,7 +391,7 @@ describe('GraderService.gradeSkillText', () => {
     expect(draft.submissionId).toBeNull();
     expect(draft.skillVersionId).toBeNull();
     expect(draft.critiqueQuality).toBeNull();
-    expect((draft as any).id).toBeUndefined();
+    expect((draft as { id?: unknown }).id).toBeUndefined();
     expect(grades.rows).toHaveLength(0);
   });
 

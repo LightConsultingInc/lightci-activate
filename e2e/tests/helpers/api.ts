@@ -1,4 +1,6 @@
-import { expect, type APIRequestContext, type Page } from "@playwright/test"
+import { expect, request as playwrightRequest, type APIRequestContext, type Page } from "@playwright/test"
+import { USERS, type RoleKey } from "./users"
+import { workosPasswordToken } from "./workos"
 
 /** REST base for direct API assertions (the web app proxies nothing; the browser talks to it directly). */
 export const API_URL = process.env.API_URL ?? "http://localhost:4310"
@@ -31,4 +33,22 @@ export async function api<T = unknown>(ctx: APIRequestContext | Page, method: Me
   const text = await res.text()
   if (!res.ok()) throw new Error(`${method} ${path} → ${res.status()}: ${text.slice(0, 300)}`)
   return (text ? JSON.parse(text) : null) as T
+}
+
+/**
+ * A bearer token for a seeded role without a browser page. WorkOS mode uses the password grant;
+ * OIDC mode reads the Activate-issued token from the role's saved session via /auth/token.
+ */
+export async function bearerFor(request: APIRequestContext, role: RoleKey): Promise<string> {
+  if (process.env.E2E_AUTH !== "oidc") return workosPasswordToken(request, USERS[role].email)
+  const ctx = await playwrightRequest.newContext({ baseURL: process.env.BASE_URL ?? "http://localhost:3000", storageState: USERS[role].state })
+  try {
+    const res = await ctx.get("/auth/token")
+    if (!res.ok()) throw new Error(`GET /auth/token → ${res.status()}`)
+    const { accessToken } = (await res.json()) as { accessToken: string | null }
+    if (!accessToken) throw new Error("No access token in the saved session; re-run the setup project")
+    return accessToken
+  } finally {
+    await ctx.dispose()
+  }
 }

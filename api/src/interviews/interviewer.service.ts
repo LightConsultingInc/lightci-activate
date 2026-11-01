@@ -13,6 +13,7 @@ import { In, IsNull, Repository } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import type { ZodType } from 'zod';
 import { AiService } from '../ai/ai.service';
+import { withAdvisoryLock } from '../common/pg-lock';
 import { ContextLayer } from '../context/entities/context-layer.entity';
 import { ContextSource } from '../context/entities/context-source.entity';
 import { CoachService } from '../learning/coach.service';
@@ -77,11 +78,6 @@ const FIRST_EXERCISE_BUDGET_MS = 90_000;
 @Injectable()
 export class InterviewerService {
   private readonly logger = new Logger(InterviewerService.name);
-  /** In-flight completions by session id so a double call (finish button + voice flush) runs once. */
-  private readonly completing = new Map<
-    string,
-    Promise<InterviewCompleteResponse>
-  >();
 
   constructor(
     @InjectRepository(InterviewSession)
@@ -432,13 +428,13 @@ export class InterviewerService {
     user: Person,
     orgId: string,
   ): Promise<InterviewCompleteResponse> {
-    const inflight = this.completing.get(session.id);
-    if (inflight) return inflight;
-    const run = this.completeOnce(session, user, orgId).finally(() =>
-      this.completing.delete(session.id),
+    // A database lock, not an in-memory map: the finish button and the voice flush may land on
+    // different replicas. The second caller waits, re-reads the session and returns the stored result.
+    return withAdvisoryLock(
+      this.sessions.manager.connection,
+      `interview:complete:${session.id}`,
+      () => this.completeOnce(session, user, orgId),
     );
-    this.completing.set(session.id, run);
-    return run;
   }
 
   private async completeOnce(

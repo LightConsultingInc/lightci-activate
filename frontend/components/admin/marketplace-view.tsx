@@ -56,7 +56,7 @@ function Inner() {
         <div className="space-y-4">
           <QueryState query={status} skeleton={<Skeleton className="h-56 rounded-xl" />}>
             {(s) => (
-              <Panel title={<span className="inline-flex items-center gap-2"><GitBranchIcon className="size-4" /> Repository</span>} description={s.mode === "github" ? "Linked to GitHub. Promotions open pull requests." : "Local working tree. Add a GitHub token to open real pull requests."} testId="repo-status">
+              <Panel title={<span className="inline-flex items-center gap-2"><GitBranchIcon className="size-4" /> Repository</span>} description={s.mode === "github" ? "Linked to GitHub. Promotions open pull requests." : s.mode === "git" ? "Linked to a Git remote. Publishing pushes to it." : "Local working tree. Link a repository to publish for real."} testId="repo-status">
                 <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1.5 text-sm">
                   <dt className="text-muted-foreground">Repo</dt>
                   <dd className="truncate font-mono text-xs">{repoUrl ? <a href={repoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">{s.repo ?? repoUrl} <ExternalLinkIcon className="size-3" /></a> : s.repo ?? "not linked"}</dd>
@@ -69,7 +69,13 @@ function Inner() {
                   <dt className="text-muted-foreground">Last sync</dt>
                   <dd>{s.lastSyncAt ? `${fmt.ago(s.lastSyncAt)} (${fmt.date(s.lastSyncAt)})` : "never"}</dd>
                   <dt className="text-muted-foreground">Mode</dt>
-                  <dd><Badge variant="outline" className={cn("text-foreground", s.mode === "github" ? "border-pass/40 bg-pass-soft" : "border-border")}>{s.mode}</Badge></dd>
+                  <dd><Badge variant="outline" className={cn("text-foreground", s.mode === "github" || s.mode === "git" ? "border-pass/40 bg-pass-soft" : "border-border")}>{s.mode}</Badge></dd>
+                  {s.lastError && (
+                    <>
+                      <dt className="text-muted-foreground">Last problem</dt>
+                      <dd className="text-xs text-fail" data-testid="repo-last-error">{s.lastError}</dd>
+                    </>
+                  )}
                 </dl>
               </Panel>
             )}

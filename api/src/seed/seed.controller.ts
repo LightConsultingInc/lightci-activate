@@ -4,12 +4,13 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SeedService } from './seed.service';
 
 /**
- * Admin seed endpoints. Authentication is handled by the global guard; the orchestrator
- * adds a role check (lead/admin) on top of this controller.
+ * Demo seed endpoints. Lead-only: `reset` truncates every tenant's tables, so a client
+ * admin must never reach it. The whole module is left out unless `seedEnabled()` says
+ * otherwise (cloud non-production, or ACTIVATE_ALLOW_SEED=true).
  */
 @ApiTags('admin')
 @ApiBearerAuth()
-@Roles('admin')
+@Roles('lead')
 @Controller('admin/seed')
 export class SeedController {
   constructor(private readonly seed: SeedService) {}

@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from './decorators';
 import type { Role } from './roles';
 import type { Person } from '../orgs/entities/person.entity';
+import type { AuthedRequest } from '../auth/workos.guard';
 
 export function hasAnyRole(user: Person | undefined, roles: Role[]): boolean {
   if (!user) return false;
@@ -26,7 +27,7 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
     if (!required || required.length === 0) return true;
-    const req = context.switchToHttp().getRequest();
+    const req = context.switchToHttp().getRequest<AuthedRequest>();
     if (!hasAnyRole(req.user, required)) {
       throw new ForbiddenException(`Requires one of: ${required.join(', ')}`);
     }

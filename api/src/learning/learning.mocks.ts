@@ -239,7 +239,6 @@ registerMockResponder('coach.next-exercise', (call): NextExerciseOutput => {
     review: "Review this piece of a teammate's work.",
   };
   const system = (s as { systems?: string[] }).systems?.[0] ?? null;
-  const isPrompt = surface === 'prompt' || surface === 'orientation';
   return {
     title: `${MOCK_TITLES[surface] ?? 'Do'} ${task} for one case`.slice(0, 60),
     brief: asks[surface] ?? asks.prompt,

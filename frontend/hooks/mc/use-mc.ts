@@ -2,9 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import type {
+import type { LicenseState,
   Adoption, Assignment, Backlog, Cost, CostInput, Escalation, Governance, Groups, GroupsCompare, IntegrationKind, IntegrationSummary,
   Journey, LeadClient, LeadClientDetail, LeadQueue, MarketplaceStatus, McPeople, McSkills, Org, Person, Readout, Setup, Team,
+  UpdateStatus,
 } from "./types"
 
 const qs = (params: Record<string, string | number | boolean | null | undefined>) => {
@@ -65,6 +66,14 @@ export function usePatchOrg() {
     },
   })
 }
+/** License status; only admins may ask, and only self-hosted installs have one to show. */
+export const useUpdates = (enabled: boolean) => useQuery({ queryKey: ["admin", "updates"], queryFn: () => api.get<UpdateStatus>("/api/admin/updates"), enabled, staleTime: 5 * 60_000 })
+export const useLicense = (enabled: boolean) => useQuery({ queryKey: ["admin", "license"], queryFn: () => api.get<LicenseState>("/api/admin/license"), enabled, staleTime: 60_000 })
+export function useLicenseMutations() {
+  const qc = useQueryClient()
+  const install = useMutation({ mutationFn: (license: string) => api.post<LicenseState>("/api/admin/license", { license }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "license"] }) })
+  return { install }
+}
 export const useIntegrations = () => useQuery({ queryKey: ["org", "integrations"], queryFn: () => api.get<IntegrationSummary[]>("/api/org/integrations") })
 export function useIntegrationMutations() {
   const qc = useQueryClient()
@@ -119,8 +128,16 @@ export const useLeadClient = (id: string) => useQuery({ queryKey: ["lead", "clie
 export function useLeadMutations() {
   const qc = useQueryClient()
   const done = () => qc.invalidateQueries({ queryKey: ["lead"] })
-  const provision = useMutation({ mutationFn: (body: { name: string; slug: string; workosOrganizationId?: string; industry?: string; sponsorName?: string; seats: number }) => api.post<Org>("/api/lead/clients", body), onSuccess: done })
+  const provision = useMutation({
+    mutationFn: (body: { name: string; slug: string; emailDomains?: string; createIdentityOrganization?: boolean; workosOrganizationId?: string; industry?: string; sponsorName?: string; seats: number }) =>
+      api.post<Org>("/api/lead/clients", body),
+    onSuccess: done,
+  })
+  /** One-time Admin Portal link so the client's IT admin connects SSO or their directory themselves. */
+  const portalLink = useMutation({
+    mutationFn: ({ id, intent }: { id: string; intent: "sso" | "dsync" }) => api.post<{ url: string; intent: "sso" | "dsync" }>(`/api/lead/clients/${id}/portal-link`, { intent, returnUrl: window.location.origin }),
+  })
   const resolve = useMutation({ mutationFn: ({ id, resolution }: { id: string; resolution: string }) => api.post<Escalation>(`/api/escalations/${id}/resolve`, { resolution }), onSuccess: done })
   const assign = useMutation({ mutationFn: ({ id, personId }: { id: string; personId: string }) => api.post<Escalation>(`/api/escalations/${id}/assign`, { personId }), onSuccess: done })
-  return { provision, resolve, assign }
+  return { provision, portalLink, resolve, assign }
 }

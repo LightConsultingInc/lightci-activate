@@ -1,0 +1,101 @@
+{{/* Migrations run before any pod of the new version starts. If this Job fails, Helm stops and the current version keeps serving. */}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "activate.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        {{- include "activate.selector" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "activate.serverImage" . }}
+          imagePullPolicy: IfNotPresent
+          command: ["activate", "migrate"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: ACTIVATE_ROLE
+              value: api
+            {{- include "activate.serverEnv" . | nindent 12 }}
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: 1000m, memory: 1Gi }
+          volumeMounts:
+            {{- include "activate.serverVolumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "activate.serverVolumes" . | nindent 8 }}
+---
+{{/* First boot: the competency catalogue and, when org.slug is set, the organisation and its initial admins. Idempotent. */}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "activate.fullname" . }}-bootstrap-{{ .Release.Revision }}
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bootstrap
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        {{- include "activate.selector" . | nindent 8 }}
+        app.kubernetes.io/component: bootstrap
+    spec:
+      restartPolicy: Never
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bootstrap
+          image: {{ include "activate.serverImage" . }}
+          imagePullPolicy: IfNotPresent
+          command: ["activate", "bootstrap"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: ACTIVATE_ROLE
+              value: api
+            {{- include "activate.serverEnv" . | nindent 12 }}
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: 1000m, memory: 1Gi }
+          volumeMounts:
+            {{- include "activate.serverVolumeMounts" . | nindent 12 }}
+            - name: data
+              mountPath: /data
+      volumes:
+        {{- include "activate.serverVolumes" . | nindent 8 }}
+        - name: data
+          emptyDir: {}

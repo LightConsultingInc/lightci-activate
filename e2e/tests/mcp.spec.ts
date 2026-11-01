@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type APIResponse } from "@playwright/test"
-import { API_URL } from "./helpers/api"
+import { API_URL, bearerFor } from "./helpers/api"
+import { OIDC_MODE } from "./helpers/auth"
 import { USERS } from "./helpers/users"
-import { workosPasswordToken } from "./helpers/workos"
 
 const MCP_URL = `${API_URL}/mcp`
 const HEADERS = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18" }
@@ -34,7 +34,7 @@ test.describe("mcp server", () => {
 
   let token = ""
   test.beforeAll(async ({ request }) => {
-    token = await workosPasswordToken(request, USERS.learner.email)
+    token = await bearerFor(request, "learner")
   })
 
   test("initialize negotiates the protocol and advertises tools + resources", async ({ request }) => {
@@ -94,14 +94,16 @@ test.describe("mcp server", () => {
     expect(res.headers()["www-authenticate"]).toMatch(/resource_metadata=/)
   })
 
-  test("/.well-known/oauth-protected-resource points at WorkOS", async ({ request }) => {
+  test("/.well-known/oauth-protected-resource points at the authorization server for this mode", async ({ request }) => {
     const res = await request.get(`${API_URL}/.well-known/oauth-protected-resource`)
     expect(res.status()).toBe(200)
     const body = (await res.json()) as { resource: string; authorization_servers: string[]; bearer_methods_supported: string[] }
     expect(body.resource).toBe(MCP_URL)
     expect(Array.isArray(body.authorization_servers)).toBeTruthy()
     expect(body.authorization_servers.length).toBeGreaterThan(0)
-    expect(body.authorization_servers[0]).toMatch(/^https:\/\/api\.workos\.com\/user_management\//)
+    // WorkOS mode: WorkOS is the issuer. OIDC mode: Activate's own OAuth server (the API origin) is.
+    if (OIDC_MODE) expect(body.authorization_servers[0]).toBe(API_URL)
+    else expect(body.authorization_servers[0]).toMatch(/^https:\/\/api\.workos\.com\/user_management\//)
     expect(body.bearer_methods_supported).toContain("header")
     const alias = await request.get(`${API_URL}/.well-known/oauth-protected-resource/mcp`)
     expect(alias.status()).toBe(200)

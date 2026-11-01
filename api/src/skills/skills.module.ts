@@ -20,6 +20,7 @@ import { SkillVersion } from './entities/skill-version.entity';
 import { Skill } from './entities/skill.entity';
 import { GitRepoService } from './git-repo.service';
 import { LibraryService } from './library.service';
+import { PluginUpdateService } from './plugin-update.service';
 import { PromoterService } from './promoter.service';
 import { SkillsController } from './skills.controller';
 import './skills.mocks';
@@ -53,7 +54,18 @@ import './skills.mocks';
     LearningModule,
   ],
   controllers: [SkillsController],
-  providers: [GitRepoService, LibraryService, PromoterService],
-  exports: [TypeOrmModule, GitRepoService, LibraryService, PromoterService],
+  providers: [
+    GitRepoService,
+    LibraryService,
+    PromoterService,
+    PluginUpdateService,
+  ],
+  exports: [
+    TypeOrmModule,
+    GitRepoService,
+    LibraryService,
+    PromoterService,
+    PluginUpdateService,
+  ],
 })
 export class SkillsModule {}

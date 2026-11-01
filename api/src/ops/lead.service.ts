@@ -11,6 +11,9 @@ import { Org } from '../orgs/entities/org.entity';
 import { Person } from '../orgs/entities/person.entity';
 import { OrgService, slugify } from '../orgs/org.service';
 import { IntegrationsService } from '../orgs/integrations.service';
+import { WorkosService, type PortalIntent } from '../auth/workos.service';
+import { parseEmailDomains } from '../auth/email-domains';
+import { defaultOrgSettings } from '../orgs/org-defaults';
 import { AuditLog } from './entities/audit-log.entity';
 import { CostInput } from './entities/cost-input.entity';
 import { Wave } from './entities/wave.entity';
@@ -23,19 +26,19 @@ import {
   type OrgFacts,
 } from './metrics.service';
 import { personById, personRef, promotionView } from './shape';
-import type {
-  LeadClientRow,
-  LeadQueue,
-  PersonRef,
-  PromotionView,
-} from './ops.types';
+import type { LeadClientRow, LeadQueue, PersonRef } from './ops.types';
 
 export const ACTIVE_PCT_TARGET = 0.6; // spec: weekly active on real work ≥ 60%
 
 export interface CreateClientInput {
   name: string;
   slug?: string;
+  /** Link an existing WorkOS organisation instead of creating one. */
   workosOrganizationId?: string | null;
+  /** Email domains the company owns; sign-in routes them to its SSO. */
+  emailDomains?: string[] | string;
+  /** Create the WorkOS organisation as part of provisioning (default true when WorkOS is configured). */
+  createIdentityOrganization?: boolean;
   industry?: string | null;
   sponsorName?: string | null;
   seats: number;
@@ -49,6 +52,7 @@ export class LeadService {
     private readonly metrics: MetricsService,
     private readonly orgService: OrgService,
     private readonly integrations: IntegrationsService,
+    private readonly workos: WorkosService,
     @InjectRepository(Org) private readonly orgs: Repository<Org>,
     @InjectRepository(Wave) private readonly waves: Repository<Wave>,
     @InjectRepository(CostInput)
@@ -359,21 +363,45 @@ export class LeadService {
       throw new ConflictException(
         'That WorkOS organization is already linked to another org',
       );
+    const emailDomains = parseEmailDomains(dto.emailDomains);
+    for (const domain of emailDomains) {
+      const taken = await this.orgs
+        .createQueryBuilder('o')
+        .where(':domain = ANY(o."emailDomains")', { domain })
+        .getOne();
+      if (taken)
+        throw new ConflictException(
+          `The email domain ${domain} already belongs to ${taken.name}`,
+        );
+    }
+
+    // Create the customer's identity organisation unless the lead linked an existing one.
+    let workosOrganizationId = dto.workosOrganizationId ?? null;
+    const createIdentity =
+      !workosOrganizationId &&
+      this.workos.enabled &&
+      dto.createIdentityOrganization !== false;
+    if (createIdentity) {
+      const created = await this.workos.createOrganization(
+        dto.name.trim(),
+        emailDomains,
+        slug,
+      );
+      workosOrganizationId = created.id;
+    }
+
     const org = await this.orgs.save(
       this.orgs.create({
         name: dto.name.trim(),
         slug,
-        workosOrganizationId: dto.workosOrganizationId ?? null,
+        workosOrganizationId,
+        emailDomains,
         industry: dto.industry ?? null,
         sponsorName: dto.sponsorName ?? null,
         seats: Math.round(dto.seats),
         premiumSeats: Math.max(0, Math.round(dto.premiumSeats ?? 0)),
         residencyMode: dto.residencyMode ?? 'lightci_hosted',
-        settings: {
-          leaderboardsEnabled: false,
-          stalledAfterDays: 14,
-          baselineMethod: 'interview_estimate',
-        },
+        settings: defaultOrgSettings(),
         marketplaceRepo: null,
         isDemo: false,
       }),
@@ -390,19 +418,61 @@ export class LeadService {
           slug,
           seats: org.seats,
           workosLinked: Boolean(org.workosOrganizationId),
+          identityCreated: createIdentity,
+          emailDomains,
         },
       }),
     );
     return org;
   }
 
+  /**
+   * A one-time Admin Portal link for the customer's IT admin to connect their IdP or
+   * directory themselves. The link is not stored; it is handed to the lead to pass on.
+   */
+  async portalLink(
+    actor: Person,
+    orgId: string,
+    intent: PortalIntent,
+    returnUrl: string,
+  ): Promise<{ url: string; intent: PortalIntent }> {
+    const org = await this.orgs.findOne({ where: { id: orgId } });
+    if (!org) throw new NotFoundException('Org not found');
+    if (!org.workosOrganizationId)
+      throw new BadRequestException(
+        'This company has no identity organisation yet. Provision one first.',
+      );
+    if (!this.workos.enabled)
+      throw new BadRequestException('WorkOS is not configured on this server.');
+    const url = await this.workos.portalLink(
+      org.workosOrganizationId,
+      intent,
+      returnUrl,
+    );
+    await this.audit.save(
+      this.audit.create({
+        orgId: org.id,
+        actorPersonId: actor.id,
+        action: 'identity.portal_link',
+        subjectType: 'org',
+        subjectId: org.id,
+        meta: { intent },
+      }),
+    );
+    return { url, intent };
+  }
+
   async client(id: string) {
     const org = await this.orgs.findOne({ where: { id } });
     if (!org) throw new NotFoundException('Org not found');
+    const ssoConnections =
+      org.workosOrganizationId && this.workos.enabled
+        ? await this.workos.countActiveConnections(org.workosOrganizationId)
+        : null;
     const [row, setup, integrations, teams, waves, costInputs] =
       await Promise.all([
         this.clientRow(org, null),
-        this.orgService.setup(org.id),
+        this.orgService.setup(org.id, { ssoConnections }),
         this.integrations.list(org.id),
         this.orgService.listTeams(org.id),
         this.waves.find({ where: { orgId: org.id }, order: { number: 'ASC' } }),

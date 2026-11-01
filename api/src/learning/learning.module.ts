@@ -30,6 +30,7 @@ import { LessonsService } from './lessons.service';
 import { MemoryController } from './memory.controller';
 import { MemoryService } from './memory.service';
 import { ModulePrepService } from './module-prep.service';
+import { LearningJobs } from './learning.jobs';
 import { ModulesController } from './modules.controller';
 import { MasteryService } from './mastery.service';
 import { PersonRefService } from './person-ref.service';
@@ -68,7 +69,12 @@ import './learning.mocks';
       UsageSnapshot,
     ]),
   ],
-  controllers: [LearningController, LessonsController, MemoryController, ModulesController],
+  controllers: [
+    LearningController,
+    LessonsController,
+    MemoryController,
+    ModulesController,
+  ],
   providers: [
     PersonRefService,
     MasteryService,
@@ -79,6 +85,7 @@ import './learning.mocks';
     LessonsService,
     MemoryService,
     ModulePrepService,
+    LearningJobs,
     LearningController,
   ],
   exports: [

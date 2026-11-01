@@ -198,7 +198,9 @@ export interface MarketplaceStatus {
   lastSyncAt: string | null;
   /** Effective repo path when the source folder is nested in another git work tree; null otherwise. */
   workDir: string | null;
-  mode: 'local' | 'local-nested' | 'github';
+  mode: 'local' | 'local-nested' | 'github' | 'git';
+  /** Last git failure for this organisation's repo (fetch, push, clone), or null. */
+  lastError: string | null;
 }
 
 export interface SyncResult {

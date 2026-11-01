@@ -3,7 +3,6 @@ import type { Exercise, WorkSurface } from './entities/exercise.entity';
 import type { Grade, RubricScore } from './entities/grade.entity';
 import type { Revisit } from './entities/revisit.entity';
 import type { Submission } from './entities/submission.entity';
-import type { WorkflowSchema } from '../workflows/entities/workflow-map.entity';
 import type {
   ExerciseSummary,
   GradeView,

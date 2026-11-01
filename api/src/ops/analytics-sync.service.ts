@@ -4,7 +4,6 @@
  * Also exposed as `POST /org/sync-analytics` for admins (runs now, returns counts).
  */
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -64,7 +63,6 @@ export class AnalyticsSyncService {
   ) {}
 
   /** 03:15 UTC daily: the Analytics API publishes a day around 17:00 UTC the day after, so the last 3 days catch up any lag. */
-  @Cron('15 3 * * *', { name: 'analytics-sync' })
   async nightly() {
     const orgs = await this.orgs.find();
     for (const org of orgs) {

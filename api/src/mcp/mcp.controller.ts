@@ -28,7 +28,8 @@ export class McpController {
           jsonrpc: '2.0',
           error: {
             code: -32001,
-            message: 'Unauthorized: connect with a WorkOS access token',
+            message:
+              'Unauthorized: sign in through the connector to get an access token',
           },
           id: null,
         });

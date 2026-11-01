@@ -59,8 +59,18 @@ export interface TokenPage<T> {
   next_page: string | null;
 }
 
-export type EnterpriseOrgRole =
-  'user' | 'managed' | 'owner' | 'membership_admin' | 'primary_owner' | string;
+/**
+ * A string that is usually one of `T` but may be a value the API added later.
+ * `string & {}` keeps the known literals visible to autocomplete without being
+ * swallowed by the plain `string` arm (the usual "literal union" idiom).
+ */
+export type LiteralUnion<T extends string> = T | (string & {});
+
+export type EnterpriseOrgRole = LiteralUnion<
+  'user' | 'managed' | 'owner' | 'membership_admin' | 'primary_owner'
+>;
+
+export type GroupSourceType = LiteralUnion<'direct' | 'scim'>;
 
 export interface AdminUser {
   type: 'user';
@@ -75,7 +85,7 @@ export interface RbacGroup {
   type: 'rbac_group';
   id: string;
   name: string;
-  source_type: 'direct' | 'scim' | string;
+  source_type: GroupSourceType;
   /** `null` when role data was temporarily unavailable (retry to distinguish from []). */
   roles: string[] | null;
   created_at: string;
@@ -334,7 +344,7 @@ export interface ComplianceGroup {
   id: string;
   name: string;
   description?: string | null;
-  source_type: 'direct' | 'scim' | string;
+  source_type: GroupSourceType;
   roles: string[] | null;
   created_at: string;
   updated_at: string;
@@ -380,7 +390,7 @@ export interface ComplianceRemoteSession {
   user: { id: string; email_address: string | null } | null;
   agent_id: string | null;
   started_by_user: { id: string; email_address: string | null } | null;
-  status: 'pending' | 'active' | 'paused' | 'archived' | 'failed' | string;
+  status: LiteralUnion<'pending' | 'active' | 'paused' | 'archived' | 'failed'>;
   created_at: string;
   updated_at: string;
   product_surface: string | null;
@@ -412,7 +422,7 @@ export interface Member {
 export interface Group {
   id: string;
   name: string;
-  sourceType: 'direct' | 'scim' | string;
+  sourceType: GroupSourceType;
   roleIds: string[];
   createdAt: string;
   updatedAt: string;

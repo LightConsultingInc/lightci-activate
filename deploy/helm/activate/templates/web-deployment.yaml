@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "activate.fullname" . }}-web
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  {{- if not .Values.web.autoscaling.enabled }}
+  replicas: {{ .Values.web.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "activate.selector" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "activate.selector" . | nindent 8 }}
+        app.kubernetes.io/component: web
+      annotations:
+        checksum/values: {{ toJson .Values | sha256sum | trunc 16 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: web
+          image: {{ include "activate.webImage" . }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: 0.0.0.0
+            - name: WEB_URL
+              value: {{ printf "https://%s" .Values.global.hosts.web | quote }}
+            - name: API_URL
+              value: http://{{ include "activate.fullname" . }}-api:3000
+
+            - name: PUBLIC_API_URL
+              value: {{ printf "https://%s" .Values.global.hosts.api | quote }}
+            - name: AUTH_PROVIDER
+              value: {{ .Values.auth.provider | quote }}
+            - name: SESSION_SECRET
+              valueFrom: { secretKeyRef: { name: {{ .Values.encryption.existingSecret | quote }}, key: key } }
+            {{- if ne .Values.auth.provider "oidc" }}
+            - name: WORKOS_API_KEY
+              valueFrom: { secretKeyRef: { name: {{ .Values.auth.workos.existingSecret | quote }}, key: api-key } }
+            - name: WORKOS_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: {{ .Values.auth.workos.existingSecret | quote }}, key: client-id } }
+            - name: WORKOS_COOKIE_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.encryption.existingSecret | quote }}, key: key } }
+            {{- end }}
+            - name: NEXT_TELEMETRY_DISABLED
+              value: "1"
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: next-cache
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "activate.fullname" . }}-web
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  selector:
+    {{- include "activate.selector" . | nindent 4 }}
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+{{- if .Values.web.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "activate.fullname" . }}-web
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "activate.fullname" . }}-web
+  minReplicas: {{ .Values.web.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.web.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.web.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- if .Values.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "activate.fullname" . }}-web
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "activate.selector" . | nindent 6 }}
+      app.kubernetes.io/component: web
+{{- end }}

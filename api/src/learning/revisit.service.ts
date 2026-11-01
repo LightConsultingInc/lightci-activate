@@ -1,5 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, LessThanOrEqual, Repository } from 'typeorm';
 import { AiService } from '../ai/ai.service';
@@ -236,8 +235,7 @@ export class RevisitService {
     return injected;
   }
 
-  /** Nightly, after the mastery snapshot: inject reassessments for everyone with a decayed competency. */
-  @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'revisit-decay-check' })
+  /** Nightly (job `nightly.revisits`, 03:00), after the mastery snapshot: inject reassessments for everyone with a decayed competency. */
   async nightlyDecayCheck(): Promise<{ injected: number }> {
     const rows = await this.revisits
       .createQueryBuilder('r')

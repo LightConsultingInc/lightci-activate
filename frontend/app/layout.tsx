@@ -1,12 +1,14 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google"
+import localFont from "next/font/local"
 import "./globals.css"
 import { Providers } from "@/components/providers"
 import { cn } from "@/lib/utils"
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["400", "500", "600"] })
+// Fonts ship with the app (app/fonts, latin subsets of the variable fonts) so the build and the
+// browser never reach Google: self-hosted installs build offline and send nothing to third parties.
+const geist = localFont({ src: "./fonts/geist-sans-latin.woff2", weight: "100 900", variable: "--font-geist-sans", display: "swap" })
+const geistMono = localFont({ src: "./fonts/geist-mono-latin.woff2", weight: "100 900", variable: "--font-geist-mono", display: "swap" })
+const playfair = localFont({ src: "./fonts/playfair-display-latin.woff2", weight: "400 900", variable: "--font-playfair", display: "swap" })
 
 export const metadata: Metadata = {
   title: { default: "LightCI Activate", template: "%s · Activate" },

@@ -1,3 +1,4 @@
+import { SeedService } from './seed.service';
 import {
   COMPETENCY_CATALOG,
   GRADER_RUBRIC_SKILL,
@@ -399,5 +400,18 @@ describe('buildSeedPlan', () => {
       plan.mastery.map((m) => `${m.personId}:${m.competencyCode}:${m.day}`),
     );
     expect(unique.size).toBe(plan.mastery.length);
+  });
+});
+
+describe('seed reset boundaries', () => {
+  it('never truncates instance infrastructure tables', () => {
+    for (const t of [
+      'migrations',
+      'instance_keys',
+      'instance_settings',
+      'oauth_clients',
+    ])
+      expect(SeedService.INFRASTRUCTURE_TABLES.has(t)).toBe(true);
+    expect(SeedService.INFRASTRUCTURE_TABLES.has('people')).toBe(false);
   });
 });

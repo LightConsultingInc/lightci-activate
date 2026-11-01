@@ -1,0 +1,51 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mcp-app-preview",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": [
+        "--cwd",
+        "mcp-app",
+        "dev",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "activate-web",
+      "url": "http://localhost:3000"
+    },
+    {
+      "name": "activate-web-dev",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": [
+        "--cwd",
+        "frontend",
+        "dev",
+        "--port",
+        "3000"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "activate-web-oidc",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "AUTH_PROVIDER=oidc",
+        "SESSION_SECRET=e2e-oidc-session-secret-with-at-least-32-chars",
+        "API_URL=http://localhost:4310",
+        "WEB_URL=http://localhost:3000",
+        "yarn",
+        "--cwd",
+        "frontend",
+        "dev",
+        "--port",
+        "3000"
+      ],
+      "port": 3000
+    }
+  ]
+}

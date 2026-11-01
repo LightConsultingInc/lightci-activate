@@ -54,6 +54,7 @@ export function navFor(me: Me): NavGroup[] {
         { href: "/admin/policy", label: "Policy & Boundary", icon: "Scale", testId: "nav-admin-policy" },
         { href: "/admin/teams", label: "Teams & People", icon: "Network", testId: "nav-admin-teams" },
         { href: "/admin/marketplace", label: "Marketplace Repo", icon: "GitBranch", testId: "nav-admin-marketplace" },
+        { href: "/admin/license", label: "License", icon: "BadgeCheck", testId: "nav-admin-license" },
       ],
     })
   }
