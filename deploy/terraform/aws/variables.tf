@@ -226,7 +226,7 @@ variable "marketplace" {
   })
   default = null
   validation {
-    condition     = var.marketplace == null || contains(["github", "git"], var.marketplace.provider)
+    condition     = try(contains(["github", "git"], var.marketplace.provider), var.marketplace == null)
     error_message = "marketplace.provider must be github or git (a local folder is not a production marketplace)."
   }
 }

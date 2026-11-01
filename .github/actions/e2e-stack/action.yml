@@ -12,6 +12,10 @@ inputs:
     description: WorkOS client id (workos mode)
     required: false
     default: ""
+  anthropic-api-key:
+    description: LightCI's platform Anthropic key; marks the platform fallback as configured (the mock provider never calls it)
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -49,6 +53,7 @@ runs:
       env:
         WORKOS_API_KEY: ${{ inputs.workos-api-key }}
         WORKOS_CLIENT_ID: ${{ inputs.workos-client-id }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         E2E_LOG_DIR: ${{ runner.temp }}/e2e-logs
       run: scripts/ci/e2e-stack.sh ${{ inputs.auth }}
     - shell: bash

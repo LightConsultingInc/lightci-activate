@@ -101,7 +101,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/e2e-stack
-        with: { auth: oidc }
+        with:
+          auth: oidc
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 
   e2e-workos:
     # The same suite in WorkOS mode (T1.6). Signs in to LightCI's WorkOS test environment, so it needs
@@ -123,6 +125,7 @@ jobs:
           auth: workos
           workos-api-key: ${{ secrets.WORKOS_API_KEY }}
           workos-client-id: ${{ secrets.WORKOS_CLIENT_ID }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 
   helm:
     name: Helm chart lint, unit tests and both modes render

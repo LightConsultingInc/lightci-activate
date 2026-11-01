@@ -11,6 +11,9 @@ mkdir -p "$LOGS"
 
 export NODE_ENV="${NODE_ENV:-test}"
 export AI_PROVIDER=mock
+# The mock provider never calls Anthropic; the key only marks LightCI's platform key as configured, which
+# the admin "Using LightCI's key" card and the lead console assert. CI passes the real secret when it has one.
+export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-sk-ant-e2e-platform-key-unused}"
 export SEED_ON_BOOT=true
 export MIGRATIONS_RUN_ON_BOOT=true
 export PORT=4310
