@@ -255,16 +255,24 @@ export async function runDoctor(
       const ok = await git.refresh(org.id);
       const repo = await git.repoFor(org.id);
       const head = ok ? await git.head(org.id) : null;
+      // The release image ships /marketplace empty: with LIBRARY_PROVIDER=local there is nothing to
+      // publish to, the library runs from the database, and that is a warning, not a broken install.
+      const noLocalFolder =
+        repo.config.provider === 'local' && !repo.config.localPath;
       checks.push({
         name: 'marketplace',
         level: ok
           ? repo.config.provider === 'local' && edition() === 'self-hosted'
             ? 'warn'
             : 'ok'
-          : 'fail',
+          : noLocalFolder
+            ? 'warn'
+            : 'fail',
         detail: ok
           ? `${org.slug}: ${repo.config.provider} ${repo.label}${head?.head ? ` at ${head.branch}@${head.head.slice(0, 7)}` : ''}${repo.config.provider === 'local' ? ' (local folder: not shared between replicas)' : ''}`
-          : `${org.slug}: ${repo.lastError ?? 'unavailable'}`,
+          : noLocalFolder
+            ? `${org.slug}: no marketplace folder; skills live in the database only until LIBRARY_PROVIDER is github or git`
+            : `${org.slug}: ${repo.lastError ?? 'unavailable'}`,
       });
     }
   } catch (e) {

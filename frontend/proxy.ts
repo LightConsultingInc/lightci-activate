@@ -1,16 +1,19 @@
 import { authkitMiddleware } from "@workos-inc/authkit-nextjs"
 import type { NextFetchEvent, NextRequest } from "next/server"
 import { NextResponse } from "next/server"
+import { redirectUri } from "@/lib/env"
 
 const PUBLIC_PATHS = ["/login", "/sign-in", "/callback", "/api/auth/sign-out", "/api/health", "/auth/token", "/brand"]
 
 const isOidc = process.env.AUTH_PROVIDER === "oidc"
 const SESSION_COOKIE = isOidc ? "activate-session" : "wos-session"
 
-// AuthKit's middleware needs WorkOS configuration; it is only built in WorkOS mode.
+// AuthKit's middleware needs WorkOS configuration; it is only built in WorkOS mode. The callback is
+// derived from WEB_URL (lib/env) so deployments never set a separate redirect-URI variable.
 const authkit = isOidc
   ? null
   : authkitMiddleware({
+      redirectUri: redirectUri(),
       middlewareAuth: { enabled: false, unauthenticatedPaths: PUBLIC_PATHS },
     })
 

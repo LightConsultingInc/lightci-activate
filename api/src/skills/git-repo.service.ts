@@ -239,9 +239,12 @@ export class GitRepoService {
       sourcePath &&
       existsSync(sourcePath) &&
       readdirSync(sourcePath).length === 0
-    )
+    ) {
+      this.logger.warn(
+        `Marketplace folder ${sourcePath} is empty; the library runs from the database only until a remote is configured.`,
+      );
       sourcePath = null;
-    if (!sourcePath || !existsSync(sourcePath)) {
+    } else if (!sourcePath || !existsSync(sourcePath)) {
       this.logger.warn(
         `Marketplace folder not found at ${sourcePath ?? '(unset)'}; library runs DB-only.`,
       );

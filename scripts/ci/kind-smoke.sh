@@ -205,7 +205,8 @@ step "metrics on the api and the worker, on their own port"
 forward activate-api 19464 9464
 curl -fsS http://127.0.0.1:19464/metrics > "$WORK/api-metrics.txt" || fail "api /metrics unreachable"
 grep -q '^activate_license_seats 50$' "$WORK/api-metrics.txt" || fail "licence seats not exported"
-grep -Eq '^activate_license_seats_used [1-9]' "$WORK/api-metrics.txt" || fail "bootstrap admin not counted as a seat"
+# A fresh install has no people yet: initial admins become seats at their first sign-in, so 0 is correct here.
+grep -Eq '^activate_license_seats_used [0-9]+$' "$WORK/api-metrics.txt" || fail "licence seats in use not exported"
 # The worker ran its boot jobs (update check, Coach plugin) and reports them per queue.
 kubectl -n $NS exec sts/activate-worker -- node -e "fetch('http://127.0.0.1:9464/metrics').then(r=>r.text()).then(t=>{ const ok=/activate_jobs_queued\{queue=\"updates\.check\"\}/.test(t) && /activate_job_last_success_timestamp\{job=\"plugin\.update\"\} [1-9]/.test(t); if(!ok){ console.error(t.split('\n').filter(l=>/activate_/.test(l)).join('\n')); process.exit(1) } })" || fail "worker metrics do not show the boot jobs"
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:13000/metrics | grep -q 404 || fail "/metrics is exposed on the application port"
