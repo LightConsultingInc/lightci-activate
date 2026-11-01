@@ -257,8 +257,8 @@ export async function runDoctor(
       const head = ok ? await git.head(org.id) : null;
       // The release image ships /marketplace empty: with LIBRARY_PROVIDER=local there is nothing to
       // publish to, the library runs from the database, and that is a warning, not a broken install.
-      const noLocalFolder =
-        repo.config.provider === 'local' && !repo.config.localPath;
+      // repo.path is the resolved folder; config.localPath is re-merged from settings on every lookup.
+      const noLocalFolder = repo.config.provider === 'local' && !repo.path;
       checks.push({
         name: 'marketplace',
         level: ok
