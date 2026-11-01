@@ -7,7 +7,14 @@ import type { Role } from '../common/roles';
 import type { WorkosProfile } from './workos.service';
 import { leadEmailDomains } from '../config/env';
 import { emailDomain } from './email-domains';
-import { applyRoleMapping, initialRoles } from './role-mapping';
+import type { UpstreamIdentity } from './identity/upstream-oidc.service';
+import {
+  DEFAULT_ROLE_MAPPING,
+  applyRoleMapping,
+  initialRoles,
+  parseRoleMapping,
+  type IdentityRoleMapping,
+} from './role-mapping';
 
 @Injectable()
 export class PeopleService {
@@ -24,6 +31,102 @@ export class PeopleService {
 
   findByEmail(email: string) {
     return this.people.findOne({ where: { email: email.toLowerCase() } });
+  }
+
+  findByIdentity(issuer: string, subject: string) {
+    return this.people.findOne({
+      where: { identityIssuer: issuer, identitySubject: subject },
+    });
+  }
+
+  /**
+   * Sign-in through the customer's own IdP (OIDC mode). Match by issuer+subject, then by
+   * email (pre-created admins and invited people get linked instead of duplicated). The org
+   * is the one owning the email domain, or the only org of a single-tenant install. Roles
+   * follow the IdP groups through the org's mapping, AUTH_ROLE_MAP, or the default mapping.
+   */
+  async provisionFromOidc(identity: UpstreamIdentity): Promise<Person> {
+    return this.people.manager.transaction(async (em) => {
+      await em.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `${identity.issuer}|${identity.subject}`,
+      ]);
+      const repo = em.getRepository(Person);
+      const email = identity.email.toLowerCase();
+      const domain = emailDomain(email);
+      const isLead = leadEmailDomains().includes(domain);
+      const person =
+        (await repo.findOne({
+          where: {
+            identityIssuer: identity.issuer,
+            identitySubject: identity.subject,
+          },
+        })) ?? (await repo.findOne({ where: { email } }));
+
+      const orgs = em.getRepository(Org);
+      let org: Org | null = null;
+      if (!isLead) {
+        if (person?.orgId)
+          org = await orgs.findOne({ where: { id: person.orgId } });
+        if (!org && domain)
+          org = await orgs
+            .createQueryBuilder('o')
+            .where(':domain = ANY(o."emailDomains")', { domain })
+            .getOne();
+        if (!org) {
+          const all = await orgs.find({ where: { isDemo: false }, take: 2 });
+          if (all.length === 1) org = all[0];
+        }
+      }
+      const mapping: IdentityRoleMapping =
+        org?.settings?.identity?.roleMapping ?? envRoleMapping();
+
+      if (!person) {
+        const roles: Role[] = isLead
+          ? ['lead']
+          : applyRoleMapping([], identity.groups, mapping);
+        const saved = await repo.save(
+          repo.create({
+            email,
+            name: identity.name ?? email.split('@')[0],
+            identityIssuer: identity.issuer,
+            identitySubject: identity.subject,
+            orgId: isLead ? null : (org?.id ?? null),
+            roles,
+            avatarUrl: identity.avatarUrl,
+            status: 'active',
+            lastSeenAt: new Date(),
+            cohortWeek: new Date().toISOString().slice(0, 10),
+          }),
+        );
+        this.logger.log(
+          `Provisioned person ${saved.id} at ${domain} via ${identity.issuer} (${roles.join(',')})`,
+        );
+        return saved;
+      }
+
+      person.identityIssuer = person.identityIssuer ?? identity.issuer;
+      person.identitySubject = person.identitySubject ?? identity.subject;
+      if (identity.name && person.name === person.email.split('@')[0])
+        person.name = identity.name;
+      if (!person.avatarUrl && identity.avatarUrl)
+        person.avatarUrl = identity.avatarUrl;
+      if (isLead) {
+        if (!person.roles.includes('lead'))
+          person.roles = [...person.roles, 'lead'];
+        person.orgId = null;
+      } else {
+        if (!person.orgId && org) person.orgId = org.id;
+        // Pre-created initial admins keep admin whatever the groups say (break-glass).
+        const keepAdmin =
+          person.roles.includes('admin') && person.status === 'invited';
+        person.roles = applyRoleMapping(person.roles, identity.groups, mapping);
+        if (keepAdmin && !person.roles.includes('admin'))
+          person.roles = ['admin', ...person.roles];
+      }
+      person.status = 'active';
+      person.lastSeenAt = new Date();
+      return repo.save(person);
+    });
   }
 
   findById(id: string) {
@@ -172,4 +275,16 @@ export class PeopleService {
 
 function sameRoles(a: readonly Role[], b: readonly Role[]): boolean {
   return a.length === b.length && a.every((r) => b.includes(r));
+}
+
+/** AUTH_ROLE_MAP (JSON) for installs that map IdP groups instance-wide; falls back to the default names. */
+function envRoleMapping(): IdentityRoleMapping {
+  const raw = process.env.AUTH_ROLE_MAP;
+  if (!raw) return DEFAULT_ROLE_MAPPING;
+  try {
+    const parsed = parseRoleMapping(JSON.parse(raw));
+    return parsed.ok ? parsed.mapping : DEFAULT_ROLE_MAPPING;
+  } catch {
+    return DEFAULT_ROLE_MAPPING;
+  }
 }

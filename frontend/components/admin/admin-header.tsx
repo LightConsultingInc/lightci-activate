@@ -11,6 +11,7 @@ const ADMIN_TABS = [
   { href: "/admin/policy", label: "Policy & Boundary", id: "policy" },
   { href: "/admin/teams", label: "Teams & People", id: "teams" },
   { href: "/admin/marketplace", label: "Marketplace repo", id: "marketplace" },
+  { href: "/admin/license", label: "License", id: "license" },
 ]
 
 export function AdminHeader({ title, description, actions }: { title: string; description?: React.ReactNode; actions?: React.ReactNode }) {

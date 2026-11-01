@@ -1,4 +1,4 @@
-import { parseArgs } from './cli';
+import { parseArgs } from './cli/args';
 
 describe('activate CLI argument parsing (T0.8)', () => {
   it('defaults to help', () => {

@@ -175,7 +175,11 @@ describe('checkEnv (T0.1)', () => {
   });
 
   it('marketplace: production self-hosted needs a remote, cloud only warns, aliases still work', () => {
-    const selfHosted = { ...prodBase, ACTIVATE_EDITION: 'self-hosted' };
+    const selfHosted = {
+      ...prodBase,
+      ACTIVATE_EDITION: 'self-hosted',
+      ACTIVATE_LICENSE: 'eyJ.license',
+    };
     expect(
       checkEnv(selfHosted).errors.some((e) => e.includes('no remote')),
     ).toBe(true);
@@ -222,6 +226,41 @@ describe('checkEnv (T0.1)', () => {
         e.includes('LIBRARY_PROVIDER'),
       ),
     ).toBe(true);
+  });
+
+  it('a self-hosted install needs a license and at least one initial admin when bootstrapping', () => {
+    const base = {
+      ...prodBase,
+      ACTIVATE_EDITION: 'self-hosted',
+      LIBRARY_ALLOW_LOCAL: 'true',
+    };
+    expect(
+      checkEnv(base).errors.some((e) =>
+        e.includes('ACTIVATE_LICENSE_FILE is required'),
+      ),
+    ).toBe(true);
+    expect(checkEnv({ ...base, ACTIVATE_LICENSE: 'x' }).errors).toEqual([]);
+    expect(
+      checkEnv({
+        ...base,
+        ACTIVATE_LICENSE_FILE: '/nonexistent/license.jwt',
+      }).errors.some((e) => e.includes('does not exist')),
+    ).toBe(true);
+    expect(
+      checkEnv({
+        ...base,
+        ACTIVATE_LICENSE: 'x',
+        ACTIVATE_ORG_SLUG: 'acme',
+      }).errors.some((e) => e.includes('ACTIVATE_ORG_INITIAL_ADMINS')),
+    ).toBe(true);
+    expect(
+      checkEnv({
+        ...base,
+        ACTIVATE_LICENSE: 'x',
+        ACTIVATE_ORG_SLUG: 'acme',
+        ACTIVATE_ORG_INITIAL_ADMINS: 'jane@acme.test',
+      }).errors,
+    ).toEqual([]);
   });
 
   it('warns a self-hosted install that grants vendor leads', () => {

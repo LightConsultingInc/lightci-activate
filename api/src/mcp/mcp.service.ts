@@ -40,7 +40,7 @@ export class McpService {
       (req as Request & { user?: Person }).user ?? null;
     if (!person && token) {
       try {
-        person = await this.guard.resolveUser(token);
+        person = await this.guard.resolveBearer(token);
       } catch (error) {
         this.logger.debug(
           `MCP token rejected: ${error instanceof Error ? error.message : String(error)}`,

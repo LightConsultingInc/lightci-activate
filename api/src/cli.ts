@@ -2,13 +2,25 @@
 /**
  * `activate` operator CLI. Shipped in the server image as /usr/local/bin/activate.
  *
- *   activate migrate            apply pending migrations (safe to run from several places at once)
- *   activate migrate --check    exit 1 if migrations are pending, 0 if the schema is current
- *
- * `doctor`, `bootstrap`, `support-bundle` and `secrets rotate` arrive with later milestones.
+ *   activate migrate [--check]      apply pending migrations (safe to run from several places at once)
+ *   activate doctor                 preflight: database, license, identity, model provider, Claude keys, marketplace, jobs
+ *   activate bootstrap              first-boot provisioning from ACTIVATE_ORG_* (idempotent)
+ *   activate support-bundle [path]  write a redacted diagnostics tarball (default ./activate-support.tgz)
+ *   activate secrets rotate         re-encrypt stored credentials from ACTIVATE_SECRETS_KEY_PREVIOUS to the current key
  */
 import 'dotenv/config';
+import { NestFactory } from '@nestjs/core';
+import type { INestApplicationContext } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { AppModule } from './app.module';
+import {
+  BootstrapService,
+  bootstrapConfig,
+} from './bootstrap/bootstrap.service';
+import { parseArgs } from './cli/args';
+import { formatChecks, runDoctor, worst } from './cli/doctor';
+import { rotateSecrets } from './cli/rotate';
+import { writeSupportBundle } from './cli/support-bundle';
 import AppDataSource from './typeorm.config';
 
 const LOCK_KEY = 'activate:migrate';
@@ -52,40 +64,105 @@ export async function migrate(opts: { check: boolean }): Promise<number> {
   });
 }
 
-export function parseArgs(argv: string[]): {
-  command: string;
-  flags: Set<string>;
-  rest: string[];
-} {
-  const [command = 'help', ...others] = argv;
-  const flags = new Set(others.filter((a) => a.startsWith('--')));
-  const rest = others.filter((a) => !a.startsWith('--'));
-  return { command, flags, rest };
+/**
+ * Boot the application without HTTP and without background work, so a command sees exactly
+ * what the running service sees (same configuration, same providers).
+ */
+async function withApp<T>(
+  fn: (app: INestApplicationContext) => Promise<T>,
+): Promise<T> {
+  process.env.ACTIVATE_ROLE = 'api';
+  process.env.MIGRATIONS_RUN_ON_BOOT =
+    process.env.MIGRATIONS_RUN_ON_BOOT ?? 'false';
+  process.env.SEED_ON_BOOT = 'false';
+  const app = await NestFactory.createApplicationContext(AppModule, {
+    logger: ['error'],
+  });
+  try {
+    return await fn(app);
+  } finally {
+    await app.close();
+  }
 }
 
 const HELP = `activate <command>
 
-  migrate [--check]   apply pending database migrations (or report whether any are pending)
-  help                show this message
-
-Coming in later releases: doctor, bootstrap, support-bundle, secrets rotate.`;
+  migrate [--check]       apply pending database migrations (or report whether any are pending)
+  doctor                  check database, license, identity, model provider, Claude keys, marketplace and jobs
+  bootstrap               create the organisation and admins from ACTIVATE_ORG_* (idempotent)
+  support-bundle [path]   write a redacted diagnostics tarball for LightCI support
+  secrets rotate          re-encrypt stored credentials with the current ACTIVATE_SECRETS_KEY
+  help                    show this message`;
 
 async function main(argv: string[]): Promise<number> {
-  const { command, flags } = parseArgs(argv);
+  const { command, flags, rest } = parseArgs(argv);
   switch (command) {
     case 'migrate':
       return migrate({ check: flags.has('--check') });
+    case 'doctor': {
+      return withApp(async (app) => {
+        const checks = await runDoctor(app);
+        out(formatChecks(checks));
+        return worst(checks) === 'fail' ? 1 : 0;
+      });
+    }
+    case 'bootstrap': {
+      return withApp(async (app) => {
+        const config = bootstrapConfig();
+        const result = await app.get(BootstrapService).run(config);
+        out(
+          `catalogue: ${result.catalogue.inserted} inserted, ${result.catalogue.updated} updated`,
+        );
+        if (!result.org) {
+          out('organisation: ACTIVATE_ORG_SLUG not set; nothing to create');
+          return 0;
+        }
+        out(
+          `organisation: ${result.org.slug} ${result.org.created ? 'created' : 'already present'}`,
+        );
+        out(
+          `admins: ${result.admins.created.length} created, ${result.admins.existing.length} already present`,
+        );
+        return 0;
+      });
+    }
+    case 'support-bundle': {
+      const target = rest[0] ?? 'activate-support.tgz';
+      return withApp(async (app) => {
+        const files = await writeSupportBundle(app, target);
+        out(`wrote ${target} (${files.join(', ')})`);
+        return 0;
+      });
+    }
+    case 'secrets': {
+      if (rest[0] !== 'rotate') {
+        process.stderr.write(
+          `Unknown secrets command "${rest[0] ?? ''}". Try: activate secrets rotate\n`,
+        );
+        return 2;
+      }
+      return withApp(async (app) => {
+        const r = await rotateSecrets(app);
+        out(
+          `integrations: ${r.integrations.rotated} re-encrypted, ${r.integrations.failed} failed, ${r.integrations.total - r.integrations.rotated - r.integrations.failed} already current`,
+        );
+        out(
+          `signing keys: ${r.signingKeys.rotated} re-encrypted, ${r.signingKeys.failed} failed, ${r.signingKeys.total - r.signingKeys.rotated - r.signingKeys.failed} already current`,
+        );
+        const remaining = r.integrations.failed + r.signingKeys.failed;
+        out(
+          remaining === 0
+            ? 'zero remaining: ACTIVATE_SECRETS_KEY_PREVIOUS can be removed'
+            : `${remaining} could not be decrypted with any configured key`,
+        );
+        return remaining === 0 ? 0 : 1;
+      });
+    }
     case 'help':
     case '--help':
     case '-h':
       out(HELP);
       return 0;
-    case 'doctor':
-    case 'bootstrap':
-    case 'support-bundle':
-    case 'secrets':
-      process.stderr.write(`"${command}" is not available in this release.\n`);
-      return 2;
     default:
       process.stderr.write(`Unknown command "${command}".\n\n${HELP}\n`);
       return 2;

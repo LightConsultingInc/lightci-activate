@@ -18,6 +18,9 @@ export class Person {
   @Column('text', { nullable: true }) title: string | null;
   @Index({ unique: true }) @Column('text', { nullable: true }) workosUserId:
     string | null;
+  /** Direct-OIDC identity (self-hosted): the upstream issuer and subject. WorkOS sign-ins use workosUserId. */
+  @Column('text', { nullable: true }) identityIssuer: string | null;
+  @Column('text', { nullable: true }) identitySubject: string | null;
   @Column('text', { nullable: true }) claudeUserId: string | null;
   @Column('text', { array: true, default: '{learner}' }) roles: Role[];
   @Column('text', { nullable: true }) avatarUrl: string | null;

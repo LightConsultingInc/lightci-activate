@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import type {
+import type { LicenseState,
   Adoption, Assignment, Backlog, Cost, CostInput, Escalation, Governance, Groups, GroupsCompare, IntegrationKind, IntegrationSummary,
   Journey, LeadClient, LeadClientDetail, LeadQueue, MarketplaceStatus, McPeople, McSkills, Org, Person, Readout, Setup, Team,
 } from "./types"
@@ -64,6 +64,13 @@ export function usePatchOrg() {
       qc.invalidateQueries({ queryKey: ["me"] })
     },
   })
+}
+/** License status; only admins may ask, and only self-hosted installs have one to show. */
+export const useLicense = (enabled: boolean) => useQuery({ queryKey: ["admin", "license"], queryFn: () => api.get<LicenseState>("/api/admin/license"), enabled, staleTime: 60_000 })
+export function useLicenseMutations() {
+  const qc = useQueryClient()
+  const install = useMutation({ mutationFn: (license: string) => api.post<LicenseState>("/api/admin/license", { license }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "license"] }) })
+  return { install }
 }
 export const useIntegrations = () => useQuery({ queryKey: ["org", "integrations"], queryFn: () => api.get<IntegrationSummary[]>("/api/org/integrations") })
 export function useIntegrationMutations() {

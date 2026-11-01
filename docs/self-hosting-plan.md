@@ -213,7 +213,7 @@ Day one (website repo, `components/activate-self-host.tsx`): add a visible banne
 |---|---|---|---|
 | M0 Hardening | 1–2 | WS0, WS6 day-one | Cloud dev runs with `/api/ready`, fail-closed secrets, lead-only seed, tenancy fixes; guide banner live |
 | M1 Cloud BYO-SSO | 2–3 | WS1a | A client org created from the lead console connects Okta via the Admin Portal and signs in with mapped roles |
-| M2 Runtime split | 3–6 | WS2 (parallel with M3) | Two API replicas + one worker on dev; a skill promotion lands in a real GitHub remote; nightly jobs run once |
+| M2 Runtime split | 3–6 | WS2 (parallel with M3) | Two API replicas + one worker on dev; a skill promotion lands in a real GitHub remote; nightly jobs run once. Recorded 2026-11-01: k6 baseline on the local mock stack, 50 browsing + 5 submitting for 60 s, reads p95 15 ms, submits p95 92 ms, 0 failed of 7,611 requests |
 | M3 Direct OIDC + AS | 4–6 | WS1b–d | E2E suite passes against a Keycloak container with `AUTH_PROVIDER=oidc`; Claude connects via DCR |
 | M4 Bootstrap, license, CLI | 6–7 | WS3 | Fresh DB → `activate bootstrap` → admin signs in; `activate doctor` all green; expired license → read-only |
 | M5 Packaging | 7–10 | WS4, WS7 | `helm install` from the guide's `values.yaml` into kind and into a customer-like EKS; Compose up on one VM; Terraform module applies in a fresh AWS account; signed images verify with cosign; `helm upgrade` 1.0.0 → 1.0.1 → rollback succeeds in CI; the update banner appears against a test release index |

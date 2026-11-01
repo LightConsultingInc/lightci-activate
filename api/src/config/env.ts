@@ -46,6 +46,22 @@ export function processRole(env: Env = process.env): ProcessRole {
   return r === 'api' || r === 'worker' ? r : 'all';
 }
 
+export type AuthProvider = 'workos' | 'oidc';
+
+/** Which identity provider signs people in: WorkOS (cloud default) or the customer's own OIDC issuer. */
+export function authProvider(env: Env = process.env): AuthProvider {
+  return env.AUTH_PROVIDER === 'oidc' ? 'oidc' : 'workos';
+}
+
+/** The origin Claude and the web app use to reach this API (PUBLIC_API_URL, MCP_PUBLIC_URL alias). */
+export function publicApiUrl(env: Env = process.env): string {
+  return (
+    env.PUBLIC_API_URL ??
+    env.MCP_PUBLIC_URL ??
+    `http://localhost:${env.PORT ?? 4000}`
+  ).replace(/\/$/, '');
+}
+
 /** Lead (vendor) email domains. Cloud defaults to lightci.com; self-hosted installs have no vendor leads unless they say so. */
 export function leadEmailDomains(env: Env = process.env): string[] {
   const raw =
@@ -211,7 +227,27 @@ export function checkEnv(env: Env = process.env): EnvReport {
   if (provider === 'oidc') {
     for (const k of ['AUTH_OIDC_ISSUER', 'AUTH_OIDC_CLIENT_ID'])
       if (!env[k]) errors.push(`${k} is required when AUTH_PROVIDER=oidc.`);
+    if (env.AUTH_OIDC_ISSUER && !/^https?:\/\//.test(env.AUTH_OIDC_ISSUER))
+      errors.push('AUTH_OIDC_ISSUER must be an https URL (the OpenID issuer).');
+    if (prod && env.AUTH_OIDC_ISSUER && !env.AUTH_OIDC_ISSUER.startsWith('https://'))
+      errors.push('AUTH_OIDC_ISSUER must use https in production.');
+    if (!env.AUTH_OIDC_CLIENT_SECRET)
+      warnings.push('AUTH_OIDC_CLIENT_SECRET is not set: Activate will act as a public client of your IdP (PKCE only).');
+    if (role !== 'worker' && !env.PUBLIC_API_URL && !env.MCP_PUBLIC_URL)
+      errors.push('PUBLIC_API_URL is required when AUTH_PROVIDER=oidc: it is the issuer of the tokens Activate mints.');
+    if (role !== 'worker' && !env.WEB_URL)
+      errors.push('WEB_URL is required when AUTH_PROVIDER=oidc: the web app is registered as an OAuth client with <WEB_URL>/callback.');
+    if (env.AUTH_ROLE_MAP) {
+      try {
+        const parsed: unknown = JSON.parse(env.AUTH_ROLE_MAP);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object');
+      } catch {
+        errors.push('AUTH_ROLE_MAP must be a JSON object like {"admin":["IT-Admins"],"champion":["Claude-Champions"]}.');
+      }
+    }
   }
+  if (provider === 'oidc' && truthy(env.AUTH_PASSWORD_LOGIN))
+    warnings.push('AUTH_PASSWORD_LOGIN has no effect with AUTH_PROVIDER=oidc: passwords live with your identity provider.');
 
   // Development-only switches must never be on in production.
   if (prod) {
@@ -261,6 +297,21 @@ export function checkEnv(env: Env = process.env): EnvReport {
       'The marketplace has no remote (LIBRARY_PROVIDER=local): skills published from one replica are invisible to the others and lost on redeploy. Set LIBRARY_PROVIDER=github with LIBRARY_REPOSITORY and LIBRARY_GIT_TOKEN, or LIBRARY_ALLOW_LOCAL=true for a single-node evaluation.';
     if (ed === 'self-hosted') errors.push(msg);
     else warnings.push(msg);
+  }
+
+  // License (self-hosted only; verified offline at boot).
+  if (ed === 'self-hosted' && !env.ACTIVATE_LICENSE_FILE && !env.ACTIVATE_LICENSE)
+    errors.push('ACTIVATE_LICENSE_FILE is required for a self-hosted install: the license LightCI sent you.');
+  if (env.ACTIVATE_LICENSE_FILE && !existsSync(env.ACTIVATE_LICENSE_FILE))
+    errors.push(`ACTIVATE_LICENSE_FILE points to a file that does not exist: ${env.ACTIVATE_LICENSE_FILE}`);
+  if (prod && env.ACTIVATE_LICENSE_PUBLIC_KEY)
+    warnings.push('ACTIVATE_LICENSE_PUBLIC_KEY is ignored in production.');
+
+  // First-boot organisation.
+  if ((env.ACTIVATE_ORG_SLUG || env.ACTIVATE_ORG_NAME) && ed === 'self-hosted') {
+    const admins = (env.ACTIVATE_ORG_INITIAL_ADMINS ?? '').split(/[,\s]+/).filter((a) => a.includes('@'));
+    if (admins.length === 0)
+      errors.push('ACTIVATE_ORG_INITIAL_ADMINS must list at least one email address when bootstrapping an organisation.');
   }
 
   if (ed === 'self-hosted' && leadEmailDomains(env).length > 0)

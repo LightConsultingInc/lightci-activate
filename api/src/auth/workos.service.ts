@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DomainDataState, WorkOS } from '@workos-inc/node';
+import { authProvider } from '../config/env';
 
 export interface WorkosProfile {
   id: string;
@@ -39,8 +40,9 @@ export class WorkosService {
       this.logger.warn('WORKOS_API_KEY not set: sign-in is disabled.');
   }
 
+  /** WorkOS is in play only in WorkOS identity mode; an OIDC install never provisions WorkOS organisations. */
   get enabled(): boolean {
-    return Boolean(this.client && this.clientId);
+    return authProvider() === 'workos' && Boolean(this.client && this.clientId);
   }
 
   private get workos(): WorkOS {

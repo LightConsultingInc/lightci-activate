@@ -67,7 +67,7 @@ async function bootstrap() {
     ],
   });
   app.setGlobalPrefix('api', {
-    exclude: ['mcp', 'mcp/(.*)', '.well-known/(.*)'],
+    exclude: ['mcp', 'mcp/(.*)', '.well-known/(.*)', 'oauth', 'oauth/(.*)'],
   });
   app.useGlobalPipes(
     new ValidationPipe({

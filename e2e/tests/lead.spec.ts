@@ -3,6 +3,7 @@ import { API_URL, api } from "./helpers/api"
 import { expectToast, intOf } from "./helpers/ui"
 import { USERS } from "./helpers/users"
 import { readApiEnv, workosPasswordToken } from "./helpers/workos"
+import { OIDC_MODE } from "./helpers/auth"
 
 const COLUMNS = ["escalations", "approvals", "stalled", "waves"] as const
 
@@ -129,9 +130,10 @@ test.describe("lead console", () => {
     await expect(page.getByTestId("setup-checklist")).toBeVisible()
     await expect(page.getByTestId("setup-checklist")).toHaveAttribute("data-total", "8")
 
-    // The identity organisation was really created in WorkOS; the client has not connected SSO yet.
+    // WorkOS mode: the identity organisation was really created; the client has not connected SSO yet.
+    // OIDC mode: identity lives with the customer's IdP, so no WorkOS organisation exists.
     const identity = page.getByTestId("client-identity")
-    await expect(identity.getByTestId("client-sso-status")).toHaveText("Waiting for the client")
+    await expect(identity.getByTestId("client-sso-status")).toHaveText(OIDC_MODE ? "No identity organisation" : "Waiting for the client")
     await expect(identity.getByTestId("client-domains")).toHaveText(clientDomain)
     await expect(page.getByTestId("setup-step-sso")).toHaveAttribute("data-done", "false")
 
@@ -143,6 +145,7 @@ test.describe("lead console", () => {
   })
 
   test("sign-in lookup routes the new client's domain to SSO and the demo org to a password", async ({ page, request }) => {
+    test.skip(OIDC_MODE, "the lookup is a WorkOS-mode feature")
     expect(clientId, "provisioning test must run first").toBeTruthy()
     const detail = await api<{ org: { workosOrganizationId: string | null; emailDomains: string[] } }>(page, "GET", `/api/lead/clients/${clientId}`)
     expect(detail.org.workosOrganizationId).toMatch(/^org_/)
@@ -159,6 +162,7 @@ test.describe("lead console", () => {
   })
 
   test("the login page sends a company with SSO straight to it", async ({ browser }) => {
+    test.skip(OIDC_MODE, "WorkOS-mode routing")
     expect(clientDomain, "provisioning test must run first").toBeTruthy()
     const ctx = await browser.newContext({ storageState: undefined })
     const page = await ctx.newPage()
@@ -172,6 +176,7 @@ test.describe("lead console", () => {
   })
 
   test("the SSO setup button opens a one-time WorkOS Admin Portal link", async ({ page }) => {
+    test.skip(OIDC_MODE, "Admin Portal links are a WorkOS-mode feature")
     expect(clientId, "provisioning test must run first").toBeTruthy()
     await page.goto(`/lead/clients/${clientId}`)
     const popup = page.waitForEvent("popup")
@@ -195,7 +200,7 @@ test.describe("lead console", () => {
 
   test.afterAll(async ({ request }) => {
     // Remove the identity organisation this run created in the shared WorkOS test environment.
-    if (!clientId) return
+    if (!clientId || OIDC_MODE) return
     const env = readApiEnv()
     const detail = await (await request.get(`${API_URL}/api/lead/clients/${clientId}`, { headers: { Authorization: `Bearer ${await workosPasswordToken(request, USERS.lead.email)}` } })).json()
     const workosOrgId = detail?.org?.workosOrganizationId as string | undefined

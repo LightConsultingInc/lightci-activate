@@ -12,7 +12,30 @@ import { lookupSignIn, signInWithOrganization, signInWithPassword, type SignInLo
  * Email first. The API says how this address signs in: a company with single sign-on is sent
  * straight to it; a demo or password account gets the password field; anyone else sees both.
  */
-export function LoginForm({ authError }: { authError: boolean }) {
+export function LoginForm({ authError, provider = "workos", next }: { authError: boolean; provider?: "workos" | "oidc"; next?: string }) {
+  // The customer's own identity provider signs everyone in; there is nothing to type here.
+  if (provider === "oidc") {
+    const href = `/sign-in${next && next.startsWith("/") ? `?next=${encodeURIComponent(next)}` : ""}`
+    return (
+      <div className="mt-8 space-y-6" data-testid="login-form">
+        {authError && (
+          <p role="alert" className="rounded-md bg-fail-soft px-3 py-2 text-sm text-fail" data-testid="login-error">
+            We could not complete sign-in. Try again, or ask your administrator if it keeps happening.
+          </p>
+        )}
+        <Button nativeButton={false} render={<a href={href} data-testid="login-sso" />} className="w-full" size="lg">
+          Continue with your company sign-in
+        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          You will sign in with the same account you use for work. Activate sees usage metadata and the artifacts you submit, never your chats.
+        </p>
+      </div>
+    )
+  }
+  return <WorkosLoginForm authError={authError} />
+}
+
+function WorkosLoginForm({ authError }: { authError: boolean }) {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [lookup, lookupAction, lookingUp] = useActionState<SignInLookup | null, FormData>(lookupSignIn, null)

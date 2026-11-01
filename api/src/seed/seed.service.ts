@@ -1976,11 +1976,19 @@ export class SeedService implements OnApplicationBootstrap {
     this.logger.warn('Removed orphaned person-scoped rows.');
   }
 
-  /** Wipe every entity table (not migrations) and reseed. */
+  /** Tables that belong to the installation, not to tenant data: a demo reset must leave them alone. */
+  static readonly INFRASTRUCTURE_TABLES = new Set([
+    'migrations',
+    'instance_keys',
+    'instance_settings',
+    'oauth_clients',
+  ]);
+
+  /** Wipe every tenant table (not migrations or instance infrastructure) and reseed. */
   async reset(): Promise<{ truncated: string[]; seeded: boolean }> {
     const tables = this.dataSource.entityMetadatas
       .map((meta) => meta.tableName)
-      .filter((t) => t !== 'migrations');
+      .filter((t) => !SeedService.INFRASTRUCTURE_TABLES.has(t));
     const quoted = tables.map((t) => `"${t}"`).join(', ');
     await this.dataSource.query(
       `TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`,

@@ -241,6 +241,25 @@ export type IntegrationSummary = {
   config: Record<string, string>
 }
 
+/** GET /api/admin/license (self-hosted installs; status "n/a" in the cloud). */
+export type LicenseState = {
+  status: "n/a" | "valid" | "expiring" | "grace" | "expired" | "missing" | "invalid"
+  readOnly: boolean
+  org: string | null
+  licenseId: string | null
+  seats: number | null
+  seatsUsed: number | null
+  premiumSeats: number | null
+  features: string[]
+  issuedAt: string | null
+  expiresAt: string | null
+  graceEndsAt: string | null
+  daysToExpiry: number | null
+  source: "file" | "env" | "upload" | "none"
+  message: string | null
+  error: string | null
+}
+
 export type OrgSettings = {
   usagePolicy?: string
   /** Bumped by PATCH /org when the policy text changes (see org-settings.ts). */

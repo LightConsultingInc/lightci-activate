@@ -1,6 +1,7 @@
 import { Controller, Get, Header, Logger, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { Public } from '../common/decorators';
+import { OAuthService } from '../auth/oauth/oauth.service';
 import { WorkosService } from '../auth/workos.service';
 import {
   mergeAuthorizationServerMetadata,
@@ -22,12 +23,21 @@ export class WellKnownController {
   private upstream: { at: number; doc: Record<string, unknown> | null } | null =
     null;
 
-  constructor(private readonly workos: WorkosService) {}
+  constructor(
+    private readonly workos: WorkosService,
+    private readonly oauth: OAuthService,
+  ) {}
 
   @Get(['oauth-protected-resource', 'oauth-protected-resource/mcp'])
   @Header('Cache-Control', 'public, max-age=300')
   protectedResource(@Req() req: Request) {
-    return protectedResourceMetadata(requestOrigin(req), this.workos.clientId);
+    const origin = requestOrigin(req);
+    if (this.oauth.enabled)
+      return {
+        ...protectedResourceMetadata(origin, this.workos.clientId),
+        authorization_servers: [this.oauth.issuer],
+      };
+    return protectedResourceMetadata(origin, this.workos.clientId);
   }
 
   @Get([
@@ -37,6 +47,7 @@ export class WellKnownController {
   ])
   @Header('Cache-Control', 'public, max-age=300')
   async authorizationServer() {
+    if (this.oauth.enabled) return this.oauth.metadata();
     const clientId = this.workos.clientId;
     return mergeAuthorizationServerMetadata(
       clientId,

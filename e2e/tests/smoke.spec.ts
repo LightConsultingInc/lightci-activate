@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/fixtures"
+import { OIDC_MODE } from "./helpers/auth"
 
 test.describe("smoke: auth and shell", () => {
   test("signed-out visitors land on the in-app login page", async ({ browser }) => {
@@ -12,6 +13,7 @@ test.describe("smoke: auth and shell", () => {
   })
 
   test("a wrong password shows a friendly error", async ({ browser }) => {
+    test.skip(OIDC_MODE, "passwords live with the identity provider in OIDC mode")
     const ctx = await browser.newContext({ storageState: undefined })
     const page = await ctx.newPage()
     await page.goto("/login")
@@ -20,6 +22,24 @@ test.describe("smoke: auth and shell", () => {
     await page.getByLabel("Password").fill("definitely-wrong")
     await page.getByTestId("login-submit").click()
     await expect(page.getByTestId("login-error")).toBeVisible({ timeout: 20_000 })
+    await ctx.close()
+  })
+
+  test("OIDC mode: the login page offers only the company sign-in and a wrong IdP password stays at the IdP", async ({ browser }) => {
+    test.skip(!OIDC_MODE, "only meaningful in OIDC mode")
+    const ctx = await browser.newContext({ storageState: undefined })
+    const page = await ctx.newPage()
+    await page.goto("/login")
+    await expect(page.getByTestId("login-sso")).toBeVisible()
+    await expect(page.getByTestId("login-email")).toHaveCount(0)
+    await page.getByTestId("login-sso").click()
+    await page.waitForURL(/\/realms\/activate-test\//)
+    await page.locator("#username").fill("priya.nair@meridianwealth.demo")
+    await page.locator("#password").fill("definitely-wrong")
+    await page.locator("#kc-login").click()
+    await expect(page.locator("#input-error, .kc-feedback-text, #input-error-username, #input-error-password").first()).toBeVisible({ timeout: 20_000 })
+    // Still at the identity provider, never back in the app.
+    expect(new URL(page.url()).port).not.toBe("3000")
     await ctx.close()
   })
 

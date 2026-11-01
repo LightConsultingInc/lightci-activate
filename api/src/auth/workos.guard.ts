@@ -6,7 +6,9 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { ModuleRef, Reflector } from '@nestjs/core';
+import { authProvider } from '../config/env';
+import { OAuthService } from './oauth/oauth.service';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { IS_PUBLIC } from '../common/decorators';
 import { currentStore, requestContext } from '../common/request-context';
@@ -59,6 +61,7 @@ export class WorkosGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly people: PeopleService,
     private readonly workos: WorkosService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -87,7 +90,7 @@ export class WorkosGuard implements CanActivate {
     }
     if (!user && token) {
       try {
-        user = await this.resolveUser(token);
+        user = await this.resolveBearer(token);
       } catch (error) {
         this.logger.debug(
           `Token rejected: ${error instanceof Error ? error.message : String(error)}`,
@@ -112,6 +115,15 @@ export class WorkosGuard implements CanActivate {
       orgId,
     });
     return true;
+  }
+
+  /** Resolve any bearer this installation accepts (WorkOS, or Activate-issued in OIDC mode). */
+  async resolveBearer(token: string): Promise<Person | null> {
+    if (authProvider() === 'oidc') {
+      const oauth = this.moduleRef.get(OAuthService, { strict: false });
+      return oauth.resolveAccessToken(token);
+    }
+    return this.resolveUser(token);
   }
 
   private extractToken(header: string | undefined): string | null {

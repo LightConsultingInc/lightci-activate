@@ -1,5 +1,6 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import { authProvider } from "@/lib/auth-provider"
 import { LoginForm } from "./login-form"
 import { ActivateLockup, LightciWordmark } from "@/components/brand/logo"
 import { Paper } from "@/components/brand/grain"
@@ -8,7 +9,8 @@ export const metadata = { title: "Sign in · LightCI Activate" }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ authError?: string; next?: string }> }) {
   // The proxy skips AuthKit for the sign-in server action, so check the session cookie directly.
-  if ((await cookies()).get("wos-session")) redirect("/")
+  const provider = authProvider()
+  if ((await cookies()).get(provider === "oidc" ? "activate-session" : "wos-session")) redirect("/")
   const sp = await searchParams
   return (
     <main className="grid min-h-svh lg:grid-cols-[1.1fr_1fr]">
@@ -32,7 +34,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <ActivateLockup className="mb-10" />
           <h2 className="font-display text-3xl font-medium">Welcome back</h2>
           <p className="mt-2 text-sm text-muted-foreground">Sign in with your work account. Your firm&apos;s SSO is honoured automatically.</p>
-          <LoginForm authError={sp.authError === "1"} />
+          <LoginForm authError={sp.authError === "1"} provider={provider} next={sp.next} />
         </div>
       </div>
     </main>

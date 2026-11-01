@@ -13,7 +13,7 @@ import { OrgService, slugify } from '../orgs/org.service';
 import { IntegrationsService } from '../orgs/integrations.service';
 import { WorkosService, type PortalIntent } from '../auth/workos.service';
 import { parseEmailDomains } from '../auth/email-domains';
-import { DEFAULT_ROLE_MAPPING } from '../auth/role-mapping';
+import { defaultOrgSettings } from '../orgs/org-defaults';
 import { AuditLog } from './entities/audit-log.entity';
 import { CostInput } from './entities/cost-input.entity';
 import { Wave } from './entities/wave.entity';
@@ -406,13 +406,7 @@ export class LeadService {
         seats: Math.round(dto.seats),
         premiumSeats: Math.max(0, Math.round(dto.premiumSeats ?? 0)),
         residencyMode: dto.residencyMode ?? 'lightci_hosted',
-        settings: {
-          leaderboardsEnabled: false,
-          stalledAfterDays: 14,
-          baselineMethod: 'interview_estimate',
-          // New orgs take roles from their IdP from day one.
-          identity: { roleMapping: { ...DEFAULT_ROLE_MAPPING } },
-        },
+        settings: defaultOrgSettings(),
         marketplaceRepo: null,
         isDemo: false,
       }),
