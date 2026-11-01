@@ -1,0 +1,198 @@
+# What the api and worker containers are told (T4.2). The guide's minimum values install unchanged,
+# so these tests run against values.yaml defaults unless a case says otherwise.
+suite: server environment
+release:
+  name: activate
+  namespace: activate
+templates:
+  - api-deployment.yaml
+  - worker-statefulset.yaml
+tests:
+  - it: self-hosted OIDC defaults carry the license, the IdP and the marketplace remote
+    template: api-deployment.yaml
+    documentIndex: 0
+    asserts:
+      - isKind: { of: Deployment }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVATE_EDITION, value: self-hosted }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVATE_LICENSE_FILE, value: /etc/activate/license/license.jwt }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: AUTH_PROVIDER, value: oidc }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_OIDC_CLIENT_SECRET
+            valueFrom: { secretKeyRef: { name: activate-oidc, key: client-secret } }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: LIBRARY_PROVIDER, value: github }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LIBRARY_GIT_TOKEN
+            valueFrom: { secretKeyRef: { name: activate-git, key: token } }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: MIGRATIONS_RUN_ON_BOOT, value: "false" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: DB_SSL_MODE, value: verify-full }
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: { name: LIBRARY_ALLOW_LOCAL, value: "true" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: PUBLIC_API_URL, value: https://mcp.activate.example.com }
+
+  - it: no secret value is ever inlined; every credential is a secretKeyRef
+    template: api-deployment.yaml
+    documentIndex: 0
+    set:
+      auth.workos.existingSecret: wos
+      claudeEnterprise.existingSecret: ce
+      ai.voice: { enabled: true, existingSecret: voice }
+      encryption.previousExistingSecret: prev
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_PASSWORD
+            valueFrom: { secretKeyRef: { name: activate-db, key: password } }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ACTIVATE_SECRETS_KEY
+            valueFrom: { secretKeyRef: { name: activate-encryption, key: key } }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ANTHROPIC_API_KEY
+            valueFrom: { secretKeyRef: { name: activate-anthropic, key: api-key } }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: OPENAI_API_KEY
+            valueFrom: { secretKeyRef: { name: voice, key: api-key } }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CLAUDE_ADMIN_API_KEY
+            valueFrom: { secretKeyRef: { name: ce, key: admin-key, optional: true } }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ACTIVATE_SECRETS_KEY_PREVIOUS
+            valueFrom: { secretKeyRef: { name: prev, key: previous } }
+
+  - it: workos mode swaps the IdP variables and keeps the rest
+    template: api-deployment.yaml
+    documentIndex: 0
+    set:
+      auth.provider: workos
+      auth.workos.existingSecret: activate-workos
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: AUTH_PROVIDER, value: workos }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WORKOS_API_KEY
+            valueFrom: { secretKeyRef: { name: activate-workos, key: api-key } }
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: { name: AUTH_OIDC_ISSUER, value: https://login.microsoftonline.com/<tenant-id>/v2.0 }
+
+  - it: the cloud edition has no license file
+    template: api-deployment.yaml
+    documentIndex: 0
+    set: { edition: cloud }
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVATE_LICENSE_FILE, value: /etc/activate/license/license.jwt }
+
+  - it: a local marketplace is explicit and only for evaluation
+    template: api-deployment.yaml
+    documentIndex: 0
+    set: { marketplace.provider: local }
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: LIBRARY_ALLOW_LOCAL, value: "true" }
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LIBRARY_GIT_TOKEN
+            valueFrom: { secretKeyRef: { name: activate-git, key: token } }
+
+  - it: a custom database CA is mounted and pointed at
+    template: api-deployment.yaml
+    documentIndex: 0
+    set: { database.caBundle.existingConfigMap: pg-ca }
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: DB_SSL_CA_FILE, value: /etc/activate/db-ca/ca.pem }
+      - contains:
+          path: spec.template.spec.volumes
+          content: { name: db-ca, configMap: { name: pg-ca } }
+        any: true
+
+  - it: an egress proxy reaches both roles
+    set: { networkPolicy.egress.httpsProxy: "http://proxy:3128", networkPolicy.egress.noProxy: "10.0.0.0/8" }
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: HTTPS_PROXY, value: "http://proxy:3128" }
+        template: api-deployment.yaml
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: HTTPS_PROXY, value: "http://proxy:3128" }
+        template: worker-statefulset.yaml
+        documentIndex: 1
+
+  - it: roles are split, api serves and worker runs jobs
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVATE_ROLE, value: api }
+        template: api-deployment.yaml
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVATE_ROLE, value: worker }
+        template: worker-statefulset.yaml
+        documentIndex: 1
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: worker-statefulset.yaml
+        documentIndex: 1
+
+  - it: a private CA is trusted by node and extra env reaches every server container
+    set:
+      trust.extraCaConfigMap: corp-ca
+      extraEnv:
+        - { name: FEATURE_X, value: "on" }
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: NODE_EXTRA_CA_CERTS, value: /etc/activate/trust/ca.pem }
+        template: api-deployment.yaml
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.volumes
+          content: { name: trust, configMap: { name: corp-ca } }
+        template: api-deployment.yaml
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: FEATURE_X, value: "on" }
+        template: worker-statefulset.yaml
+        documentIndex: 1

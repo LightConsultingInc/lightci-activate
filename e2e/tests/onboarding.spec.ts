@@ -148,8 +148,8 @@ test.describe("onboarding voice default", () => {
     const orb = page.getByTestId("voice-orb")
     const chatInput = page.getByTestId("intake-input")
     await expect(orb.or(chatInput)).toBeVisible({ timeout: 20_000 })
-    if (await orb.isVisible()) {
-      await expect(page.getByTestId("intake-chat").getByTestId("chat-interviewer")).toHaveCount(0)
+    // The microphone check can fail (and fall back to chat) before or after this point; both are correct.
+    if ((await orb.isVisible()) && !(await chatInput.isVisible())) {
       await page.getByTestId("voice-toggle").click() // "Prefer to type"
     }
     await expect(chatInput).toBeVisible({ timeout: 30_000 })

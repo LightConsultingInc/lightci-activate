@@ -39,6 +39,8 @@ export interface JobDefinition<T = unknown> {
   expireInSeconds?: number;
   /** Cron expression, when the job also runs on a schedule (worker role only). */
   cron?: string;
+  /** Enqueue once when a worker starts (after the queue is installed), with this singleton key. */
+  onBoot?: { singletonKey: string };
   /**
    * One job per singleton key across queued, retrying and running states. Required for
    * queues that enqueue with `singletonKey`; leave off for fire-and-forget queues, where

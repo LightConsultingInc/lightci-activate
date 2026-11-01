@@ -36,7 +36,7 @@ export class WorkosService {
     this.client = process.env.WORKOS_API_KEY
       ? new WorkOS(process.env.WORKOS_API_KEY)
       : null;
-    if (!this.client)
+    if (!this.client && authProvider() === 'workos')
       this.logger.warn('WORKOS_API_KEY not set: sign-in is disabled.');
   }
 

@@ -2,7 +2,7 @@ ARG NODE_IMAGE=node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --network-timeout 600000
 
 FROM ${NODE_IMAGE} AS build
 WORKDIR /app

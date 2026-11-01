@@ -12,7 +12,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={client}>
       <ThemeProvider>
         <TooltipProvider>{children}</TooltipProvider>
-        <Toaster position="bottom-right" richColors />
+        {/* Top right: sticky action bars live at the bottom, and a toast must never cover the button that caused it. */}
+        <Toaster position="top-right" richColors />
       </ThemeProvider>
     </QueryClientProvider>
   )

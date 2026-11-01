@@ -45,12 +45,11 @@ import {
   type BoundaryDeclaration,
   type SampleCase,
   Skill,
-  type SkillStatus,
 } from './entities/skill.entity';
 import { GitRepoService } from './git-repo.service';
 import {
-  type RepoManifest,
   type RepoSkill,
+  type RepoSkillVersion,
   boundaryToManifest,
   composeSkillMd,
   parseFrontmatter,
@@ -315,7 +314,9 @@ export class LibraryService {
       skill = await this.skills.save(skill);
 
       // versions from tags (or the declared activate-version from HEAD when the repo has no tags)
-      const repoVersions = rs.versions.length
+      const repoVersions: Array<
+        Omit<RepoSkillVersion, 'tag'> & { tag: string | null }
+      > = rs.versions.length
         ? rs.versions
         : [
             {

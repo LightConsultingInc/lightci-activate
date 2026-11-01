@@ -69,7 +69,12 @@ import './learning.mocks';
       UsageSnapshot,
     ]),
   ],
-  controllers: [LearningController, LessonsController, MemoryController, ModulesController],
+  controllers: [
+    LearningController,
+    LessonsController,
+    MemoryController,
+    ModulesController,
+  ],
   providers: [
     PersonRefService,
     MasteryService,

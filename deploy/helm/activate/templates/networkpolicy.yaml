@@ -1,0 +1,75 @@
+{{- if .Values.networkPolicy.enabled }}
+{{/* Deny everything in the namespace by default; allow only what Activate needs. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "activate.fullname" . }}-default-deny
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "activate.selector" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "activate.fullname" . }}-web
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "activate.selector" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Any ingress controller may reach the web app.
+    - ports: [{ port: 3000, protocol: TCP }]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "activate.selector" . | nindent 14 }}
+              app.kubernetes.io/component: api
+      ports: [{ port: 3000, protocol: TCP }]
+    # DNS, and the identity provider (WorkOS mode) over 443.
+    - ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+    - ports: [{ port: 443, protocol: TCP }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "activate.fullname" . }}-server
+  labels:
+    {{- include "activate.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: [api, worker, migrate, bootstrap]
+      - key: app.kubernetes.io/instance
+        operator: In
+        values: [{{ .Release.Name | quote }}]
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - ports: [{ port: 3000, protocol: TCP }]
+    # Prometheus scrapes the metrics port from any namespace.
+    - ports: [{ port: {{ .Values.metrics.port }}, protocol: TCP }]
+  egress:
+    - ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+    # Database
+    - ports: [{ port: {{ .Values.database.port }}, protocol: TCP }]
+    # Anthropic, the identity provider, the Git host, and the proxy if any (all 443).
+    - ports: [{ port: 443, protocol: TCP }]
+    {{- range .Values.networkPolicy.extraEgressPorts }}
+    - ports: [{ port: {{ . }}, protocol: TCP }]
+    {{- end }}
+    {{- range .Values.networkPolicy.egressCIDRs }}
+    - to:
+        - ipBlock:
+            cidr: {{ . | quote }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,224 @@
+name: Release
+
+# Tag vX.Y.Z on main to publish a release: signed multi-arch images, an SBOM attestation, the Helm
+# chart as an OCI artifact, the Compose files, an offline bundle, and a GitHub Release with notes.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/activate
+
+jobs:
+  notes:
+    name: Release notes present
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: The tag needs a section in RELEASE_NOTES.md
+        run: |
+          grep -q "^## ${GITHUB_REF_NAME}\$" RELEASE_NOTES.md || { echo "RELEASE_NOTES.md has no section for ${GITHUB_REF_NAME}"; exit 1; }
+          awk -v tag="## ${GITHUB_REF_NAME}" '$0==tag{p=1;next} /^## /{p=0} p' RELEASE_NOTES.md > notes-section.md
+          test -s notes-section.md
+      - name: api/package.json carries the same version (doctor and the update banner report it)
+        run: |
+          PKG=$(node -p "require('./api/package.json').version")
+          test "$PKG" = "${GITHUB_REF_NAME#v}" || { echo "api/package.json version is $PKG, tag is ${GITHUB_REF_NAME#v}"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with: { name: notes, path: notes-section.md }
+
+  images:
+    name: Build, sign and attest images
+    needs: notes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: server
+            context: .
+            file: api/Dockerfile
+          - name: web
+            context: frontend
+            file: frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BASE }}/${{ matrix.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Scan for critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign (keyless, GitHub OIDC)
+        run: cosign sign --yes "${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}"
+      - uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: ${{ matrix.name }}-sbom.spdx.json
+      - name: Attest the SBOM
+        run: cosign attest --yes --predicate "${{ matrix.name }}-sbom.spdx.json" --type spdxjson "${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}"
+      - name: Verify what we just published (what a customer runs)
+        run: |
+          cosign verify "${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}" \
+            --certificate-identity-regexp "^https://github.com/${{ github.repository }}/" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          cosign verify-attestation --type spdxjson "${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}" \
+            --certificate-identity-regexp "^https://github.com/${{ github.repository }}/" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.name }}
+          path: ${{ matrix.name }}-sbom.spdx.json
+      - name: Record digest
+        run: echo "${{ steps.build.outputs.digest }}" > ${{ matrix.name }}.digest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.name }}
+          path: ${{ matrix.name }}.digest
+  upgrade-path:
+    # T7.2: schema at N-2 → migrate N-1 → migrate N, then boot N-1 against the N schema (rollback) and N.
+    name: Two-version upgrade and rollback
+    needs: [notes, images]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with: { name: digest-server, path: artifacts }
+      - name: Previous two releases (semver tags before this one)
+        id: prev
+        run: |
+          mapfile -t TAGS < <(git tag --list 'v*.*.*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -2)
+          echo "prev=${TAGS[0]:-}" >> "$GITHUB_OUTPUT"; echo "prev2=${TAGS[1]:-}" >> "$GITHUB_OUTPUT"
+          echo "previous: ${TAGS[*]:-none}"
+      - run: |
+          CAND="${IMAGE_BASE}/server@$(cat artifacts/server.digest)"
+          P1="${{ steps.prev.outputs.prev }}"; P2="${{ steps.prev.outputs.prev2 }}"
+          scripts/ci/upgrade-path.sh "$CAND" ${P1:+"${IMAGE_BASE}/server:${P1#v}"} ${P2:+"${IMAGE_BASE}/server:${P2#v}"}
+
+  chart:
+    name: Package and push the Helm chart
+    needs: [notes, images, upgrade-path]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Chart version follows the tag
+        run: |
+          sed -i "s/^version: .*/version: ${{ needs.notes.outputs.version }}/; s/^appVersion: .*/appVersion: \"${{ needs.notes.outputs.version }}\"/" deploy/helm/activate/Chart.yaml
+          helm lint deploy/helm/activate
+          helm package deploy/helm/activate -d dist
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+      - run: helm push dist/activate-${{ needs.notes.outputs.version }}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign the chart
+        run: cosign sign --yes "${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/activate:${{ needs.notes.outputs.version }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chart
+          path: dist/activate-${{ needs.notes.outputs.version }}.tgz
+  bundle:
+    name: Offline bundle and GitHub Release
+    needs: [notes, images, chart]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Assemble the offline bundle (images as OCI archives, chart, compose, checksums)
+        run: |
+          set -euo pipefail
+          V=${{ needs.notes.outputs.version }}
+          B=activate-$V-bundle
+          mkdir -p "$B/images" "$B/charts" "$B/compose"
+          for img in server web; do
+            docker pull --platform linux/amd64 "${IMAGE_BASE}/$img:$V"
+            docker save "${IMAGE_BASE}/$img:$V" -o "$B/images/$img.tar"
+          done
+          cp artifacts/chart/activate-$V.tgz "$B/charts/"
+          cp deploy/compose/docker-compose.yml deploy/compose/.env.example "$B/compose/"
+          cp artifacts/sbom-server/server-sbom.spdx.json artifacts/sbom-web/web-sbom.spdx.json "$B/"
+          cat artifacts/digest-server/server.digest artifacts/digest-web/web.digest > "$B/DIGESTS"
+          (cd "$B" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          tar -czf "$B.tgz" "$B"
+          sha256sum "$B.tgz" > "$B.tgz.sha256"
+      - name: Release index (what installed copies read once a day)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p index
+          # Every published release plus this one. A notes section containing the line
+          # "Security advisory: yes" marks the release as an advisory (red banner).
+          node scripts/release-index.mjs \
+            --repo "${{ github.repository }}" --version "${{ needs.notes.outputs.version }}" \
+            --notes RELEASE_NOTES.md --out index/index.json
+          cat index/index.json
+      - name: Publish the index to releases.lightci.com (when the bucket is configured)
+        if: vars.RELEASES_BUCKET != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.RELEASES_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.RELEASES_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.RELEASES_AWS_REGION }}
+        run: aws s3 cp index/index.json "s3://${{ vars.RELEASES_BUCKET }}/activate/index.json" --cache-control max-age=300 --content-type application/json
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: artifacts/notes/notes-section.md
+          files: |
+            activate-${{ needs.notes.outputs.version }}-bundle.tgz
+            activate-${{ needs.notes.outputs.version }}-bundle.tgz.sha256
+            deploy/compose/docker-compose.yml
+            deploy/compose/.env.example
+            artifacts/chart/activate-${{ needs.notes.outputs.version }}.tgz
+            artifacts/sbom-server/server-sbom.spdx.json
+            artifacts/sbom-web/web-sbom.spdx.json
+            index/index.json

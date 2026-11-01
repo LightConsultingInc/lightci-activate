@@ -207,6 +207,25 @@ Files: `.github/workflows/release.yml`, `.github/workflows/deploy.yml`, `scripts
 
 Day one (website repo, `components/activate-self-host.tsx`): add a visible banner "Self-hosted Activate 1.0 is in early access; this page describes the 1.0 release", remove the three false security bullets (fails closed, verify-full, no demo data) until WS0 ships, change the registry host, fix the redirect URI to `/callback`, state WorkOS as the cloud default and direct OIDC as the self-hosted option, cite Anthropic's published IP range. Then update each section as its workstream lands; the guide's values keys and env var names are the contract the code adopts (`DB_SSL_MODE`, `DB_SSL_CA_FILE`, `AUTH_OIDC_*`, `AUTH_ROLE_MAP`, `ACTIVATE_LICENSE_FILE`, `ACTIVATE_ORG_*`, `LIBRARY_PROVIDER`, `LIBRARY_REPOSITORY`, `LIBRARY_GIT_TOKEN`, `TELEMETRY_ENABLED` as a no-op default false). Update `docs/architecture.md` (deployment section, port numbers, lead rule) and `infra/README.md`.
 
+## Status (2026-11-01)
+
+Everything below is on branch `m0-hardening`, not yet merged or released. Each milestone's tests ran locally against real services (Postgres, Keycloak, a bare git remote, Docker images, a kind cluster); CI now runs the same on every pull request.
+
+| Milestone | State | Evidence |
+|---|---|---|
+| M0 hardening (WS0) | done | `f8e7000`; `env.spec.ts`, DB TLS tests, tenancy fixes |
+| M1 cloud BYO-SSO (WS1 cloud) | done | `940b47d`; `workos.int.spec.ts` against the WorkOS test environment, E2E in WorkOS mode (113 passed) |
+| M2 runtime split, jobs, git remote (WS2) | done | `088197a`; `jobs`, `pg-lock`, `git-remote` integration specs; k6 baseline |
+| M3 + M4 direct OIDC, OAuth server, licence, bootstrap, CLI (WS1 self-hosted, WS3) | done | `1397679`; `oauth` (Keycloak), `bootstrap`, `license`, `rotate` specs; E2E in OIDC mode (108 passed) |
+| M5 packaging (WS4) | done, uncommitted at the time of writing | Helm chart with 28 unit tests, Compose, Terraform module validated, release workflow, metrics (`metrics.int.spec.ts`), kind install smoke (`scripts/ci/kind-smoke.sh`: TLS Postgres, Keycloak over a private CA, licence, migrate and bootstrap hooks, doctor, metrics, web sign-in routing, upgrade, rollback, volume survival) and Compose smoke (`scripts/ci/compose-smoke.sh`). The smokes found and fixed four defects the unit and E2E suites could not see: the web app sent browsers to the in-cluster API address to sign in (now `PUBLIC_API_URL`); the connector host's IP whitelist covered `/oauth` and `/.well-known`, which people's browsers need (now split: `/mcp` only); the Compose stack refused to boot because production rejects a plaintext database host (now an explicit, warned `DB_SSL_ALLOW_PLAINTEXT` for the single-node evaluation); and api and worker starting together deadlocked in Postgres while creating pg-boss queues (now serialised under the advisory lock). Final local results: kind smoke passed, Compose smoke passed, E2E WorkOS mode 108 passed (3 reruns after a toast-overlay fix), E2E OIDC mode 110 passed (one timing-tolerant test fix) |
+| WS7 release and upgrade lifecycle | done, uncommitted | `check-migrations.mjs`, `upgrade-path.sh` in the release workflow, chart image-tag lock (T7.7), deprecated-alias sunset test (T7.3), update check and admin banner (`updates.int.spec.ts`, T7.4), Coach plugin pull requests (`plugin-update.int.spec.ts`, T7.5), release notes gate (T7.6) |
+| WS5 cells | roots written and validated, not applied | `infra/aws/envs/us-prod`, `eu-prod` from the shared module; `deploy.yml` / `deploy-cell.yml`; `infra/cells.json`. Needs: state buckets, the lightci.com zone id, per-cell WorkOS environments and secrets, OIDC deploy roles (`AWS_DEPLOY_ROLE_US/EU`), GitHub environments `us-prod` and `eu-prod` with reviewers |
+| WS6 guide | in progress | website corrections against the shipped chart and code |
+
+Still open before the first customer (see the rollout gate): T1.11 manual sign-off with a real Claude Enterprise org; T1.14 ZAP scan; T2.5 Compose replica topology against a scratch GitHub repo; T5.x once the cells are applied; T6.1/T6.2 harnesses that execute the guide's code blocks and diff its tables against `env.ts` and `values.yaml`; the `releases.lightci.com` bucket (`RELEASES_BUCKET` repository variable) so installed copies can read the index; the licence signing key in a secret store and as the `LICENSE_SIGNING_KEY` GitHub secret (the kind job needs it); `ANTHROPIC_API_KEY` as a GitHub secret if the kind job should prove the model path too; a WorkOS test-environment secret pair for the `workos` E2E leg.
+
+Lint: `cd api && yarn lint` now gates CI with zero errors (292 pre-existing errors were fixed without behaviour changes).
+
 ## Sequencing and milestones
 
 | Milestone | Weeks | Contents | Proof |

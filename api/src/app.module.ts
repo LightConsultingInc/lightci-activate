@@ -6,6 +6,8 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { LicenseModule } from './license/license.module';
 import { ClaudeEnterpriseModule } from './claude-enterprise/claude-enterprise.module';
 import { seedEnabled } from './config/env';
+import { MetricsModule } from './metrics/metrics.module';
+import { UpdatesModule } from './updates/updates.module';
 import { McpModule } from './mcp/mcp.module';
 import { SeedModule } from './seed/seed.module';
 import { ContextModule } from './context/context.module';
@@ -25,6 +27,8 @@ import { WorkflowsModule } from './workflows/workflows.module';
     LoggingModule,
     TypeOrmModule.forRoot({ ...AppDataSource.options, autoLoadEntities: true }),
     JobsModule,
+    MetricsModule,
+    UpdatesModule,
     LicenseModule,
     BootstrapModule,
     HealthcheckModule,

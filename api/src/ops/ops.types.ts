@@ -8,11 +8,7 @@
 import type { Role } from '../common/roles';
 import type { Artifact } from '../learning/entities/submission.entity';
 import type { RubricScore } from '../learning/entities/grade.entity';
-import type {
-  BoundaryDeclaration,
-  SampleCase,
-  SkillStatus,
-} from '../skills/entities/skill.entity';
+import type { SkillStatus } from '../skills/entities/skill.entity';
 import type {
   BoundaryCheck,
   PromotionDecision,

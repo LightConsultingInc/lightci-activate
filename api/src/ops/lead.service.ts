@@ -26,12 +26,7 @@ import {
   type OrgFacts,
 } from './metrics.service';
 import { personById, personRef, promotionView } from './shape';
-import type {
-  LeadClientRow,
-  LeadQueue,
-  PersonRef,
-  PromotionView,
-} from './ops.types';
+import type { LeadClientRow, LeadQueue, PersonRef } from './ops.types';
 
 export const ACTIVE_PCT_TARGET = 0.6; // spec: weekly active on real work ≥ 60%
 

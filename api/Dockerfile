@@ -19,9 +19,9 @@ RUN yarn build
 FROM ${NODE_IMAGE} AS api
 WORKDIR /app
 COPY api/package.json api/yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --network-timeout 600000
 COPY api/ .
-RUN yarn build && yarn install --frozen-lockfile --production --ignore-scripts && yarn cache clean
+RUN yarn build && yarn install --frozen-lockfile --production --ignore-scripts --network-timeout 600000 && yarn cache clean
 
 # The demo marketplace is opt-in. Stage 0 is an empty folder; stage 1 carries the demo repo.
 FROM ${NODE_IMAGE} AS marketplace-0
@@ -37,13 +37,16 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     MCP_APP_HTML=/mcp-app/dist/app.html \
-    LIBRARY_WORK_DIR=/data/marketplace-work
+    LIBRARY_WORK_DIR=/data/marketplace-work \
+    COACH_PLUGIN_DIR=/app/plugins/activate-coach
 COPY --from=api /app/node_modules ./node_modules
 COPY --from=api /app/dist ./dist
 COPY --from=api /app/package.json ./package.json
 COPY api/certs ./certs
 COPY --from=mcp-app /mcp-app/dist /mcp-app/dist
 COPY --from=marketplace /srv/marketplace/ /marketplace/
+# The Coach plugin ships with every release so the worker can offer customers the update as a pull request.
+COPY marketplace/plugins/activate-coach /app/plugins/activate-coach
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 --ingroup nodejs nodeuser \
   && mkdir -p /data \

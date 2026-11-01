@@ -10,6 +10,8 @@ import { LicenseService } from '../license/license.service';
 import { Org } from '../orgs/entities/org.entity';
 import { IntegrationsService } from '../orgs/integrations.service';
 import { GitRepoService } from '../skills/git-repo.service';
+import { UpdateCheckService } from '../updates/update-check.service';
+import { APP_VERSION } from '../updates/version';
 
 export type CheckLevel = 'ok' | 'warn' | 'fail';
 
@@ -293,6 +295,29 @@ export async function runDoctor(
   } catch (e) {
     checks.push({
       name: 'jobs',
+      level: 'warn',
+      detail: e instanceof Error ? e.message : String(e),
+    });
+  }
+
+  // updates
+  try {
+    const updates = app.get(UpdateCheckService);
+    const u = updates.enabled ? await updates.check() : await updates.status();
+    checks.push({
+      name: 'updates',
+      level: u.advisory ? 'fail' : u.updateAvailable || u.error ? 'warn' : 'ok',
+      detail: !u.enabled
+        ? `running ${APP_VERSION}; update check off`
+        : u.error
+          ? `running ${APP_VERSION}; release index unreachable (${u.error})`
+          : u.updateAvailable
+            ? `running ${APP_VERSION}; ${u.latest} available${u.advisory ? ' (security advisory)' : ''}: ${u.notesUrl ?? ''}`
+            : `running ${APP_VERSION}; up to date`,
+    });
+  } catch (e) {
+    checks.push({
+      name: 'updates',
       level: 'warn',
       detail: e instanceof Error ? e.message : String(e),
     });

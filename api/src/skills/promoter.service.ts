@@ -18,7 +18,7 @@ import { checkBoundary } from './boundary';
 import { PromotionRequest } from './entities/promotion-request.entity';
 import { SkillComment } from './entities/skill-comment.entity';
 import { SkillVersion } from './entities/skill-version.entity';
-import { type ActivateManifest, Skill } from './entities/skill.entity';
+import { Skill } from './entities/skill.entity';
 import { GitRepoService, diffSummary } from './git-repo.service';
 import { LibraryService } from './library.service';
 import type { PromotionDetail, PromotionView } from './skills.types';

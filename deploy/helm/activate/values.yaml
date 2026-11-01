@@ -1,0 +1,204 @@
+# Self-hosted Activate. Keys here match the self-host guide at lightci.com/activate/self-host;
+# the guide's minimum production values.yaml installs unchanged.
+
+global:
+  imageRegistry: ghcr.io/lightci/activate
+  imagePullSecrets: []
+  # The chart's appVersion is used when empty. Chart and images are released together, so a tag that
+  # differs from appVersion is refused unless allowImageTagMismatch is set (for mirrors that retag).
+  imageTag: ""
+  allowImageTagMismatch: false
+  hosts:
+    web: activate.example.com
+    api: api.activate.example.com
+    mcp: mcp.activate.example.com
+
+edition: self-hosted
+
+license:
+  # Secret with key `license.jwt`: the license LightCI sent you.
+  existingSecret: activate-license
+  key: license.jwt
+
+org:
+  name: Example Corp
+  slug: example
+  emailDomains: [example.com]
+  initialAdmins: [jane.doe@example.com]
+  seats: 0
+
+auth:
+  # oidc: your own identity provider. workos: a WorkOS environment you own (set auth.workos.existingSecret).
+  provider: oidc
+  oidc:
+    issuer: https://login.microsoftonline.com/<tenant-id>/v2.0
+    clientId: 00000000-0000-0000-0000-000000000000
+    # Secret with key `client-secret`
+    existingSecret: activate-oidc
+    scopes: openid profile email
+    groupsClaim: groups
+  # IdP groups (names or ids) → Activate roles. learner is implicit.
+  roleMapping:
+    admin: [activate-admin]
+    sponsor: [activate-sponsor]
+    champion: [activate-champion]
+  workos:
+    # Secret with keys `api-key`, `client-id`
+    existingSecret: ""
+  passwordLogin: false
+
+database:
+  host: activate.cluster-abc123.us-east-1.rds.amazonaws.com
+  port: 5432
+  name: activate
+  # Secret with keys `username`, `password`
+  existingSecret: activate-db
+  sslMode: verify-full
+  caBundle:
+    # ConfigMap with key `ca.pem`. Not needed for RDS hosts: the image carries the AWS bundle.
+    existingConfigMap: ""
+  pool:
+    max: 10
+
+encryption:
+  # Secret with key `key` (any string; openssl rand -base64 32). Back it up with the database.
+  existingSecret: activate-encryption
+  # Secret with key `previous` during rotation (comma-separated old keys)
+  previousExistingSecret: ""
+
+ai:
+  # Anthropic's API is the model provider in this release (Bedrock in-region is a later option).
+  anthropic:
+    # Secret with key `api-key`
+    existingSecret: activate-anthropic
+  model: claude-opus-5
+  fastModel: claude-sonnet-5
+  voice:
+    enabled: false
+    # Secret with key `api-key` (OpenAI)
+    existingSecret: ""
+
+claudeEnterprise:
+  # Optional. Secret with keys `analytics-key`, `admin-key`, optionally `compliance-key`.
+  # Admins may instead enter these under Settings › Integrations.
+  existingSecret: ""
+
+marketplace:
+  provider: github # github | git | local
+  repository: example-corp/claude-marketplace
+  remoteUrl: ""
+  defaultBranch: main
+  # Secret with key `token` (contents + pull-request write)
+  existingSecret: activate-git
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+
+web:
+  replicas: 2
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { cpu: 500m, memory: 1Gi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+api:
+  replicas: 2
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { cpu: 1000m, memory: 2Gi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { cpu: 1000m, memory: 2Gi }
+  schedule:
+    timezone: UTC
+
+ingress:
+  internal:
+    enabled: true
+    className: nginx-internal
+    annotations: {}
+    tls:
+      secretName: activate-tls
+  mcp:
+    enabled: true
+    className: nginx-public
+    annotations: {}
+    tls:
+      secretName: activate-mcp-tls
+    # Anthropic's published egress ranges; check them at install and at each upgrade:
+    # https://platform.claude.com/docs/en/api/ip-addresses
+    sourceRanges:
+      - 160.79.104.0/23
+      - 2607:6bc0::/48
+
+networkPolicy:
+  enabled: true
+  # Extra egress CIDRs (your IdP, Git host, database) when the cluster denies egress by default.
+  egressCIDRs: []
+  # Extra TCP ports the server pods may reach. Policies see the destination pod's port, so an identity
+  # provider or Git host inside the cluster needs its container port here even when its Service is 443.
+  extraEgressPorts: []
+  egress:
+    httpsProxy: ""
+    noProxy: ""
+
+trust:
+  # ConfigMap with key `ca.pem`: a private CA the API must trust when it calls your identity provider,
+  # Git host or proxy (NODE_EXTRA_CA_CERTS). Not needed for publicly trusted certificates.
+  extraCaConfigMap: ""
+
+# Extra environment for the api, worker, migrate and bootstrap containers (name/value or valueFrom).
+extraEnv: []
+
+podDisruptionBudget:
+  enabled: true
+
+metrics:
+  # Prometheus endpoint on a port of its own (never routed through the ingress).
+  port: 9464
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+
+telemetry:
+  enabled: false
+
+updates:
+  # Once a day the worker reads LightCI's release index (a static file; nothing is sent) and admins
+  # see a banner when a newer release exists. Set false on restricted networks.
+  checkEnabled: true
+  indexUrl: https://releases.lightci.com/activate/index.json
+
+logLevel: info
+
+# Applied to every container (the guide's Security section).
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: [ALL]
+  seccompProfile:
+    type: RuntimeDefault
+
+podSecurityContext:
+  fsGroup: 1001
+  fsGroupChangePolicy: OnRootMismatch
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

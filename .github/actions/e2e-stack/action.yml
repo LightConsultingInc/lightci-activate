@@ -1,0 +1,71 @@
+name: E2E stack
+description: Build the API, web and MCP app, start them against the job's Postgres (and Keycloak in oidc mode), then run Playwright.
+inputs:
+  auth:
+    description: workos | oidc
+    required: true
+  workos-api-key:
+    description: WorkOS API key (workos mode)
+    required: false
+    default: ""
+  workos-client-id:
+    description: WorkOS client id (workos mode)
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with: { node-version-file: .nvmrc, cache: yarn, cache-dependency-path: "**/yarn.lock" }
+    - shell: bash
+      run: |
+        yarn --cwd api install --frozen-lockfile
+        yarn --cwd frontend install --frozen-lockfile
+        yarn --cwd mcp-app install --frozen-lockfile || yarn --cwd mcp-app install
+        yarn --cwd e2e install --frozen-lockfile
+    - shell: bash
+      run: |
+        yarn --cwd mcp-app build
+        yarn --cwd api build
+        yarn --cwd frontend build
+        cp -r frontend/.next/static frontend/.next/standalone/.next/static
+        cp -r frontend/public frontend/.next/standalone/public
+    - name: Keycloak with the activate-test realm
+      if: inputs.auth == 'oidc'
+      shell: bash
+      run: ./api/test/keycloak/start.sh
+    - name: WorkOS credentials for the API and the Playwright token helper
+      if: inputs.auth == 'workos'
+      shell: bash
+      env:
+        WORKOS_API_KEY: ${{ inputs.workos-api-key }}
+        WORKOS_CLIENT_ID: ${{ inputs.workos-client-id }}
+      run: |
+        test -n "$WORKOS_API_KEY" || { echo "WORKOS_API_KEY secret is required for the workos E2E leg"; exit 1; }
+        printf 'WORKOS_API_KEY=%s\nWORKOS_CLIENT_ID=%s\n' "$WORKOS_API_KEY" "$WORKOS_CLIENT_ID" > "$RUNNER_TEMP/api.env"
+        echo "API_ENV_FILE=$RUNNER_TEMP/api.env" >> "$GITHUB_ENV"
+    - name: Start the stack
+      shell: bash
+      env:
+        WORKOS_API_KEY: ${{ inputs.workos-api-key }}
+        WORKOS_CLIENT_ID: ${{ inputs.workos-client-id }}
+        E2E_LOG_DIR: ${{ runner.temp }}/e2e-logs
+      run: scripts/ci/e2e-stack.sh ${{ inputs.auth }}
+    - shell: bash
+      run: yarn --cwd e2e playwright install --with-deps chromium
+    - name: Playwright
+      shell: bash
+      working-directory: e2e
+      env:
+        E2E_AUTH: ${{ inputs.auth }}
+        E2E_PASSWORD: ${{ inputs.auth == 'oidc' && 'Activate-oidc-2026!' || 'Activate-demo-2026!' }}
+      run: yarn test
+    - uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: e2e-${{ inputs.auth }}
+        path: |
+          e2e/playwright-report
+          e2e/test-results
+          ${{ runner.temp }}/e2e-logs
+        retention-days: 7

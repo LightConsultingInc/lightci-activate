@@ -169,7 +169,7 @@ describe('ModulePrepService', () => {
           (r) => r.personId === p.id && r.lessonSlug === slug,
         );
         Object.assign(existing!, { memoryVersion: 2, moduleCode });
-        return { personalised: true };
+        return Promise.resolve({ personalised: true });
       },
     );
     await svc.prepare(person, 'org1', 'L2', ['a', 'b'].map(lesson));

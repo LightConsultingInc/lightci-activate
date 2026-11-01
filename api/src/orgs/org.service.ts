@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { AiService } from '../ai/ai.service';
 import { ClaudeEnterpriseService } from '../claude-enterprise/claude-enterprise.service';
+import type { Group } from '../claude-enterprise/types';
 import { ROLES, type Role } from '../common/roles';
 import { SecretsService } from '../common/secrets.service';
 import { ContextSource } from '../context/entities/context-source.entity';
@@ -560,7 +561,7 @@ export class OrgService {
       throw new NotImplementedException(
         'No Claude Admin API key configured for this org. Add one under Integrations (scope read:rbac_groups) and retry.',
       );
-    let groups;
+    let groups: Group[];
     try {
       groups = await this.claude.listGroups({ admin: resolved.secret });
     } catch (error) {

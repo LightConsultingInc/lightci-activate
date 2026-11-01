@@ -295,7 +295,7 @@ export class ClaudeEnterpriseService {
         'skillUsage needs an analytics key',
       );
     const rows = await this.analytics.listAll(
-      this.analytics.skills,
+      (key, params) => this.analytics.skills(key, params),
       k.analytics,
       {
         starting_date: range.from,

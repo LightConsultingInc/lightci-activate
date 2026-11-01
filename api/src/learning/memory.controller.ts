@@ -13,7 +13,11 @@ export type MemoryView = Pick<
   | 'preferences'
   | 'version'
   | 'updatedAt'
-> & { anchorWorkflows: string[]; eventCount: number; preparedModules: string[] };
+> & {
+  anchorWorkflows: string[];
+  eventCount: number;
+  preparedModules: string[];
+};
 
 @ApiTags('Learning')
 @Controller()

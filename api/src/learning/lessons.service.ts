@@ -119,7 +119,13 @@ export class LessonsService {
     const cached = await this.rows.findOne({
       where: { personId: person.id, lessonSlug: slug },
     });
-    if (cached && cached.memoryVersion === memory.version && moduleCode && cached.moduleCode !== moduleCode) await this.rows.save(Object.assign(cached, { moduleCode }));
+    if (
+      cached &&
+      cached.memoryVersion === memory.version &&
+      moduleCode &&
+      cached.moduleCode !== moduleCode
+    )
+      await this.rows.save(Object.assign(cached, { moduleCode }));
     if (cached && cached.memoryVersion === memory.version)
       return {
         example: cached.example,

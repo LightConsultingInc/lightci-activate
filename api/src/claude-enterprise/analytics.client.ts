@@ -128,8 +128,10 @@ export class AnalyticsClient {
   ): Promise<AnalyticsNamedUsageRow[]> {
     const out: AnalyticsNamedUsageRow[] = [];
     let page: string | undefined;
+    // Callers pass an unbound method (e.g. `client.skills`); run it against this client.
+    const fetchPage: typeof fn = (k, p) => Reflect.apply(fn, this, [k, p]);
     do {
-      const res = await fn.call(this, key, {
+      const res = await fetchPage(key, {
         ...params,
         limit: params.limit ?? 1000,
         page,

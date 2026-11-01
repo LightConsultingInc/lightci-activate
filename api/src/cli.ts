@@ -175,9 +175,13 @@ if (require.main === module) {
       process.exitCode = code;
     },
     (err: unknown) => {
-      process.stderr.write(
-        `${err instanceof Error ? err.message : String(err)}\n`,
-      );
+      const message = err instanceof Error ? err.message : String(err);
+      const hint = /certificate|self[- ]signed|SSL|TLS/i.test(message)
+        ? ' The database connection failed TLS verification: check DB_SSL_MODE and DB_SSL_CA_FILE (the CA that signed the server certificate).'
+        : /ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|timeout/i.test(message)
+          ? ' The database is unreachable: check DB_HOST, DB_PORT and the network path.'
+          : '';
+      process.stderr.write(`${message}${hint}\n`);
       process.exitCode = 1;
     },
   );

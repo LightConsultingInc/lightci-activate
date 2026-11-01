@@ -7,6 +7,7 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import PgBoss from 'pg-boss';
 import type { DataSource } from 'typeorm';
+import { withAdvisoryLock } from '../common/pg-lock';
 import { processRole } from '../config/env';
 import {
   JobRegistry,
@@ -69,7 +70,19 @@ export class PgBossJobs
       this.logger.error(`queue error: ${e instanceof Error ? e.message : e}`),
     );
     await this.boss.start();
-    for (const def of this.registry.all()) await this.installQueue(def);
+    // Creating queues from several processes at once (api and worker on first boot) deadlocks in
+    // pg-boss's queue table; one process installs at a time, the others wait their turn.
+    await withAdvisoryLock(this.ds, 'activate.jobs.install', async () => {
+      for (const def of this.registry.all()) await this.installQueue(def);
+    });
+    if (this.runsHandlers)
+      for (const def of this.registry.all())
+        if (def.onBoot)
+          await this.enqueue(
+            def.name,
+            {},
+            { singletonKey: def.onBoot.singletonKey },
+          );
     this.logger.log(
       `Job queue ready (${this.registry.all().length} queues, role=${this.role}, handlers=${this.runsHandlers ? 'on' : 'off'})`,
     );
@@ -164,13 +177,23 @@ export class PgBossJobs
               MAX(completed_on) FILTER (WHERE state = 'completed') AS last_completed
          FROM ${JOBS_SCHEMA}.job GROUP BY name`,
     );
-    return rows.map((r) => ({
-      name: r.name,
-      queued: r.queued,
-      lastCompletedAt: r.last_completed
-        ? new Date(r.last_completed).toISOString()
-        : null,
-    }));
+    const byName = new Map(rows.map((r) => [r.name, r]));
+    // Every registered queue appears, idle ones at 0: a missing series is worse than a zero for an
+    // operator's dashboard, and doctor can tell "never ran" from "no such queue".
+    const names = new Set<string>([
+      ...this.registry.all().map((d) => d.name),
+      ...byName.keys(),
+    ]);
+    return [...names].sort().map((name) => {
+      const r = byName.get(name);
+      return {
+        name,
+        queued: r?.queued ?? 0,
+        lastCompletedAt: r?.last_completed
+          ? new Date(r.last_completed).toISOString()
+          : null,
+      };
+    });
   }
 
   async onApplicationShutdown(): Promise<void> {

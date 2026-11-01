@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import type { ZodType } from 'zod';
 import { IntegrationsService } from '../orgs/integrations.service';
 import { AgentRun } from '../ops/entities/agent-run.entity';
+import { aiRequests, aiTokens } from '../metrics/registry';
 import { mockResponder } from './mock-responders';
 
 export interface AiCall {
@@ -86,7 +87,7 @@ export class AiService {
       run.status = 'mock';
       run.output = out;
       run.durationMs = Date.now() - started;
-      await this.runs.save(run);
+      await this.persist(run);
       return out;
     }
     try {
@@ -119,7 +120,7 @@ export class AiService {
       if (response.stop_reason === 'refusal') {
         run.status = 'refused';
         run.error = response.stop_details?.explanation ?? 'refused';
-        await this.runs.save(run);
+        await this.persist(run);
         throw new Error(
           `Claude declined this request (${response.stop_details?.category ?? 'refusal'}).`,
         );
@@ -127,13 +128,13 @@ export class AiService {
       if (!response.parsed_output)
         throw new Error('Claude returned no structured output');
       run.output = response.parsed_output;
-      await this.runs.save(run);
+      await this.persist(run);
       return response.parsed_output;
     } catch (error) {
       run.status = run.status === 'refused' ? 'refused' : 'error';
       run.error = error instanceof Error ? error.message : String(error);
       run.durationMs = Date.now() - started;
-      await this.runs.save(run).catch(() => undefined);
+      await this.persist(run).catch(() => undefined);
       this.logger.error(`${call.task} failed: ${run.error}`);
       throw error;
     }
@@ -157,7 +158,7 @@ export class AiService {
       );
       run.status = 'mock';
       run.output = out;
-      await this.runs.save(run);
+      await this.persist(run);
       return { text: out.text, runId: run.id };
     }
     try {
@@ -194,15 +195,26 @@ export class AiService {
         run.status = 'refused';
         run.error = message.stop_details?.explanation ?? 'refused';
       }
-      await this.runs.save(run);
+      await this.persist(run);
       return { text, runId: run.id };
     } catch (error) {
       run.status = 'error';
       run.error = error instanceof Error ? error.message : String(error);
       run.durationMs = Date.now() - started;
-      await this.runs.save(run).catch(() => undefined);
+      await this.persist(run).catch(() => undefined);
       throw error;
     }
+  }
+
+  /** Save the run and count it (requests by outcome, tokens by direction). */
+  private async persist(run: AgentRun): Promise<void> {
+    await this.runs.save(run);
+    const model = run.model ?? this.defaultModel;
+    aiRequests.labels(run.task, model, run.status).inc();
+    if (run.inputTokens)
+      aiTokens.labels(run.task, model, 'input').inc(run.inputTokens);
+    if (run.outputTokens)
+      aiTokens.labels(run.task, model, 'output').inc(run.outputTokens);
   }
 
   /** Verify an Anthropic key by listing models (cheap, no tokens). */

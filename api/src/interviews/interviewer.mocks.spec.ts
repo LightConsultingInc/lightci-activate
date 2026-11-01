@@ -12,6 +12,14 @@ import {
   turnSchemaFor,
 } from './interviewer.schemas';
 import type { InterviewMode } from './interviews.types';
+import type {
+  ChampionCompleteOutput,
+  IntakeCompleteOutput,
+  WorkflowCompleteOutput,
+} from './interviewer.schemas';
+
+type CompleteOutput =
+  IntakeCompleteOutput | ChampionCompleteOutput | WorkflowCompleteOutput;
 import './interviewer.mocks';
 
 const modes: InterviewMode[] = ['intake', 'champion', 'workflow'];
@@ -22,7 +30,7 @@ describe('interviewer mock responders satisfy the structured-output schemas', ()
     (mode) => {
       let scribe: Record<string, unknown> = {};
       for (let turnCount = 1; turnCount <= 9; turnCount++) {
-        const out = mockResponder<any>(
+        const out = mockResponder(
           {
             agent: 'interviewer',
             task: 'interviewer.turn',
@@ -62,7 +70,7 @@ describe('interviewer mock responders satisfy the structured-output schemas', ()
           lastUser: 'Weekly report, meeting prep and client summaries',
           scribe: {},
         };
-        const scribe = mockResponder<any>(
+        const scribe = mockResponder(
           {
             agent: 'interviewer',
             task: 'interviewer.scribe',
@@ -72,7 +80,7 @@ describe('interviewer mock responders satisfy the structured-output schemas', ()
           },
           scribeSchemaFor(mode),
         );
-        const turn = mockResponder<any>(
+        const turn = mockResponder(
           {
             agent: 'interviewer',
             task: 'interviewer.turn',
@@ -82,7 +90,10 @@ describe('interviewer mock responders satisfy the structured-output schemas', ()
           },
           turnSchemaFor(mode),
         );
-        expect(scribe.nextQuestion).toBeUndefined();
+        // the scribe schema has no nextQuestion; check the parsed object, not the type
+        expect(
+          (scribe as Record<string, unknown>).nextQuestion,
+        ).toBeUndefined();
         expect(scribe.scribeUpdate).toEqual(turn.scribeUpdate);
         expect(scribe.checkerFlags).toEqual(turn.checkerFlags);
         expect(scribe.completeness).toBeCloseTo(Math.min(1, turnCount / 8), 5);
@@ -91,7 +102,7 @@ describe('interviewer mock responders satisfy the structured-output schemas', ()
   );
 
   it.each(modes)('%s: interviewer.complete is schema-valid', (mode) => {
-    const out = mockResponder<any>(
+    const out = mockResponder<CompleteOutput>(
       {
         agent: 'interviewer',
         task: 'interviewer.complete',
@@ -113,17 +124,21 @@ describe('interviewer mock responders satisfy the structured-output schemas', ()
           },
         },
       },
-      completeSchemaFor(mode) as any,
+      completeSchemaFor(mode),
     );
     if (mode === 'intake') {
-      expect(out.workflowMaps.length).toBeGreaterThanOrEqual(2);
-      expect(out.workflowMaps.length).toBeLessThanOrEqual(4);
-      expect(out.placement.rung).toBe(2);
-      expect(out.workflowMaps[0].minutesPerRun).toBe(60); // compact WorkflowMapOut (flat)
+      const intake = out as IntakeCompleteOutput;
+      expect(intake.workflowMaps.length).toBeGreaterThanOrEqual(2);
+      expect(intake.workflowMaps.length).toBeLessThanOrEqual(4);
+      expect(intake.placement.rung).toBe(2);
+      expect(intake.workflowMaps[0].minutesPerRun).toBe(60); // compact WorkflowMapOut (flat)
     }
     if (mode === 'champion')
-      expect(out.workflowMaps.length).toBeGreaterThanOrEqual(2);
-    if (mode === 'workflow') expect(out.schema.purpose).toBeTruthy();
+      expect(
+        (out as ChampionCompleteOutput).workflowMaps.length,
+      ).toBeGreaterThanOrEqual(2);
+    if (mode === 'workflow')
+      expect((out as WorkflowCompleteOutput).schema.purpose).toBeTruthy();
   });
 });
 

@@ -1,6 +1,8 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
+  accessSync,
+  constants,
   cpSync,
   existsSync,
   mkdirSync,
@@ -15,6 +17,7 @@ import { withAdvisoryLock } from '../common/pg-lock';
 import { Org, type MarketplaceRepo } from '../orgs/entities/org.entity';
 import { IntegrationsService } from '../orgs/integrations.service';
 import { isGitRepo, readTree, resolveRepoPath } from './repo-reader';
+import { marketplacePublishFailures } from '../metrics/registry';
 
 export interface GitAuthor {
   name: string;
@@ -316,6 +319,7 @@ export class GitRepoService {
     const message = e instanceof Error ? e.message : String(e);
     repo.lastError = `${what}: ${message.split('\n')[0]}`.slice(0, 500);
     this.logger.warn(`${what} failed for ${repo.label}: ${message}`);
+    marketplacePublishFailures.labels(what.replace(/\(.*\)$/, '')).inc();
     return null;
   }
 
@@ -493,10 +497,19 @@ export class GitRepoService {
       Boolean(toplevel) &&
       real(toplevel!) !== src &&
       src.startsWith(real(toplevel!) + sep);
-    if (!nested) {
+    // A read-only image (/marketplace on a read-only root filesystem) cannot hold the repo either:
+    // the writable copy lives in the work dir on /data, the same way as the nested case.
+    let writable = true;
+    try {
+      accessSync(source, constants.W_OK);
+    } catch {
+      writable = false;
+    }
+    if (!nested && writable) {
       this.logger.log(`Marketplace repo mode: in-place (${source})`);
       return;
     }
+    const why = nested ? `nested inside ${toplevel}` : `${source} is read-only`;
     const workDir = this.env.workDir;
     if (!existsSync(workDir)) {
       cpSync(source, workDir, {
@@ -505,11 +518,11 @@ export class GitRepoService {
           !s.endsWith(`${sep}.git`) && !s.includes(`${sep}.git${sep}`),
       });
       this.logger.log(
-        `Marketplace repo mode: nested inside ${toplevel}; mirrored plain files to work dir ${workDir}`,
+        `Marketplace repo mode: ${why}; mirrored plain files to work dir ${workDir}`,
       );
     } else {
       this.logger.log(
-        `Marketplace repo mode: nested inside ${toplevel}; reusing existing work dir ${workDir}`,
+        `Marketplace repo mode: ${why}; reusing existing work dir ${workDir}`,
       );
     }
     repo.mode = 'nested';
@@ -562,9 +575,27 @@ export class GitRepoService {
     message: string,
     author: GitAuthor,
   ): Promise<GitWriteResult | null> {
+    return this.writeFilesOnBranch(
+      orgId,
+      `skill/${slug}`,
+      files,
+      message,
+      author,
+      slug,
+    );
+  }
+
+  /** Same as writeOnBranch for any branch name (the Coach plugin update uses `activate/coach-plugin-v<version>`). */
+  async writeFilesOnBranch(
+    orgId: string,
+    branch: string,
+    files: Record<string, string>,
+    message: string,
+    author: GitAuthor,
+    label = branch,
+  ): Promise<GitWriteResult | null> {
     if (!(await this.ensureRepo(orgId))) return null;
     const repo = await this.repoFor(orgId);
-    const branch = `skill/${slug}`;
     return this.lockFor(repo, async () => {
       const git = this.git(repo);
       try {
@@ -591,7 +622,7 @@ export class GitRepoService {
         repo.lastError = null;
         return { sha, branch };
       } catch (e) {
-        this.fail(repo, `writeOnBranch(${slug})`, e);
+        this.fail(repo, `writeOnBranch(${label})`, e);
         await git.checkout(repo.config.defaultBranch).catch(() => undefined);
         return null;
       }
@@ -657,6 +688,57 @@ export class GitRepoService {
         return false;
       }
     });
+  }
+
+  /** True when the remote already has this branch (a pull request is probably open). Local repos: local branch. */
+  async branchExists(orgId: string, branch: string): Promise<boolean> {
+    if (!(await this.ensureRepo(orgId))) return false;
+    const repo = await this.repoFor(orgId);
+    const git = this.git(repo);
+    if (repo.mode === 'clone') return this.remoteBranchExists(git, branch);
+    return (await git.branchLocal()).all.includes(branch);
+  }
+
+  /**
+   * Open a pull request on GitHub for a branch already pushed. Returns null for non-GitHub remotes
+   * (the branch is on the remote; the customer opens the review in their own tooling).
+   */
+  async openPullRequest(
+    orgId: string,
+    pr: { head: string; title: string; body: string },
+  ): Promise<{ number: number; url: string } | null> {
+    const repo = await this.repoFor(orgId);
+    if (!repo.githubMode || !repo.config.owner || !repo.config.repo)
+      return null;
+    const res = await fetch(
+      `https://api.github.com/repos/${repo.config.owner}/${repo.config.repo}/pulls`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${repo.config.token ?? ''}`,
+          Accept: 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'lightci-activate',
+        },
+        body: JSON.stringify({
+          title: pr.title,
+          head: pr.head,
+          base: repo.config.defaultBranch,
+          body: pr.body,
+        }),
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      // 422 "A pull request already exists" is the idempotent case.
+      if (res.status === 422 && /already exists/i.test(text)) return null;
+      throw new Error(
+        `GitHub pull request failed (${res.status}): ${text.slice(0, 200)}`,
+      );
+    }
+    const json = (await res.json()) as { number: number; html_url: string };
+    return { number: json.number, url: json.html_url };
   }
 
   async fileAt(

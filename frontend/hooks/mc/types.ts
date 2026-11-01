@@ -419,3 +419,16 @@ export type LeadClientDetail = LeadClient & {
   sponsorName?: string | null
   industry?: string | null
 }
+
+/** GET /api/admin/updates: the running release and whether a newer one is published (self-hosted). */
+export type UpdateStatus = {
+  enabled: boolean
+  current: string
+  latest: string | null
+  updateAvailable: boolean
+  advisory: boolean
+  notesUrl: string | null
+  checkedAt: string | null
+  error: string | null
+  message: string | null
+}

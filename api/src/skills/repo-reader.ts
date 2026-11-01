@@ -25,7 +25,7 @@ export function parseFrontmatter(md: string): ParsedFrontmatter | null {
   const m = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!m) return null;
   try {
-    const data = parseYaml(m[1]);
+    const data: unknown = parseYaml(m[1]);
     if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
     return { data: data as Record<string, unknown>, body: m[2] ?? '' };
   } catch {
@@ -46,7 +46,7 @@ function stringifyFrontmatter(data: Record<string, unknown>): string {
   // Small, predictable serialiser: strings quoted only when needed, nested maps one level.
   const q = (v: unknown): string => {
     const s = String(v);
-    return /^[A-Za-z0-9 _.,:;()\/'@-]+$/.test(s) &&
+    return /^[A-Za-z0-9 _.,:;()/'@-]+$/.test(s) &&
       !/^\d/.test(s) &&
       !['true', 'false', 'null'].includes(s)
       ? s
@@ -156,7 +156,11 @@ export function boundaryToManifest(
 export function declaredVersion(
   meta: Record<string, unknown> | null | undefined,
 ): number {
-  const n = Number.parseInt(String(meta?.['activate-version'] ?? ''), 10);
+  const raw = meta?.['activate-version'];
+  const n = Number.parseInt(
+    typeof raw === 'string' || typeof raw === 'number' ? String(raw) : '',
+    10,
+  );
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
@@ -171,17 +175,33 @@ function readCases(dir: string, warnings: string[], rel: string): SampleCase[] {
   const p = join(dir, 'cases', 'cases.json');
   if (!existsSync(p)) return [];
   try {
-    const raw = JSON.parse(readFileSync(p, 'utf8'));
+    const raw: unknown = JSON.parse(readFileSync(p, 'utf8'));
     if (!Array.isArray(raw)) return [];
-    return raw
-      .filter((c) => c && typeof c.input === 'string')
-      .map((c) => ({
+    const isCase = (
+      c: unknown,
+    ): c is { input: string } & Record<string, unknown> =>
+      typeof c === 'object' &&
+      c !== null &&
+      typeof (c as Record<string, unknown>).input === 'string';
+    // `expected` is free-form in cases.json; keep String()'s behaviour for the loose values it may hold.
+    const text = (v: unknown): string => {
+      if (typeof v === 'string') return v;
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- untyped JSON from the repo; a stray object/array keeps String()'s output as before
+      return String(v);
+    };
+    return (raw as unknown[]).filter(isCase).map((c): SampleCase => {
+      const trigger = c.shouldTrigger;
+      return {
         input: c.input,
-        shouldTrigger: ['yes', 'no', 'ambiguous'].includes(c.shouldTrigger)
-          ? c.shouldTrigger
-          : 'ambiguous',
-        expected: String(c.expected ?? ''),
-      }));
+        shouldTrigger:
+          trigger === 'yes' || trigger === 'no' || trigger === 'ambiguous'
+            ? trigger
+            : 'ambiguous',
+        expected: text(c.expected),
+      };
+    });
   } catch (e) {
     warnings.push(`${rel}: cases.json unparsable (${(e as Error).message})`);
     return [];

@@ -1,5 +1,6 @@
 import type { UsageMetrics } from '../ops/entities/usage-snapshot.entity';
 import type {
+  AnalyticsOfficeAppMetrics,
   AnalyticsUserActivity,
   DailyUserMetric,
   ToolActionCounts,
@@ -46,7 +47,9 @@ export function mapUserActivityToUsageMetrics(
   const code = rec.claude_code_metrics?.core_metrics;
   const cowork = rec.cowork_metrics ?? {};
   const science = rec.science_metrics ?? {};
-  const office = Object.values(rec.office_metrics ?? {}).filter(Boolean);
+  const office = Object.values(rec.office_metrics ?? {}).filter(
+    (o): o is AnalyticsOfficeAppMetrics => Boolean(o),
+  );
 
   const messages = n(chat.message_count);
   const codeSessions = n(code?.distinct_session_count);

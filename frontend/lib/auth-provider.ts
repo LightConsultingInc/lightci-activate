@@ -1,5 +1,5 @@
 import "server-only"
-import { apiUrl, webUrl } from "./env"
+import { apiUrl, publicApiUrl, webUrl } from "./env"
 
 /**
  * Which identity mode this deployment runs in. Mirrors the API's AUTH_PROVIDER:
@@ -16,7 +16,7 @@ export const WEB_CLIENT_ID = process.env.AUTH_WEB_CLIENT_ID ?? "activate-web"
 
 /** Where the web app sends people to sign in (OIDC mode): Activate's own authorize endpoint. */
 export function oidcAuthorizeUrl(params: { state: string; codeChallenge: string; loginHint?: string }): string {
-  const u = new URL(`${apiUrl()}/oauth/authorize`)
+  const u = new URL(`${publicApiUrl()}/oauth/authorize`)
   u.searchParams.set("response_type", "code")
   u.searchParams.set("client_id", WEB_CLIENT_ID)
   u.searchParams.set("redirect_uri", `${webUrl()}/callback`)

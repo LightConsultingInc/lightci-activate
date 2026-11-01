@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
+import { edition } from '../config/env';
+import { LicenseService, type LicenseState } from '../license/license.service';
 
 export type ReadyState = 'ok' | 'fail' | 'pending' | 'current' | 'n/a';
 
@@ -8,7 +10,8 @@ export interface ReadinessReport {
   status: 'ok' | 'fail';
   db: 'ok' | 'fail';
   migrations: 'current' | 'pending' | 'unknown';
-  license: 'valid' | 'n/a';
+  /** The licence state on a self-hosted install ('n/a' in the cloud edition and for the worker's bare check). */
+  license: LicenseState['status'];
 }
 
 /** The subset of DataSource readiness needs; narrow so tests can fake it. */
@@ -24,10 +27,19 @@ export interface ReadinessDataSource {
  */
 @Injectable()
 export class ReadinessService {
-  constructor(@InjectDataSource() private readonly ds: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly ds: DataSource,
+    @Optional() private readonly license?: LicenseService,
+  ) {}
 
-  check(): Promise<ReadinessReport> {
-    return ReadinessService.evaluate(this.ds);
+  /** Readiness stays 200 while the licence is expired: the install serves read-only, which is routable. */
+  async check(): Promise<ReadinessReport> {
+    const report = await ReadinessService.evaluate(this.ds);
+    if (edition() === 'self-hosted' && this.license) {
+      const state = await this.license.state().catch(() => null);
+      if (state) report.license = state.status;
+    }
+    return report;
   }
 
   static async evaluate(ds: ReadinessDataSource): Promise<ReadinessReport> {

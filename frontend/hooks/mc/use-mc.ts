@@ -5,6 +5,7 @@ import { api } from "@/lib/api"
 import type { LicenseState,
   Adoption, Assignment, Backlog, Cost, CostInput, Escalation, Governance, Groups, GroupsCompare, IntegrationKind, IntegrationSummary,
   Journey, LeadClient, LeadClientDetail, LeadQueue, MarketplaceStatus, McPeople, McSkills, Org, Person, Readout, Setup, Team,
+  UpdateStatus,
 } from "./types"
 
 const qs = (params: Record<string, string | number | boolean | null | undefined>) => {
@@ -66,6 +67,7 @@ export function usePatchOrg() {
   })
 }
 /** License status; only admins may ask, and only self-hosted installs have one to show. */
+export const useUpdates = (enabled: boolean) => useQuery({ queryKey: ["admin", "updates"], queryFn: () => api.get<UpdateStatus>("/api/admin/updates"), enabled, staleTime: 5 * 60_000 })
 export const useLicense = (enabled: boolean) => useQuery({ queryKey: ["admin", "license"], queryFn: () => api.get<LicenseState>("/api/admin/license"), enabled, staleTime: 60_000 })
 export function useLicenseMutations() {
   const qc = useQueryClient()

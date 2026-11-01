@@ -1,0 +1,12 @@
+Activate {{ include "activate.tag" . }} is installing in {{ .Release.Namespace }}.
+
+Next:
+  kubectl -n {{ .Release.Namespace }} get pods
+  kubectl -n {{ .Release.Namespace }} exec {{ include "activate.fullname" . }}-worker-0 -- activate doctor
+  curl -s https://{{ .Values.global.hosts.api }}/api/ready
+
+Then sign in at https://{{ .Values.global.hosts.web }} as one of org.initialAdmins and connect Claude Enterprise
+with the connector URL https://{{ .Values.global.hosts.mcp }}/mcp.
+
+Back up the Secret {{ .Values.encryption.existingSecret }} with your database backups: credentials stored in
+the database are encrypted with it and cannot be recovered without it.

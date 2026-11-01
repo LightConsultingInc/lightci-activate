@@ -29,3 +29,12 @@ export function redirectUri(): string {
 export function apiUrl(): string {
   return (process.env.API_URL ?? "http://localhost:4310").replace(/\/$/, "")
 }
+
+/**
+ * The API as reached from the person's browser: where OIDC sign-in sends them (the OAuth authorize
+ * endpoint). In a cluster API_URL is an internal address, so deployments set PUBLIC_API_URL to the
+ * API's public host. Defaults to API_URL for local development.
+ */
+export function publicApiUrl(): string {
+  return (process.env.PUBLIC_API_URL ?? process.env.API_URL ?? "http://localhost:4310").replace(/\/$/, "")
+}

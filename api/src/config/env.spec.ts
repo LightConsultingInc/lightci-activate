@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   checkEnv,
   dbSslMode,
@@ -143,6 +145,19 @@ describe('checkEnv (T0.1)', () => {
     ).toEqual([]);
   });
 
+  it('a single-node evaluation may say its private-network database is plaintext, and is warned', () => {
+    const { errors, warnings } = checkEnv({
+      ...prodBase,
+      DB_HOST: 'postgres',
+      DB_SSL_MODE: 'disable',
+      DB_SSL_ALLOW_PLAINTEXT: 'true',
+    });
+    expect(errors.some((e) => e.includes('must use TLS'))).toBe(false);
+    expect(warnings.some((w) => w.includes('DB_SSL_ALLOW_PLAINTEXT'))).toBe(
+      true,
+    );
+  });
+
   it('rejects bad enum values and a missing CA file', () => {
     const { errors } = checkEnv({
       ...prodBase,
@@ -269,5 +284,39 @@ describe('checkEnv (T0.1)', () => {
       LEAD_EMAIL_DOMAINS: 'lightci.com',
     });
     expect(warnings.some((w) => w.includes('cross-organisation'))).toBe(true);
+  });
+});
+
+describe('deprecated aliases have a sunset', () => {
+  // Deprecated names keep working for two minors (RELEASE_NOTES.md). This test starts failing at the
+  // release where they must go, so the removal is not forgotten (T7.3).
+  const SUNSET = '1.2.0';
+  const version = (
+    JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')) as {
+      version: string;
+    }
+  ).version;
+  const atLeast = (v: string, floor: string) => {
+    const [a, b, c] = v.split('.').map(Number);
+    const [x, y, z] = floor.split('.').map(Number);
+    return a !== x ? a > x : b !== y ? b > y : c >= z;
+  };
+
+  it('GITHUB_REPO / GITHUB_TOKEN and DB_SSL are removed from env.ts at the sunset release', () => {
+    const legacy = checkEnv({
+      NODE_ENV: 'test',
+      GITHUB_REPO: 'o/r',
+      GITHUB_TOKEN: 't',
+      DB_SSL: 'true',
+    });
+    const stillAccepted =
+      legacy.warnings.some((w) =>
+        w.includes('GITHUB_REPO / GITHUB_TOKEN are deprecated'),
+      ) && legacy.warnings.some((w) => w.includes('DB_SSL is deprecated'));
+    if (atLeast(version, SUNSET)) {
+      expect(stillAccepted).toBe(false);
+    } else {
+      expect(stillAccepted).toBe(true);
+    }
   });
 });

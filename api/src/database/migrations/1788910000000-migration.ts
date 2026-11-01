@@ -19,7 +19,9 @@ export class Migration1788910000000 implements MigrationInterface {
       "retiredAt" TIMESTAMP WITH TIME ZONE,
       "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
       CONSTRAINT "PK_instance_keys" PRIMARY KEY ("id"))`);
-    await q.query(`CREATE UNIQUE INDEX "IDX_instance_keys_kid" ON "instance_keys" ("kid")`);
+    await q.query(
+      `CREATE UNIQUE INDEX "IDX_instance_keys_kid" ON "instance_keys" ("kid")`,
+    );
     await q.query(`CREATE TABLE "oauth_clients" (
       "id" text NOT NULL,
       "name" text NOT NULL,
@@ -45,7 +47,9 @@ export class Migration1788910000000 implements MigrationInterface {
       "usedAt" TIMESTAMP WITH TIME ZONE,
       "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
       CONSTRAINT "PK_oauth_codes" PRIMARY KEY ("id"))`);
-    await q.query(`CREATE UNIQUE INDEX "IDX_oauth_codes_hash" ON "oauth_codes" ("codeHash")`);
+    await q.query(
+      `CREATE UNIQUE INDEX "IDX_oauth_codes_hash" ON "oauth_codes" ("codeHash")`,
+    );
     await q.query(`CREATE TABLE "oauth_refresh_tokens" (
       "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
       "tokenHash" text NOT NULL,
@@ -57,8 +61,12 @@ export class Migration1788910000000 implements MigrationInterface {
       "replacedById" uuid,
       "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
       CONSTRAINT "PK_oauth_refresh_tokens" PRIMARY KEY ("id"))`);
-    await q.query(`CREATE UNIQUE INDEX "IDX_oauth_refresh_hash" ON "oauth_refresh_tokens" ("tokenHash")`);
-    await q.query(`CREATE INDEX "IDX_oauth_refresh_person" ON "oauth_refresh_tokens" ("personId")`);
+    await q.query(
+      `CREATE UNIQUE INDEX "IDX_oauth_refresh_hash" ON "oauth_refresh_tokens" ("tokenHash")`,
+    );
+    await q.query(
+      `CREATE INDEX "IDX_oauth_refresh_person" ON "oauth_refresh_tokens" ("personId")`,
+    );
     await q.query(`CREATE TABLE "oauth_login_states" (
       "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
       "upstreamState" text NOT NULL,
@@ -68,7 +76,9 @@ export class Migration1788910000000 implements MigrationInterface {
       "expiresAt" TIMESTAMP WITH TIME ZONE NOT NULL,
       "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
       CONSTRAINT "PK_oauth_login_states" PRIMARY KEY ("id"))`);
-    await q.query(`CREATE UNIQUE INDEX "IDX_oauth_login_state" ON "oauth_login_states" ("upstreamState")`);
+    await q.query(
+      `CREATE UNIQUE INDEX "IDX_oauth_login_state" ON "oauth_login_states" ("upstreamState")`,
+    );
   }
 
   public async down(q: QueryRunner): Promise<void> {

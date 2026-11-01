@@ -63,29 +63,24 @@ registerMockResponder('context.summarise', (call) => {
     text?: string;
   };
   const text = seed.text ?? '';
-  const words =
-    text.match(/\b[A-Z][A-Za-z]{2,}(?:\s[A-Z][A-Za-z]{2,})?\b/g) ?? [];
+  /** All matches of a global regex as a plain string array ([] when none). */
+  const found = (re: RegExp): string[] => text.match(re) ?? [];
+  const words = found(/\b[A-Z][A-Za-z]{2,}(?:\s[A-Z][A-Za-z]{2,})?\b/g);
   const uniq = (xs: string[]) => [...new Set(xs)];
   const caps = uniq(words).slice(0, 8);
   const systems = uniq(
-    (
-      text.match(
-        /\b(Salesforce|HubSpot|Jira|Confluence|Slack|SharePoint|Excel|Outlook|Workday|NetSuite|Redtail|Orion|Tamarac|Drive|GitHub|Snowflake)\b/gi,
-      ) ?? []
+    found(
+      /\b(Salesforce|HubSpot|Jira|Confluence|Slack|SharePoint|Excel|Outlook|Workday|NetSuite|Redtail|Orion|Tamarac|Drive|GitHub|Snowflake)\b/gi,
     ).map((s) => s[0].toUpperCase() + s.slice(1).toLowerCase()),
   );
   const sensitivities = uniq(
-    (
-      text.match(
-        /\b(SSN|PII|PHI|account numbers?|client (?:data|statements?)|salary|compensation|passwords?|MNPI)\b/gi,
-      ) ?? []
+    found(
+      /\b(SSN|PII|PHI|account numbers?|client (?:data|statements?)|salary|compensation|passwords?|MNPI)\b/gi,
     ).map((s) => s.toLowerCase()),
   );
   const workflows = uniq(
-    (
-      text.match(
-        /\b[a-z]+(?:ly)?\s(?:prep|review|report|memo|letter|reconciliation|onboarding|close|update|summary)\b/gi,
-      ) ?? []
+    found(
+      /\b[a-z]+(?:ly)?\s(?:prep|review|report|memo|letter|reconciliation|onboarding|close|update|summary)\b/gi,
     ).map((s) => s.toLowerCase()),
   ).slice(0, 6);
   return {

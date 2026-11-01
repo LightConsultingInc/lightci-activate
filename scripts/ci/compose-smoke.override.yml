@@ -1,0 +1,30 @@
+# Test-only additions for scripts/ci/compose-smoke.sh: a real Keycloak over https (self-signed by a
+# throwaway CA) standing in for the customer's identity provider, and that CA trusted by the servers.
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm", "--https-certificate-file=/certs/tls.crt", "--https-certificate-key-file=/certs/tls.key", "--hostname-strict=false"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ${SMOKE_DIR}/keycloak.crt:/certs/tls.crt:ro
+      - ${SMOKE_DIR}/keycloak.key:/certs/tls.key:ro
+      - ${SMOKE_REALM}:/opt/keycloak/data/import/realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8443"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+  migrate:
+    volumes: [ "${SMOKE_DIR}/ca.pem:/etc/activate/ca.pem:ro" ]
+  api:
+    volumes: [ "${SMOKE_DIR}/ca.pem:/etc/activate/ca.pem:ro" ]
+    depends_on:
+      keycloak:
+        condition: service_healthy
+  worker:
+    volumes: [ "${SMOKE_DIR}/ca.pem:/etc/activate/ca.pem:ro" ]
+    depends_on:
+      keycloak:
+        condition: service_healthy

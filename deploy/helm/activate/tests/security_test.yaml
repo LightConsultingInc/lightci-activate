@@ -1,0 +1,114 @@
+# The guide's Security section, checked on every object that runs a container (T4.2).
+suite: pod security
+release:
+  name: activate
+  namespace: activate
+templates:
+  - api-deployment.yaml
+  - web-deployment.yaml
+  - worker-statefulset.yaml
+  - migrate-job.yaml
+tests:
+  - it: containers run as 1001, read-only, without privilege escalation or capabilities
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+        template: api-deployment.yaml
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 1001
+        template: api-deployment.yaml
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+        template: api-deployment.yaml
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+        template: api-deployment.yaml
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: [ALL]
+        template: api-deployment.yaml
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+        template: web-deployment.yaml
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+        template: worker-statefulset.yaml
+        documentIndex: 1
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+        template: migrate-job.yaml
+        documentIndex: 0
+
+  - it: images are pinned to the chart version by default and pull secrets propagate
+    set: { global.imagePullSecrets: [ghcr-pull] }
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/lightci/activate/server:1.0.0
+        template: api-deployment.yaml
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/lightci/activate/web:1.0.0
+        template: web-deployment.yaml
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content: { name: ghcr-pull }
+        template: api-deployment.yaml
+        documentIndex: 0
+
+  - it: an image tag that differs from the chart version is refused (T7.7)
+    set: { global.imageTag: "1.2.3" }
+    template: worker-statefulset.yaml
+    asserts:
+      - failedTemplate:
+          errorPattern: 'global.imageTag "1.2.3" does not match this chart.s appVersion "1.0.0"'
+
+  - it: a mirror that retags images can opt out of the lock
+    set: { global.imageTag: "1.2.3", global.allowImageTagMismatch: true }
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/lightci/activate/server:1.2.3
+        template: api-deployment.yaml
+        documentIndex: 0
+
+  - it: readiness and liveness probes hit the API's health routes
+    template: api-deployment.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /api/ready
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /api/health
+
+  - it: resources are set on every container
+    asserts:
+      - isNotNullOrEmpty:
+          path: spec.template.spec.containers[0].resources.limits
+        template: api-deployment.yaml
+        documentIndex: 0
+      - isNotNullOrEmpty:
+          path: spec.template.spec.containers[0].resources.limits
+        template: web-deployment.yaml
+        documentIndex: 0
+      - isNotNullOrEmpty:
+          path: spec.template.spec.containers[0].resources.limits
+        template: worker-statefulset.yaml
+        documentIndex: 1

@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { simpleGit } from 'simple-git';
 import { DataSource } from 'typeorm';
+import { marketplacePublishFailures } from '../../src/metrics/registry';
 import { GitRepoService } from '../../src/skills/git-repo.service';
 import AppDataSource from '../../src/typeorm.config';
 
@@ -34,6 +35,10 @@ function walk(dir: string, fn: (p: string) => void) {
 }
 
 describe('GitRepoService against a remote', () => {
+  const publishFailures = async () =>
+    (await marketplacePublishFailures.get()).values
+      .filter((v) => v.labels.reason === 'publish')
+      .reduce((n, v) => n + v.value, 0);
   const root = mkdtempSync(join(tmpdir(), 'activate-remote-'));
   const bare = join(root, 'remote.git');
   const remoteUrl = `file://${bare}`;
@@ -165,6 +170,7 @@ describe('GitRepoService against a remote', () => {
 
   it('a rejected push is reported, not swallowed, and the next write recovers', async () => {
     walk(bare, (p) => chmodSync(p, statSync(p).isDirectory() ? 0o555 : 0o444));
+    const failuresBefore = await publishFailures();
     try {
       const res = await a.publish(
         ORG,
@@ -177,6 +183,8 @@ describe('GitRepoService against a remote', () => {
       expect(res).toBeNull();
       const repo = await a.repoFor(ORG);
       expect(repo.lastError).toMatch(/publish\(rmd-letter-draft\)/);
+      // T2.4: the documented counter moves, so an operator's alert fires.
+      expect(await publishFailures()).toBe(failuresBefore + 1);
     } finally {
       walk(bare, (p) =>
         chmodSync(p, statSync(p).isDirectory() ? 0o755 : 0o644),

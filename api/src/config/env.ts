@@ -193,10 +193,18 @@ export function checkEnv(env: Env = process.env): EnvReport {
     prod &&
     mode === 'disable' &&
     !['localhost', '127.0.0.1'].includes(dbHost(env) ?? '')
-  )
-    errors.push(
-      'The database must use TLS in production (DB_SSL_MODE=disable is only allowed for a local host).',
-    );
+  ) {
+    // The Compose evaluation stack talks to its bundled Postgres over a private container network;
+    // it says so explicitly and is warned. Anything else must encrypt.
+    if (truthy(env.DB_SSL_ALLOW_PLAINTEXT))
+      warnings.push(
+        `DB_SSL_ALLOW_PLAINTEXT=true: the connection to ${dbHost(env)} is not encrypted. Acceptable for a single-node evaluation on a private network only.`,
+      );
+    else
+      errors.push(
+        'The database must use TLS in production (DB_SSL_MODE=disable is only allowed for a local host, or with DB_SSL_ALLOW_PLAINTEXT=true for a single-node evaluation on a private network).',
+      );
+  }
   if (prod && mode === 'require')
     warnings.push(
       'DB_SSL_MODE=require encrypts the connection but does not verify the server. Prefer verify-full with DB_SSL_CA_FILE.',
@@ -229,25 +237,40 @@ export function checkEnv(env: Env = process.env): EnvReport {
       if (!env[k]) errors.push(`${k} is required when AUTH_PROVIDER=oidc.`);
     if (env.AUTH_OIDC_ISSUER && !/^https?:\/\//.test(env.AUTH_OIDC_ISSUER))
       errors.push('AUTH_OIDC_ISSUER must be an https URL (the OpenID issuer).');
-    if (prod && env.AUTH_OIDC_ISSUER && !env.AUTH_OIDC_ISSUER.startsWith('https://'))
+    if (
+      prod &&
+      env.AUTH_OIDC_ISSUER &&
+      !env.AUTH_OIDC_ISSUER.startsWith('https://')
+    )
       errors.push('AUTH_OIDC_ISSUER must use https in production.');
     if (!env.AUTH_OIDC_CLIENT_SECRET)
-      warnings.push('AUTH_OIDC_CLIENT_SECRET is not set: Activate will act as a public client of your IdP (PKCE only).');
+      warnings.push(
+        'AUTH_OIDC_CLIENT_SECRET is not set: Activate will act as a public client of your IdP (PKCE only).',
+      );
     if (role !== 'worker' && !env.PUBLIC_API_URL && !env.MCP_PUBLIC_URL)
-      errors.push('PUBLIC_API_URL is required when AUTH_PROVIDER=oidc: it is the issuer of the tokens Activate mints.');
+      errors.push(
+        'PUBLIC_API_URL is required when AUTH_PROVIDER=oidc: it is the issuer of the tokens Activate mints.',
+      );
     if (role !== 'worker' && !env.WEB_URL)
-      errors.push('WEB_URL is required when AUTH_PROVIDER=oidc: the web app is registered as an OAuth client with <WEB_URL>/callback.');
+      errors.push(
+        'WEB_URL is required when AUTH_PROVIDER=oidc: the web app is registered as an OAuth client with <WEB_URL>/callback.',
+      );
     if (env.AUTH_ROLE_MAP) {
       try {
         const parsed: unknown = JSON.parse(env.AUTH_ROLE_MAP);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object');
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+          throw new Error('not an object');
       } catch {
-        errors.push('AUTH_ROLE_MAP must be a JSON object like {"admin":["IT-Admins"],"champion":["Claude-Champions"]}.');
+        errors.push(
+          'AUTH_ROLE_MAP must be a JSON object like {"admin":["IT-Admins"],"champion":["Claude-Champions"]}.',
+        );
       }
     }
   }
   if (provider === 'oidc' && truthy(env.AUTH_PASSWORD_LOGIN))
-    warnings.push('AUTH_PASSWORD_LOGIN has no effect with AUTH_PROVIDER=oidc: passwords live with your identity provider.');
+    warnings.push(
+      'AUTH_PASSWORD_LOGIN has no effect with AUTH_PROVIDER=oidc: passwords live with your identity provider.',
+    );
 
   // Development-only switches must never be on in production.
   if (prod) {
@@ -300,18 +323,33 @@ export function checkEnv(env: Env = process.env): EnvReport {
   }
 
   // License (self-hosted only; verified offline at boot).
-  if (ed === 'self-hosted' && !env.ACTIVATE_LICENSE_FILE && !env.ACTIVATE_LICENSE)
-    errors.push('ACTIVATE_LICENSE_FILE is required for a self-hosted install: the license LightCI sent you.');
+  if (
+    ed === 'self-hosted' &&
+    !env.ACTIVATE_LICENSE_FILE &&
+    !env.ACTIVATE_LICENSE
+  )
+    errors.push(
+      'ACTIVATE_LICENSE_FILE is required for a self-hosted install: the license LightCI sent you.',
+    );
   if (env.ACTIVATE_LICENSE_FILE && !existsSync(env.ACTIVATE_LICENSE_FILE))
-    errors.push(`ACTIVATE_LICENSE_FILE points to a file that does not exist: ${env.ACTIVATE_LICENSE_FILE}`);
+    errors.push(
+      `ACTIVATE_LICENSE_FILE points to a file that does not exist: ${env.ACTIVATE_LICENSE_FILE}`,
+    );
   if (prod && env.ACTIVATE_LICENSE_PUBLIC_KEY)
     warnings.push('ACTIVATE_LICENSE_PUBLIC_KEY is ignored in production.');
 
   // First-boot organisation.
-  if ((env.ACTIVATE_ORG_SLUG || env.ACTIVATE_ORG_NAME) && ed === 'self-hosted') {
-    const admins = (env.ACTIVATE_ORG_INITIAL_ADMINS ?? '').split(/[,\s]+/).filter((a) => a.includes('@'));
+  if (
+    (env.ACTIVATE_ORG_SLUG || env.ACTIVATE_ORG_NAME) &&
+    ed === 'self-hosted'
+  ) {
+    const admins = (env.ACTIVATE_ORG_INITIAL_ADMINS ?? '')
+      .split(/[,\s]+/)
+      .filter((a) => a.includes('@'));
     if (admins.length === 0)
-      errors.push('ACTIVATE_ORG_INITIAL_ADMINS must list at least one email address when bootstrapping an organisation.');
+      errors.push(
+        'ACTIVATE_ORG_INITIAL_ADMINS must list at least one email address when bootstrapping an organisation.',
+      );
   }
 
   if (ed === 'self-hosted' && leadEmailDomains(env).length > 0)

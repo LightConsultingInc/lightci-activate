@@ -168,7 +168,7 @@ export class MasteryService {
     }));
     const predictions: Prediction[] = mine.map((a) => ({
       confidence: clamp01(a.submission.expectationConfidence),
-      outcome: (a.grade.decision === 'pass' ? 1 : 0) as 0 | 1,
+      outcome: a.grade.decision === 'pass' ? 1 : 0,
     }));
     const critiques = mine
       .map((a) => a.grade.critiqueQuality)
@@ -262,9 +262,9 @@ export class MasteryService {
         trend: 'flat',
         overconfidentRate: 0,
       };
-    const predictions = artifacts.map((a) => ({
+    const predictions: Prediction[] = artifacts.map((a) => ({
       confidence: clamp01(a.submission.expectationConfidence),
-      outcome: (a.grade.decision === 'pass' ? 1 : 0) as 0 | 1,
+      outcome: a.grade.decision === 'pass' ? 1 : 0,
     }));
     const critiques = artifacts
       .map((a) => a.grade.critiqueQuality)
@@ -405,7 +405,7 @@ export class MasteryService {
   }
 
   /** Whether a competency view clears its own rung gate (mastery and contexts; judgement retired). */
-  competencyMeetsGate(c: CompetencyView, _judgement?: number): boolean {
+  competencyMeetsGate(c: CompetencyView): boolean {
     const gate = RUNG_GATES[c.rung as Rung];
     return meetsGate(
       { mastery: c.mastery, contexts: c.components.contexts },
