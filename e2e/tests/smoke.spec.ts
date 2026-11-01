@@ -32,6 +32,32 @@ test.describe("smoke: auth and shell", () => {
     await expect(page.getByTestId("topbar-org")).toContainText("Meridian")
   })
 
+  test("the browser talks only to the web origin; /api is proxied to the API at runtime", async ({ page }) => {
+    const offOrigin: string[] = []
+    page.on("request", (req) => {
+      const url = new URL(req.url())
+      if (url.port === "4310" || url.hostname.includes("4310")) offOrigin.push(req.url())
+    })
+    await page.goto("/")
+    await expect(page.getByTestId("app-sidebar")).toBeVisible()
+    const me = await page.evaluate(async () => {
+      const res = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${(await (await fetch("/auth/token")).json()).accessToken}` } })
+      return { status: res.status, requestId: res.headers.get("x-request-id"), body: (await res.json()) as { user: { email: string } | null } }
+    })
+    expect(me.status).toBe(200)
+    expect(me.requestId).toBeTruthy()
+    expect(me.body.user?.email).toBe("priya.nair@meridianwealth.demo")
+    expect(offOrigin).toEqual([])
+  })
+
+  test("a signed-out browser call to the proxied API gets a plain 401", async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: undefined })
+    const res = await ctx.request.get("/api/people")
+    expect(res.status()).toBe(401)
+    expect(await res.json()).toMatchObject({ status: 401 })
+    await ctx.close()
+  })
+
   test("sign out returns to login", async ({ page }) => {
     await page.goto("/")
     await page.getByTestId("user-menu").click()

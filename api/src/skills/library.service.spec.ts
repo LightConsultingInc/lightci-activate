@@ -15,6 +15,7 @@ import { GitRepoService } from './git-repo.service';
 import { LibraryService } from './library.service';
 import {
   SEEDED_SLUGS,
+  ORG,
   copyMarketplace,
   governedWarnings,
   repoFor,
@@ -315,7 +316,7 @@ describe('LibraryService against the demo marketplace', () => {
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   it('status reports the repo on main, clean, with counts', async () => {
-    expect(git.available()).toBe(true);
+    expect(await git.ensureRepo(ORG)).toBe(true);
     const s = await lib.status(ORG_ID);
     expect(s).toMatchObject({
       branch: 'main',

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { rmSync } from 'fs';
-import { resolve } from 'path';
+import { marketplaceEnv } from '../skills/git-repo.service';
 import {
   DataSource,
   EntityManager,
@@ -1600,20 +1600,26 @@ export class SeedService implements OnApplicationBootstrap {
     }
   }
 
-  /** Idempotent: does nothing if the demo org already exists. */
+  /** Idempotent: does nothing if the demo org already exists. Safe to run from several replicas at once. */
   async run(): Promise<void> {
-    const existing = await this.dataSource
-      .getRepository(Org)
-      .findOne({ where: { slug: DEMO_ORG.slug } });
-    if (existing) {
-      this.logger.log(
-        `Demo org "${DEMO_ORG.slug}" already present; skipping seed.`,
-      );
-      return;
-    }
     const started = Date.now();
     const plan = buildSeedPlan(new Date());
+    let seeded = false;
     await this.dataSource.transaction(async (m) => {
+      // Replicas booting together take turns; the second one finds the org and leaves.
+      await m.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        'seed:demo',
+      ]);
+      const existing = await m
+        .getRepository(Org)
+        .findOne({ where: { slug: DEMO_ORG.slug } });
+      if (existing) {
+        this.logger.log(
+          `Demo org "${DEMO_ORG.slug}" already present; skipping seed.`,
+        );
+        return;
+      }
+      seeded = true;
       await insertAll(m, Org, plan.org);
       await insertAll(m, Team, plan.teams);
       await insertAll(m, Person, plan.people);
@@ -1648,6 +1654,7 @@ export class SeedService implements OnApplicationBootstrap {
       await insertAll(m, AuditLog, plan.audit);
       await insertAll(m, AgentRun, plan.agentRuns);
     });
+    if (!seeded) return;
     const total = (Object.keys(plan) as (keyof SeedPlan)[]).reduce(
       (n, k) => n + plan[k].length,
       0,
@@ -1979,12 +1986,13 @@ export class SeedService implements OnApplicationBootstrap {
       `TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`,
     );
     this.logger.warn(`Truncated ${tables.length} tables for reseed.`);
-    // Drop the nested marketplace clone so stale tags are not re-imported by the next sync.
-    const workDir =
-      process.env.LIBRARY_WORK_DIR ??
-      resolve(process.cwd(), '.marketplace-work');
+    // Drop the nested marketplace mirror and any clones so stale tags are not re-imported by the next sync.
+    const { workDir, clonesDir } = marketplaceEnv();
     rmSync(workDir, { recursive: true, force: true });
-    this.logger.warn(`Removed marketplace work dir ${workDir}.`);
+    rmSync(clonesDir, { recursive: true, force: true });
+    this.logger.warn(
+      `Removed marketplace work dir ${workDir} and clones ${clonesDir}.`,
+    );
     await this.run();
     return { truncated: tables, seeded: true };
   }

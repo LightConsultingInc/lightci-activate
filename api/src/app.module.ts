@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
@@ -10,6 +9,7 @@ import { SeedModule } from './seed/seed.module';
 import { ContextModule } from './context/context.module';
 import { HealthcheckModule } from './healthcheck/healthcheck.module';
 import { InterviewsModule } from './interviews/interviews.module';
+import { JobsModule } from './jobs/jobs.module';
 import { LearningModule } from './learning/learning.module';
 import { LoggingModule } from './logging/logging.module';
 import { OpsModule } from './ops/ops.module';
@@ -22,7 +22,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
   imports: [
     LoggingModule,
     TypeOrmModule.forRoot({ ...AppDataSource.options, autoLoadEntities: true }),
-    ScheduleModule.forRoot(),
+    JobsModule,
     HealthcheckModule,
     AiModule,
     AuthModule,

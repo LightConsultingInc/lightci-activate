@@ -33,9 +33,11 @@ export interface OrgSettings {
 }
 
 export interface MarketplaceRepo {
-  provider: 'github' | 'local';
+  /** github: owner/repo with a token in integrations; git: any remote URL; local: the shared demo folder. */
+  provider: 'github' | 'local' | 'git';
   owner?: string;
   repo?: string;
+  url?: string;
   defaultBranch: string;
   autoSync: boolean;
   linkedAt?: string;

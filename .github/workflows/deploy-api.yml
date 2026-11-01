@@ -66,9 +66,6 @@ jobs:
           file: frontend/Dockerfile
           platforms: linux/amd64
           push: true
-          build-args: |
-            NEXT_PUBLIC_API_URL=${{ env.API_URL }}
-            NEXT_PUBLIC_WORKOS_REDIRECT_URI=${{ env.WEB_URL }}/callback
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.WEB_ECR_REPOSITORY }}:latest
             ${{ steps.ecr.outputs.registry }}/${{ env.WEB_ECR_REPOSITORY }}:${{ github.sha }}

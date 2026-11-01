@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Not, Repository } from 'typeorm';
 import { daysBetween, isoDay } from '../common/dates';
@@ -506,8 +505,7 @@ export class MasteryService {
     }));
   }
 
-  /** Nightly: recompute and store mastery for everyone with learning activity. */
-  @Cron(CronExpression.EVERY_DAY_AT_2AM, { name: 'mastery-nightly-snapshot' })
+  /** Nightly (job `nightly.mastery`, 02:00): recompute and store mastery for everyone with learning activity. */
   async nightlySnapshots(): Promise<{ people: number }> {
     const rows = await this.exercises
       .createQueryBuilder('e')

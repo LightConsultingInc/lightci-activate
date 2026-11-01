@@ -13,6 +13,7 @@ import { Baseline } from './entities/baseline.entity';
 import { Measurement } from './entities/measurement.entity';
 import { WorkflowMap } from './entities/workflow-map.entity';
 import { ScorerService } from './scorer.service';
+import { WorkflowsJobs } from './workflows.jobs';
 import { WorkflowsController } from './workflows.controller';
 import { WorkflowsService } from './workflows.service';
 import './workflows.mocks';
@@ -20,7 +21,7 @@ import './workflows.mocks';
 /**
  * Workflow maps, backlog, Scorer and Builder. Imports SkillsModule (LibraryService for Builder
  * drafts and skill cards) and LearningModule (PersonRefService). ScheduleModule.forRoot() in
- * AppModule enables the nightly @Cron in ScorerService.
+ * WorkflowsJobs registers the nightly rescoring schedule on the job queue.
  */
 @Module({
   imports: [
@@ -39,7 +40,7 @@ import './workflows.mocks';
     LearningModule,
   ],
   controllers: [WorkflowsController],
-  providers: [WorkflowsService, ScorerService, BuilderService],
+  providers: [WorkflowsService, ScorerService, BuilderService, WorkflowsJobs],
   exports: [TypeOrmModule, WorkflowsService, ScorerService, BuilderService],
 })
 export class WorkflowsModule {}

@@ -30,6 +30,7 @@ import { AgentRun } from './entities/agent-run.entity';
 import { AuditLog } from './entities/audit-log.entity';
 import { AnalyticsSyncController } from './analytics-sync.controller';
 import { AnalyticsSyncService } from './analytics-sync.service';
+import { OpsJobs } from './ops.jobs';
 import { AuditorService } from './auditor.service';
 import { EscalationsController } from './escalations.controller';
 import { LeadController } from './lead.controller';
@@ -93,6 +94,7 @@ import { TeamService } from './team.service';
     AuditorService,
     LeadService,
     AnalyticsSyncService,
+    OpsJobs,
   ],
   exports: [
     TypeOrmModule,

@@ -313,7 +313,7 @@ export type Person = {
 export type SetupStep = { key: string; label: string; done: boolean; detail: string | null }
 export type Setup = { steps: SetupStep[] }
 
-export type MarketplaceStatus = { repo: string | null; branch: string; head: string | null; dirty: boolean; pluginCount: number; skillCount: number; lastSyncAt: string | null; mode: "local" | "github" }
+export type MarketplaceStatus = { repo: string | null; branch: string | null; head: string | null; dirty: boolean; pluginCount: number; skillCount: number; lastSyncAt: string | null; workDir?: string | null; mode: "local" | "local-nested" | "github" | "git"; lastError?: string | null }
 
 // ───────────────────────────── LightCI lead ─────────────────────────────
 

@@ -81,6 +81,20 @@ export function dbSslMode(env: Env = process.env, host?: string): DbSslMode {
   return isLocal ? 'disable' : 'verify-full';
 }
 
+/** Instance-level marketplace provider, mirroring skills/git-repo.service.ts (kept here to avoid an import cycle). */
+export function marketplaceProvider(env: Env): 'local' | 'github' | 'git' {
+  const explicit = env.LIBRARY_PROVIDER;
+  if (explicit === 'local' || explicit === 'github' || explicit === 'git')
+    return explicit;
+  if (env.LIBRARY_REMOTE_URL) return 'git';
+  if (
+    (env.LIBRARY_REPOSITORY ?? env.GITHUB_REPO) &&
+    (env.LIBRARY_GIT_TOKEN ?? env.GITHUB_TOKEN)
+  )
+    return 'github';
+  return 'local';
+}
+
 function dbHost(env: Env): string | undefined {
   if (env.DB) {
     try {
@@ -212,6 +226,43 @@ export function checkEnv(env: Env = process.env): EnvReport {
     if (env.AI_PROVIDER === 'mock')
       errors.push('AI_PROVIDER=mock must not be used in production.');
   }
+  // Marketplace repository. Production needs a remote: a local folder lives and dies with one container.
+  const mp = marketplaceProvider(env);
+  if (
+    env.LIBRARY_PROVIDER &&
+    !['local', 'github', 'git'].includes(env.LIBRARY_PROVIDER)
+  )
+    errors.push(
+      `LIBRARY_PROVIDER must be "local", "github" or "git" (got "${env.LIBRARY_PROVIDER}").`,
+    );
+  if (
+    (env.GITHUB_REPO || env.GITHUB_TOKEN) &&
+    !env.LIBRARY_REPOSITORY &&
+    !env.LIBRARY_GIT_TOKEN
+  )
+    warnings.push(
+      'GITHUB_REPO / GITHUB_TOKEN are deprecated; use LIBRARY_REPOSITORY and LIBRARY_GIT_TOKEN.',
+    );
+  if (mp === 'github') {
+    const repository = env.LIBRARY_REPOSITORY ?? env.GITHUB_REPO;
+    if (!repository || !/^[^/\s]+\/[^/\s]+$/.test(repository))
+      errors.push(
+        'LIBRARY_REPOSITORY must be owner/name when LIBRARY_PROVIDER=github.',
+      );
+    if (!(env.LIBRARY_GIT_TOKEN ?? env.GITHUB_TOKEN))
+      errors.push(
+        'LIBRARY_GIT_TOKEN is required when LIBRARY_PROVIDER=github.',
+      );
+  }
+  if (mp === 'git' && !env.LIBRARY_REMOTE_URL)
+    errors.push('LIBRARY_REMOTE_URL is required when LIBRARY_PROVIDER=git.');
+  if (prod && mp === 'local' && !truthy(env.LIBRARY_ALLOW_LOCAL)) {
+    const msg =
+      'The marketplace has no remote (LIBRARY_PROVIDER=local): skills published from one replica are invisible to the others and lost on redeploy. Set LIBRARY_PROVIDER=github with LIBRARY_REPOSITORY and LIBRARY_GIT_TOKEN, or LIBRARY_ALLOW_LOCAL=true for a single-node evaluation.';
+    if (ed === 'self-hosted') errors.push(msg);
+    else warnings.push(msg);
+  }
+
   if (ed === 'self-hosted' && leadEmailDomains(env).length > 0)
     warnings.push(
       `LEAD_EMAIL_DOMAINS grants cross-organisation access to ${leadEmailDomains(env).join(', ')}.`,

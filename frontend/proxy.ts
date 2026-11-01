@@ -18,6 +18,8 @@ export default async function proxy(request: NextRequest, event: NextFetchEvent)
   if (request.headers.has("next-action") && pathname === "/login") return NextResponse.next()
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
   if (!isPublic && !request.cookies.get("wos-session")) {
+    // Browser API calls through the same-origin proxy get a plain 401, not a login page.
+    if (pathname.startsWith("/api/")) return NextResponse.json({ status: 401, title: "Unauthorized", detail: "Sign in required" }, { status: 401 })
     const url = new URL("/login", request.url)
     if (pathname !== "/") url.searchParams.set("next", pathname)
     return NextResponse.redirect(url)

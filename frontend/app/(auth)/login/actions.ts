@@ -1,7 +1,7 @@
 "use server"
 
 import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs"
-import { API_URL } from "@/lib/api"
+import { apiUrl, webUrl } from "@/lib/env"
 
 export type OrgChoice = { id: string; name: string }
 export type SignInResult =
@@ -13,7 +13,7 @@ export type SignInResult =
 /** What the API says about how this address signs in. */
 export type SignInLookup = { mode: "sso" | "password" | "unknown"; organizationId?: string; passwordAllowed: boolean }
 
-const origin = () => new URL(process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI ?? "http://localhost:3000/callback").origin
+const origin = () => webUrl()
 
 function friendly(err: unknown): string {
   const message = err instanceof Error ? err.message : "Sign-in failed."
@@ -28,7 +28,7 @@ export async function lookupSignIn(_prev: SignInLookup | null, formData: FormDat
   const email = String(formData.get("email") ?? "").trim().toLowerCase()
   if (!email.includes("@")) return { mode: "unknown", passwordAllowed: true }
   try {
-    const res = await fetch(`${API_URL}/api/auth/lookup?email=${encodeURIComponent(email)}`, { cache: "no-store" })
+    const res = await fetch(`${apiUrl()}/api/auth/lookup?email=${encodeURIComponent(email)}`, { cache: "no-store" })
     if (!res.ok) return { mode: "unknown", passwordAllowed: true }
     return (await res.json()) as SignInLookup
   } catch {

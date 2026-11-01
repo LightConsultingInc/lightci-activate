@@ -1,12 +1,9 @@
 import { getWorkOS, handleAuth, saveSession } from "@workos-inc/authkit-nextjs"
 import { NextResponse, type NextRequest } from "next/server"
+import { webUrl } from "@/lib/env"
 
-function publicBase(): string | undefined {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI ?? "").origin
-  } catch {
-    return undefined
-  }
+function publicBase(): string {
+  return webUrl()
 }
 
 const handler = handleAuth({

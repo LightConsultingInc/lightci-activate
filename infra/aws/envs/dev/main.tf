@@ -47,7 +47,9 @@ module "service" {
       CORS_ORIGINS      = join(",", compact([var.public_web_url, "https://${var.web_domain_name}"]))
       PUBLIC_API_URL    = "https://${var.domain_name}"
       LIBRARY_REPO_PATH = "/marketplace"
-      MCP_APP_HTML      = "/mcp-app/dist/app.html"
+      # The demo marketplace is a local folder; one API task today, so say so explicitly.
+      LIBRARY_ALLOW_LOCAL = "true"
+      MCP_APP_HTML        = "/mcp-app/dist/app.html"
       # Dev is a demo cell: the image is built with DEMO_MARKETPLACE=1 and seeds Meridian on boot.
       # Production builds refuse SEED_ON_BOOT unless ACTIVATE_ALLOW_SEED is set, so say so explicitly.
       SEED_ON_BOOT        = "true"
@@ -87,10 +89,9 @@ module "web" {
 
   environment = merge(
     {
-      NODE_ENV                        = "production"
-      API_URL                         = "https://${var.domain_name}"
-      NEXT_PUBLIC_API_URL             = "https://${var.domain_name}"
-      NEXT_PUBLIC_WORKOS_REDIRECT_URI = "https://${var.web_domain_name}/callback"
+      NODE_ENV = "production"
+      API_URL  = "https://${var.domain_name}"
+      WEB_URL  = "https://${var.web_domain_name}"
     },
     var.web_environment,
   )

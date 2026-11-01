@@ -174,6 +174,56 @@ describe('checkEnv (T0.1)', () => {
     );
   });
 
+  it('marketplace: production self-hosted needs a remote, cloud only warns, aliases still work', () => {
+    const selfHosted = { ...prodBase, ACTIVATE_EDITION: 'self-hosted' };
+    expect(
+      checkEnv(selfHosted).errors.some((e) => e.includes('no remote')),
+    ).toBe(true);
+    expect(
+      checkEnv({ ...selfHosted, LIBRARY_ALLOW_LOCAL: 'true' }).errors,
+    ).toEqual([]);
+    expect(checkEnv(prodBase).errors).toEqual([]);
+    expect(
+      checkEnv(prodBase).warnings.some((w) => w.includes('no remote')),
+    ).toBe(true);
+    const github = {
+      ...selfHosted,
+      LIBRARY_PROVIDER: 'github',
+      LIBRARY_REPOSITORY: 'acme/claude-marketplace',
+      LIBRARY_GIT_TOKEN: 't',
+    };
+    expect(checkEnv(github).errors).toEqual([]);
+    expect(
+      checkEnv({ ...github, LIBRARY_REPOSITORY: 'not-a-repo' }).errors.some(
+        (e) => e.includes('owner/name'),
+      ),
+    ).toBe(true);
+    expect(
+      checkEnv({
+        ...selfHosted,
+        LIBRARY_PROVIDER: 'github',
+        LIBRARY_REPOSITORY: 'a/b',
+      }).errors.some((e) => e.includes('LIBRARY_GIT_TOKEN')),
+    ).toBe(true);
+    expect(
+      checkEnv({ ...selfHosted, LIBRARY_PROVIDER: 'git' }).errors.some((e) =>
+        e.includes('LIBRARY_REMOTE_URL'),
+      ),
+    ).toBe(true);
+    const legacy = checkEnv({
+      ...selfHosted,
+      GITHUB_REPO: 'a/b',
+      GITHUB_TOKEN: 't',
+    });
+    expect(legacy.errors).toEqual([]);
+    expect(legacy.warnings.some((w) => w.includes('deprecated'))).toBe(true);
+    expect(
+      checkEnv({ ...prodBase, LIBRARY_PROVIDER: 'svn' }).errors.some((e) =>
+        e.includes('LIBRARY_PROVIDER'),
+      ),
+    ).toBe(true);
+  });
+
   it('warns a self-hosted install that grants vendor leads', () => {
     const { warnings } = checkEnv({
       ACTIVATE_EDITION: 'self-hosted',

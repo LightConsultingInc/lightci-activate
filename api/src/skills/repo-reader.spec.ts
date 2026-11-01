@@ -44,12 +44,16 @@ export function copyMarketplace(): string {
   return dir;
 }
 
+/** Any org id works for the shared local marketplace; specs use one constant. */
+export const ORG = '00000000-0000-4000-8000-000000000001';
+
 /** Point GitRepoService at a folder and let ensureRepo() initialise it. */
 export async function repoFor(dir: string): Promise<GitRepoService> {
   process.env.LIBRARY_REPO_PATH = dir;
   delete process.env.GITHUB_TOKEN;
+  delete process.env.LIBRARY_PROVIDER;
   const git = new GitRepoService();
-  expect(await git.ensureRepo()).toBe(true);
+  expect(await git.ensureRepo(ORG)).toBe(true);
   return git;
 }
 
@@ -140,7 +144,7 @@ describe('readRepoSkills against the demo marketplace', () => {
       tags.filter((t) => SEEDED_SLUGS.some((slug) => t.startsWith(`${slug}@`))),
     ).toHaveLength(11);
     const again = new GitRepoService();
-    expect(await again.ensureRepo()).toBe(true);
+    expect(await again.ensureRepo(ORG)).toBe(true);
     expect((await g.log()).total).toBe(1);
   });
 
@@ -160,10 +164,11 @@ describe('readRepoSkills against the demo marketplace', () => {
       process.env.LIBRARY_REPO_PATH = source;
       process.env.LIBRARY_WORK_DIR = work;
       const git = new GitRepoService();
-      expect(await git.ensureRepo()).toBe(true);
-      expect(git.mode).toBe('nested');
-      expect(git.workDir).toBe(work);
-      expect(git.path).toBe(work);
+      expect(await git.ensureRepo(ORG)).toBe(true);
+      const repo = await git.repoFor(ORG);
+      expect(repo.mode).toBe('nested');
+      expect(repo.workDir).toBe(work);
+      expect(repo.path).toBe(work);
       expect(isGitRepo(source)).toBe(false); // nothing initialised inside the outer work tree
       expect(isGitRepo(work)).toBe(true);
       expect((await simpleGit(work).tags()).all).toContain(
@@ -176,6 +181,7 @@ describe('readRepoSkills against the demo marketplace', () => {
       ).toEqual(SEEDED_SLUGS);
       // a second instance reuses the work dir without re-mirroring (API-made commits persist)
       const res = await git.publish(
+        ORG,
         'rmd-letter-draft',
         {
           'plugins/fp-meeting-prep/skills/rmd-letter-draft/NOTE.md':
@@ -187,8 +193,8 @@ describe('readRepoSkills against the demo marketplace', () => {
       );
       expect(res?.sha).toMatch(/^[0-9a-f]{40}$/);
       const again = new GitRepoService();
-      expect(await again.ensureRepo()).toBe(true);
-      expect(again.path).toBe(work);
+      expect(await again.ensureRepo(ORG)).toBe(true);
+      expect((await again.repoFor(ORG)).path).toBe(work);
       expect(
         existsSync(
           join(work, 'plugins/fp-meeting-prep/skills/rmd-letter-draft/NOTE.md'),

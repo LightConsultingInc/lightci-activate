@@ -4,7 +4,12 @@
  * near expiry. Every call is scoped to the org the person belongs to; LightCI
  * leads can switch orgs with the `activate_org` cookie (sent as X-Activate-Org).
  */
-export const API_URL = (typeof window === "undefined" ? process.env.API_URL : process.env.NEXT_PUBLIC_API_URL) ?? "http://localhost:4310"
+/**
+ * On the server, the API's address comes from the runtime environment. In the browser the
+ * app talks to its own origin and `/api/[...path]` forwards to the API, so one web image
+ * serves every deployment.
+ */
+export const API_URL = typeof window === "undefined" ? (process.env.API_URL ?? "http://localhost:4310") : ""
 
 export class ApiError extends Error {
   constructor(public status: number, public title: string, public detail: string) {
