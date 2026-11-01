@@ -12,6 +12,19 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { simpleGit, type SimpleGit } from 'simple-git';
+
+/**
+ * simple-git 4 filters the environment handed to git. These are the variables authEnv() sets on
+ * purpose: non-interactive runs, the per-process auth header, and a private CA for the remote.
+ */
+const GIT_ENV_ALLOWED = [
+  'GIT_TERMINAL_PROMPT',
+  'GIT_CONFIG_COUNT',
+  'GIT_CONFIG_KEY_0',
+  'GIT_CONFIG_VALUE_0',
+  'GIT_SSL_CAINFO',
+  'SSL_CERT_FILE',
+];
 import { DataSource, Repository } from 'typeorm';
 import { withAdvisoryLock } from '../common/pg-lock';
 import { Org, type MarketplaceRepo } from '../orgs/entities/org.entity';
@@ -314,7 +327,10 @@ export class GitRepoService {
   }
 
   private git(repo: OrgRepo): SimpleGit {
-    const git = simpleGit({ baseDir: repo.path! });
+    const git = simpleGit({
+      baseDir: repo.path!,
+      allowEnvironment: GIT_ENV_ALLOWED,
+    });
     return repo.mode === 'clone' ? git.env(this.authEnv(repo.config)) : git;
   }
 
@@ -374,7 +390,7 @@ export class GitRepoService {
       try {
         if (!isGitRepo(path)) {
           mkdirSync(dirname(path), { recursive: true });
-          await simpleGit()
+          await simpleGit({ allowEnvironment: GIT_ENV_ALLOWED })
             .env(this.authEnv(repo.config))
             .clone(repo.config.remoteUrl!, path);
           const git = this.git(repo);
