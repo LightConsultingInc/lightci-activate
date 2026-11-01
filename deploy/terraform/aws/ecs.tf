@@ -189,6 +189,7 @@ resource "aws_ecs_task_definition" "web" {
       var.auth_provider == "workos" ? [
         { name = "WORKOS_API_KEY", valueFrom = "${var.workos_secret_arn}:api-key::" },
         { name = "WORKOS_CLIENT_ID", valueFrom = "${var.workos_secret_arn}:client-id::" },
+        { name = "WORKOS_COOKIE_PASSWORD", valueFrom = var.encryption_key_secret_arn }, # as the chart does
       ] : [],
     )
     mountPoints      = concat(local.tmp_mount, [{ sourceVolume = "tmp", containerPath = "/app/.next/cache", readOnly = false }])

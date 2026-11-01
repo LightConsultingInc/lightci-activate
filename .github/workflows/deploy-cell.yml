@@ -99,7 +99,7 @@ jobs:
           curl -fsS "${{ inputs.api_url }}/api/ready"
           echo
           echo "Baking for ${{ inputs.bake_minutes }} minutes; any 5xx from the people load balancer fails the promotion."
-          ALB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='${{ steps.out.outputs.cluster }}-people'].LoadBalancerArn" --output text)
+          ALB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='${{ steps.out.outputs.cluster }}-internal'].LoadBalancerArn" --output text)
           DIM=$(echo "$ALB" | sed 's#.*loadbalancer/##')
           END=$(( $(date +%s) + ${{ inputs.bake_minutes }} * 60 ))
           while [ "$(date +%s)" -lt "$END" ]; do
