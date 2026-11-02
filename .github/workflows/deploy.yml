@@ -55,7 +55,9 @@ jobs:
 
   eu-prod:
     needs: [version, us-prod]
-    if: contains(needs.version.outputs.cells, 'eu') && (needs.us-prod.result == 'success' || needs.us-prod.result == 'skipped')
+    # A job that needs a skipped job is skipped too unless the condition opts in with !cancelled(),
+    # so an EU-only run (cells=eu) would otherwise never start.
+    if: "!cancelled() && contains(needs.version.outputs.cells, 'eu') && (needs.us-prod.result == 'success' || needs.us-prod.result == 'skipped')"
     uses: ./.github/workflows/deploy-cell.yml
     with:
       cell: eu
