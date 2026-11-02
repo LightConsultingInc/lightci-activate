@@ -29,14 +29,14 @@ mkdirSync(path.dirname(out), { recursive: true })
 const { chromium } = createRequire(path.join(ROOT, "e2e/package.json"))("playwright")
 
 const COLS = 132
-const ROWS = 36
+const ROWS = 35
 const SIZE = { width: 1280, height: 720 }
 
 const PAGE = `<!doctype html><html><head><meta charset="utf-8"><style>
   html,body{margin:0;background:#0f1419;color:#d6dde6;font:14px/19px ui-monospace,Menlo,Consolas,"DejaVu Sans Mono",monospace;overflow:hidden}
   #bar{height:32px;line-height:32px;padding:0 14px;background:#1b2229;color:#8b98a5;border-bottom:1px solid #2b343d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #bar b{color:#e6edf3;font-weight:600}
-  #screen{padding:8px 14px;white-space:pre;height:${SIZE.height - 32 - 16}px}
+  #screen{margin:0;padding:8px 14px;white-space:pre;height:${SIZE.height - 32 - 16}px}
   .b{font-weight:700;color:#fff}.d{opacity:.55}
   .c30{color:#4d5966}.c31{color:#ff6b6b}.c32{color:#5fd787}.c33{color:#ffd166}.c34{color:#6cb6ff}.c35{color:#d2a8ff}.c36{color:#56d4dd}.c37{color:#e6edf3}
   .c90{color:#6e7681}.c91{color:#ff7b72}.c92{color:#7ee787}.c93{color:#f2cc60}.c94{color:#79c0ff}.c95{color:#d2a8ff}.c96{color:#76e3ea}.c97{color:#fff}

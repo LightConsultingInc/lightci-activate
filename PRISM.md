@@ -205,7 +205,7 @@ a terminal-styled page in headless Chromium, and saves the Playwright recording 
 
 ```bash
 node .prism/scripts/record-terminal.mjs 'curl -s http://localhost:4310/api/health'
-node .prism/scripts/record-terminal.mjs 'curl -s http://localhost:4310/api/ready && curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4310/docs' /tmp/evidence/api-ready.mp4
+node .prism/scripts/record-terminal.mjs 'curl -s -w "\n" http://localhost:4310/api/ready && curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4310/docs' /tmp/evidence/api-ready.mp4
 ```
 
 The first argument is the whole command, quoted; the optional second one is the output path.
