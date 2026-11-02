@@ -263,6 +263,8 @@ rather than adding a contradicting one. Keep it tight.
   `e2e/tests/qa/` and are part of the regular suite (`yarn test`, CI included) — the team keeps
   them as regression tests. For backend-only proof use `.prism/scripts/record-terminal.mjs`
   (see [Recording terminal evidence](#recording-terminal-evidence)).
+- Uploading a recording as evidence: send an explicit `Content-Type` (`video/mp4`,
+  `video/webm`) with the PUT; without it the upload endpoint rejects the file.
 - The Playwright Chromium build in `/opt/pw-browsers` can lag the pinned `@playwright/test`
   version (`Executable doesn't exist at …chromium_headless_shell-NNNN`); `stack.sh up` does not
   install browsers, so run `cd e2e && npx playwright install --with-deps chromium` once
