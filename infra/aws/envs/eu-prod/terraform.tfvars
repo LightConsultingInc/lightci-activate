@@ -16,4 +16,4 @@ extra_secret_names = {}
 
 # Set once the webhook endpoint https://api.eu.activate.lciventure.com/api/webhooks/workos is registered in the WorkOS dashboard
 # and its signing secret written to a secret of this name.
-# workos_webhook_secret_name = "activate-eu-workos-webhook"
+workos_webhook_secret_name = "activate-eu-workos-webhook"
