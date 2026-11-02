@@ -33,8 +33,9 @@ module "bootstrap" {
   github_reviewer_ids = []        # required reviewers need GitHub Enterprise on a private repo; the deploy workflow is run by hand instead
 
   secret_names = {
-    workos      = "Activate EU cell: WorkOS environment, JSON {\"api-key\",\"client-id\"}"
-    anthropic   = "Activate EU cell: platform Anthropic key"
-    secrets-key = "Activate EU cell: AES-GCM key for stored credentials and the web session. Back up with the database."
+    workos         = "Activate EU cell: WorkOS environment, JSON {\"api-key\",\"client-id\"}"
+    anthropic      = "Activate EU cell: platform Anthropic key"
+    secrets-key    = "Activate EU cell: AES-GCM key for stored credentials and the web session. Back up with the database."
+    workos-webhook = "Activate EU cell: signing secret of the WorkOS webhook endpoint (plain string)"
   }
 }
