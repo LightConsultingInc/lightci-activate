@@ -92,7 +92,7 @@ resource "aws_lb" "mcp" {
   name                       = "${var.name}-mcp"
   load_balancer_type         = "application"
   internal                   = false
-  ip_address_type            = "dualstack"
+  ip_address_type            = var.mcp_alb_ip_address_type
   security_groups            = [aws_security_group.mcp_alb.id]
   subnets                    = var.public_subnet_ids
   idle_timeout               = 1200 # long-lived MCP streams

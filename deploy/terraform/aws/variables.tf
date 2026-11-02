@@ -102,6 +102,16 @@ variable "mcp_allowed_cidrs" {
   default     = ["160.79.104.0/23"]
 }
 
+variable "mcp_alb_ip_address_type" {
+  description = "ipv4, or dualstack when the public subnets carry an IPv6 CIDR (lets Claude reach the connector over IPv6 too; the WAF already allows Anthropic's IPv6 range)."
+  type        = string
+  default     = "ipv4"
+  validation {
+    condition     = contains(["ipv4", "dualstack"], var.mcp_alb_ip_address_type)
+    error_message = "mcp_alb_ip_address_type must be ipv4 or dualstack."
+  }
+}
+
 variable "mcp_allowed_ipv6_cidrs" {
   type    = list(string)
   default = ["2607:6bc0::/48"]
