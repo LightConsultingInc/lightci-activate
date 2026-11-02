@@ -26,7 +26,7 @@ const stamp = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").s
 const out = path.resolve(outArg ?? `/tmp/evidence/terminal-${stamp}.mp4`)
 mkdirSync(path.dirname(out), { recursive: true })
 
-const { chromium } = createRequire(path.join(ROOT, "e2e/package.json"))("playwright")
+const { chromium } = createRequire(path.join(ROOT, "e2e/package.json"))("@playwright/test")
 
 const COLS = 132
 const ROWS = 35

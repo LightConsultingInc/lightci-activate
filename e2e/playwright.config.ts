@@ -19,7 +19,8 @@ export default defineConfig({
     baseURL: process.env.BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: process.env.E2E_VIDEO ? "on" : "off",
+    // E2E_VIDEO=1 records every test at the full viewport (Playwright would otherwise scale video to 800px).
+    video: process.env.E2E_VIDEO ? { mode: "on", size: { width: 1440, height: 900 } } : "off",
     viewport: { width: 1440, height: 900 },
   },
   projects: [

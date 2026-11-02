@@ -116,7 +116,7 @@ Both happen on boot: `MIGRATIONS_RUN_ON_BOOT` defaults to on outside production,
 `SEED_ON_BOOT=true` the API seeds the Meridian Wealth Partners demo org (~4k rows, well under a
 second) the first time it finds an empty database. To run migrations ahead of boot, or to check
 the schema is current: `cd api && yarn migration:run` (~7 s). To reseed later:
-`POST /api/admin/seed/reset` as an admin (truncates every table — see the E2E caveat below).
+`POST /api/admin/seed/reset` as a LightCI lead (truncates every table — see the E2E caveat below).
 
 ### 4. Boot the API
 
@@ -192,8 +192,9 @@ every table and reseeds Meridian — any extra org you created locally (e.g. wit
 PRISM requirement (`prism-local-setup.spec.ts` for this guide). They are ordinary members of the
 suite: `cd e2e && yarn test` runs them, and so does CI's E2E job. Keep them in git — the suite is
 the regression set — and when you add one, write it so it passes against the plain mock-mode
-stack with no manual setup, like every other spec. Record a run with `E2E_VIDEO=1` (viewport
-1440×900; downscale frames before viewing them).
+stack with no manual setup, like every other spec, and sign in through `helpers/auth.ts`'s
+`signIn`, which also works in CI's OIDC leg. Record a run with `E2E_VIDEO=1` (1440×900, the
+viewport; videos land next to the test's other artifacts under `e2e/test-results/`).
 
 ## Recording terminal evidence
 
@@ -213,7 +214,9 @@ Without it the file lands in `/tmp/evidence/terminal-<UTC timestamp>.mp4`, and t
 printed last either way. The command runs from the repo root, its output is echoed to your
 terminal too, and the helper exits with the command's own exit code, so a failing walkthrough
 fails the caller. Needs `e2e/node_modules` with the Playwright Chromium build (section 2) and
-`ffmpeg`; a trivial command takes ~5 s end to end.
+`ffmpeg`; a trivial command takes ~5 s end to end. The command sees `TERM=xterm-256color`,
+a 132×35 terminal and `CI=1` (so yarn, Next and Playwright stay non-interactive — note that
+`CI=1` also switches `e2e/playwright.config.ts` to its CI reporter and retry settings).
 
 Use it to:
 
@@ -256,7 +259,7 @@ rather than adding a contradicting one. Keep it tight.
 - Outbound network works: WorkOS sign-in for all five demo roles passes
   (`npx playwright test --project=setup`), as does `smoke.spec.ts` against the mock-AI stack.
 - Evidence recording: `E2E_VIDEO=1` turns on Playwright video in `e2e/playwright.config.ts`
-  (viewport 1440×900 — downscale frames before viewing them). PRISM verification specs live in
+  at the 1440×900 viewport (frames are safe to view as-is). PRISM verification specs live in
   `e2e/tests/qa/` and are part of the regular suite (`yarn test`, CI included) — the team keeps
   them as regression tests. For backend-only proof use `.prism/scripts/record-terminal.mjs`
   (see [Recording terminal evidence](#recording-terminal-evidence)).
