@@ -213,4 +213,7 @@ rather than adding a contradicting one. Keep it tight.
 - Outbound network works: WorkOS sign-in for all five demo roles passes
   (`npx playwright test --project=setup`), as does `smoke.spec.ts` against the mock-AI stack.
 - Evidence recording: `E2E_VIDEO=1` turns on Playwright video in `e2e/playwright.config.ts`
-  (viewport 1440×900 — downscale frames before viewing them).
+  (viewport 1440×900 — downscale frames before viewing them). PRISM verification specs live in
+  `e2e/tests/qa/` and run only through `npx playwright test -c playwright.qa.config.ts`
+  (1280×720, video always on); the product suite's config ignores that folder so `yarn test`
+  and CI's OIDC leg are unaffected.
