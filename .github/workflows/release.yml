@@ -157,6 +157,12 @@ jobs:
           helm package deploy/helm/activate -d dist
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
       - run: helm push dist/activate-${{ needs.notes.outputs.version }}.tgz oci://${{ env.REGISTRY }}/${{ env.OWNER }}/charts
+      # helm's registry login lives in helm's own config; cosign reads the Docker credential store.
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: sigstore/cosign-installer@v3
       - name: Sign the chart
         run: cosign sign --yes "${{ env.REGISTRY }}/${{ env.OWNER }}/charts/activate:${{ needs.notes.outputs.version }}"
