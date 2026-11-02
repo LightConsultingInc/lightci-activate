@@ -69,6 +69,11 @@ resource "aws_secretsmanager_secret" "cell" {
   description             = each.value
   recovery_window_in_days = 30
   tags                    = local.tags
+
+  # Values are written by hand and exist nowhere else; a plan from a stale branch must not remove them.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_secretsmanager_secret" "shared" {
@@ -78,6 +83,11 @@ resource "aws_secretsmanager_secret" "shared" {
   description             = each.value
   recovery_window_in_days = 30
   tags                    = merge(local.tags, { cell = "shared" })
+
+  # Values are written by hand and exist nowhere else; a plan from a stale branch must not remove them.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # --- Image mirror: the deploy workflow copies each signed release from GHCR into the cell -----
