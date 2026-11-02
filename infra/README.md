@@ -71,7 +71,8 @@ cells (`us,eu` by default). Per cell, `deploy-cell.yml`:
 1. verifies the release's cosign signatures and mirrors `server` and `web` from GHCR into the cell's ECR (crane);
 2. `terraform apply` with the new `image_tag` (new task definitions; services keep the old version until rolled);
 3. snapshots the database, runs `activate migrate` as a one-shot task and requires exit 0;
-4. rolls api, worker and web and waits for them to stabilise;
+4. rolls api, worker and web, waits for them to stabilise, and requires each one to finish on the task
+   definition just applied (the circuit breaker rolls a failed service back, and a rolled-back service counts as stable);
 5. checks `/api/ready`, then bakes for 30 minutes with no 5xx from the people load balancer before the next cell.
 
 Required reviewers on GitHub environments need GitHub Enterprise on a private repository, so running the
@@ -98,3 +99,10 @@ OAuth protected-resource metadata; people sign in with their firm identity.
 
 The former `dev` stack (`lightci-activate-api.lciventure.com`, deployed from `deploy-api.yml` with an IAM
 user) was torn down on 2026-11-01 when the cells went live; its root and modules were removed in the same change.
+
+v1.0.0 went live in both cells on 2026-11-02, on the seventh Deploy cells run. The first six found, in order:
+the GitHub OIDC immutable subject, an apostrophe in a security group description, a dualstack connector
+balancer without IPv6 subnets, one target group attached to two balancers, a people balancer that ignored
+`people_alb_internet_facing` (private addresses, so readiness never answered), and a worker health check on
+`/health` instead of `/api/health` (the circuit breaker left both cells with no worker while the run passed).
+Each is fixed in the module and the workflow, so a self-hosted install gets the same fixes.
