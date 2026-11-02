@@ -92,6 +92,21 @@ jobs:
             aws ecs update-service --cluster "$C" --service "$C-$svc" --force-new-deployment > /dev/null
           done
           aws ecs wait services-stable --cluster "$C" --services "$C-api" "$C-worker" "$C-web"
+          # The circuit breaker rolls a failed service back to the previous task definition and the
+          # service then counts as stable, so check that each one finished on the revision just applied.
+          FAILED=0
+          for svc in api worker web; do
+            WANT=$(aws ecs describe-task-definition --task-definition "$C-$svc" --query 'taskDefinition.taskDefinitionArn' --output text)
+            read -r STATE GOT RUNNING DESIRED <<< "$(aws ecs describe-services --cluster "$C" --services "$C-$svc" \
+              --query 'services[0].deployments[?status==`PRIMARY`] | [0].[rolloutState, taskDefinition, runningCount, desiredCount]' --output text)"
+            echo "$svc: $STATE on ${GOT##*/} ($RUNNING/$DESIRED running)"
+            if [ "$STATE" != "COMPLETED" ] || [ "$GOT" != "$WANT" ]; then
+              echo "$svc did not finish on ${WANT##*/}:"
+              aws ecs describe-services --cluster "$C" --services "$C-$svc" --query 'services[0].events[:5].message' --output text
+              FAILED=1
+            fi
+          done
+          [ "$FAILED" = 0 ]
 
       - name: Ready, version and bake
         run: |
