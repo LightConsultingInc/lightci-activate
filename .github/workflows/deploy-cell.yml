@@ -95,8 +95,8 @@ jobs:
 
       - name: Ready, version and bake
         run: |
-          for _ in $(seq 1 30); do curl -fsS "${{ inputs.api_url }}/api/ready" > /dev/null && break; sleep 10; done
-          curl -fsS "${{ inputs.api_url }}/api/ready"
+          for _ in $(seq 1 30); do curl -fsS -m 20 "${{ inputs.api_url }}/api/ready" > /dev/null && break; sleep 10; done
+          curl -fsS -m 20 "${{ inputs.api_url }}/api/ready"
           echo
           echo "Baking for ${{ inputs.bake_minutes }} minutes; any 5xx from the people load balancer fails the promotion."
           ALB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='${{ steps.out.outputs.cluster }}-internal'].LoadBalancerArn" --output text)
