@@ -2,9 +2,10 @@
 # QA proof for the "PRISM Local setup" requirement: tears the sandbox stack down, then follows
 # PRISM.md "Step by step" sections 1-5 with the commands copied VERBATIM from the doc on a fresh
 # Postgres data directory, and prints the health checks the acceptance criteria name.
-# Leaves the stack running in mock mode. Run from the repo root; output is the evidence.
+# Leaves the stack running in mock mode. Run from the repo root; the output is the evidence —
+# record it as a video with the terminal recorder (PRISM.md "Recording terminal evidence"):
 #
-#   script -q -c .prism/scripts/qa-local-setup-verify.sh /tmp/qa-local-setup/transcript.txt
+#   node .prism/scripts/record-terminal.mjs .prism/scripts/qa-local-setup-verify.sh /tmp/evidence/local-setup.mp4
 set -uo pipefail
 export PAGER=cat PSQL_PAGER=cat   # script(1) gives psql a tty; keep it non-interactive
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

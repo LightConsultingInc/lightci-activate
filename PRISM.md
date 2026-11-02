@@ -180,11 +180,54 @@ equivalent of `.prism/scripts/stack.sh up mock`. Live mode calls Anthropic with 
 (cd e2e && yarn test)                             # Playwright, stack must be up in mock mode
 (cd e2e && npx playwright test --project=setup)   # just the five sign-ins (~50 s) — a quick auth smoke
 (cd e2e && npx playwright test smoke.spec.ts)     # shell + roles smoke (~30 s)
+(cd e2e && npx playwright test tests/qa)          # the PRISM verification specs only (~60 s incl. sign-ins)
+(cd e2e && E2E_VIDEO=1 npx playwright test tests/qa)   # same, recorded — videos under e2e/test-results/
 ```
 
 **E2E caveat:** `tests/00-reset.spec.ts` calls `POST /api/admin/seed/reset`, which truncates
 every table and reseeds Meridian — any extra org you created locally (e.g. with
 `scripts/fresh-client.mjs`) disappears. Only run the suite against a local stack.
+
+**PRISM verification specs are regression tests.** `e2e/tests/qa/` holds one Playwright spec per
+PRISM requirement (`prism-local-setup.spec.ts` for this guide). They are ordinary members of the
+suite: `cd e2e && yarn test` runs them, and so does CI's E2E job. Keep them in git — the suite is
+the regression set — and when you add one, write it so it passes against the plain mock-mode
+stack with no manual setup, like every other spec. Record a run with `E2E_VIDEO=1` (viewport
+1440×900; downscale frames before viewing them).
+
+## Recording terminal evidence
+
+Some work has no screen to drive: an API-only change, a migration, a new REST or Swagger
+endpoint, or this setup guide itself. For those, record the terminal instead of the browser.
+`.prism/scripts/record-terminal.mjs` runs any shell command in a pty, streams its output into
+a terminal-styled page in headless Chromium, and saves the Playwright recording as a 1280×720
+`.mp4` — the same kind of video evidence a UI spec produces.
+
+```bash
+node .prism/scripts/record-terminal.mjs 'curl -s http://localhost:4310/api/health'
+node .prism/scripts/record-terminal.mjs 'curl -s http://localhost:4310/api/ready && curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4310/docs' /tmp/evidence/api-ready.mp4
+```
+
+The first argument is the whole command, quoted; the optional second one is the output path.
+Without it the file lands in `/tmp/evidence/terminal-<UTC timestamp>.mp4`, and the path is
+printed last either way. The command runs from the repo root, its output is echoed to your
+terminal too, and the helper exits with the command's own exit code, so a failing walkthrough
+fails the caller. Needs `e2e/node_modules` with the Playwright Chromium build (section 2) and
+`ffmpeg`; a trivial command takes ~5 s end to end.
+
+Use it to:
+
+- prove backend-only changes — boot the API and curl `/api/health`, `/api/ready` and the
+  endpoint you changed, or hit Swagger (`/docs`) and the JSON it describes (`/docs-json`);
+- show a migration or seed running (`cd api && yarn migration:run`);
+- walk through a setup document step by step. `.prism/scripts/qa-local-setup-verify.sh` is the
+  worked example: it tears the stack down and replays sections 1–5 above verbatim, printing
+  every health check. Record it with
+  `node .prism/scripts/record-terminal.mjs .prism/scripts/qa-local-setup-verify.sh /tmp/evidence/local-setup.mp4`
+  (~3–4 min, and it leaves the stack running in mock mode).
+
+Prefer a Playwright spec whenever there is a page to show; use the terminal recording when
+there is not, or alongside one when the proof is in the API.
 
 ## Sandbox notes / gotchas
 
@@ -214,6 +257,10 @@ rather than adding a contradicting one. Keep it tight.
   (`npx playwright test --project=setup`), as does `smoke.spec.ts` against the mock-AI stack.
 - Evidence recording: `E2E_VIDEO=1` turns on Playwright video in `e2e/playwright.config.ts`
   (viewport 1440×900 — downscale frames before viewing them). PRISM verification specs live in
-  `e2e/tests/qa/` and run only through `npx playwright test -c playwright.qa.config.ts`
-  (1280×720, video always on); the product suite's config ignores that folder so `yarn test`
-  and CI's OIDC leg are unaffected.
+  `e2e/tests/qa/` and are part of the regular suite (`yarn test`, CI included) — the team keeps
+  them as regression tests. For backend-only proof use `.prism/scripts/record-terminal.mjs`
+  (see [Recording terminal evidence](#recording-terminal-evidence)).
+- The Playwright Chromium build in `/opt/pw-browsers` can lag the pinned `@playwright/test`
+  version (`Executable doesn't exist at …chromium_headless_shell-NNNN`); `stack.sh up` does not
+  install browsers, so run `cd e2e && npx playwright install --with-deps chromium` once
+  (~30 s) before any recording or Playwright run.

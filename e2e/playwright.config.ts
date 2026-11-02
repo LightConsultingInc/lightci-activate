@@ -7,8 +7,7 @@ import { defineConfig, devices } from "@playwright/test"
  */
 export default defineConfig({
   testDir: "./tests",
-  // tests/qa/ holds PRISM verification evidence specs; they run through playwright.qa.config.ts only.
-  testIgnore: ["**/helpers/**", "**/qa/**"],
+  testIgnore: ["**/helpers/**"],
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
