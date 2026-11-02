@@ -1,4 +1,4 @@
-# PRISM.md — running LightCI Activate locally (and in the PRISM sandbox)
+# Running LightCI Activate locally (and in the PRISM sandbox)
 
 This is the local-setup guide for two readers: a developer bringing the stack up on their own
 machine, and an automated agent run inside the PRISM cloud sandbox. The sandbox has **no Docker
@@ -8,6 +8,9 @@ It is also the repo's memory of what previous sandbox runs learned — see
 [Sandbox notes / gotchas](#sandbox-notes--gotchas) at the end and keep it current.
 
 Never put secrets or env values in this file. Variable *names* and where they come from only.
+
+In a hurry (sandbox, env files already in place): `.prism/scripts/stack.sh up mock`, then
+http://localhost:3000/login. Details in [Fast path](#fast-path-sandbox).
 
 ## What runs where
 
@@ -26,8 +29,8 @@ There is **no root `package.json` and no yarn workspaces** — run `yarn install
 
 - Node **22.14.0** (`.nvmrc`; any 22.x works — the sandbox ships 22.22.0) and yarn v1 (`1.22.x`).
 - Postgres server binaries: `initdb`, `pg_ctl`, `pg_isready`, `psql`, `createdb`. On the sandbox
-  they live in `/usr/lib/postgresql/16/bin`. Docker Desktop instead, if you have it, and
-  `scripts/dev.sh` does the rest.
+  they live in `/usr/lib/postgresql/16/bin`. Or Docker Desktop, in which case `./scripts/dev.sh`
+  does the rest.
 - `ffmpeg` and the Playwright Chromium build if you intend to record verification evidence:
   `cd e2e && npx playwright install --with-deps chromium`.
 

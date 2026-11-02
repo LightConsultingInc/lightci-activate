@@ -7,6 +7,7 @@
 #   .prism/scripts/stack.sh status           print health of each piece
 #
 # Expects api/.env and frontend/.env.local to be in place already (never committed).
+# Overrides (env): PGBIN, PGDATA (default /var/tmp/activate-pg), DB_PORT (5439), DB_DATABASE, PRISM_LOG_DIR (/tmp).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
