@@ -118,13 +118,34 @@ resource "aws_lb_listener" "mcp_https" {
   }
 }
 
+# A target group can belong to one load balancer only, so the connector gets its own view of the
+# api tasks; the api service registers with both.
+resource "aws_lb_target_group" "mcp_api" {
+  name        = "${var.name}-mcp-api"
+  port        = 3000
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = var.vpc_id
+  tags        = var.tags
+
+  health_check {
+    path                = "/api/ready"
+    matcher             = "200"
+    interval            = 15
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+  deregistration_delay = 30
+}
+
 resource "aws_lb_listener_rule" "mcp_paths" {
   listener_arn = aws_lb_listener.mcp_https.arn
   priority     = 10
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.api.arn
+    target_group_arn = aws_lb_target_group.mcp_api.arn
   }
   condition {
     path_pattern { values = ["/mcp", "/mcp/*", "/oauth/*", "/.well-known/*"] }
