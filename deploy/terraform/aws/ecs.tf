@@ -113,7 +113,7 @@ resource "aws_ecs_task_definition" "worker" {
     secrets                = local.server_secret_list
     mountPoints            = concat(local.tmp_mount, local.data_mount)
     healthCheck = {
-      command     = ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"]
+      command     = ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
       interval    = 15
       timeout     = 5
       retries     = 3
