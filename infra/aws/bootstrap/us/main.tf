@@ -41,5 +41,6 @@ module "bootstrap" {
 
   shared_secret_names = {
     activate-license-signing-key = "Ed25519 private JWK that signs Activate licences (kid lightci-license-2026). The only durable copy."
+    activate-lead-signin         = "Password of the LightCI activation lead user (zain+activate-lead@lightci.com) in both production WorkOS environments."
   }
 }

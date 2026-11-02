@@ -80,9 +80,12 @@ workflow by hand is the approval gate.
 
 ## WorkOS
 
-Each cell is meant to have its own WorkOS environment. Today both cells run on the shared test environment
-(`sk_test_`), which is also what local development and E2E use. To move a cell to a production environment,
-write its key pair to `activate-<cell>-workos` and roll the services.
+Each cell has its own WorkOS production environment since 2026-11-02 (US `client_01M6EB66EM6Y7RZKPBCJ8E0AK9`,
+EU `client_01M6EB6CVN073T8AWWJF6N9W1M`); the shared test environment (`sk_test_`) is now only for local
+development and E2E. A cell's key pair lives in `activate-<cell>-workos` (JSON `api-key`, `client-id`); to
+rotate it, write the new pair and roll the services. The LightCI activation lead user
+(`zain+activate-lead@lightci.com`) exists in both environments; its password is in the shared secret
+`activate-lead-signin` (us-east-1), declared by the US bootstrap root.
 
 - Redirect URIs: `node scripts/workos-redirects.mjs [us|eu]` registers `<web>/callback` for each cell (idempotent).
 - Webhooks (dashboard only): endpoint `<api>/api/webhooks/workos`, events `organization_membership.*`,
