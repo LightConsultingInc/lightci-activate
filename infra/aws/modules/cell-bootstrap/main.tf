@@ -133,10 +133,15 @@ data "aws_iam_policy_document" "deploy_trust" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # GitHub can issue the subject in the plain form or the immutable form that embeds the
+    # organisation and repository ids (this repository uses the latter). Accept exactly these two.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:environment:${var.cell}-prod"]
+      values = [
+        "repo:${var.github_repository}:environment:${var.cell}-prod",
+        "repo:${local.github_owner}@${var.github_owner_id}/${local.github_repo}@${data.github_repository.this.repo_id}:environment:${var.cell}-prod",
+      ]
     }
   }
 }
@@ -156,9 +161,15 @@ resource "aws_iam_role_policy_attachment" "deploy" {
 
 # --- GitHub: the environment with reviewers, and the role ARN the workflow reads -----------------
 
+locals {
+  github_owner = split("/", var.github_repository)[0]
+  github_repo  = split("/", var.github_repository)[1]
+}
+
 data "github_repository" "this" {
   full_name = var.github_repository
 }
+
 
 resource "github_repository_environment" "cell" {
   repository          = data.github_repository.this.name

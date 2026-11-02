@@ -12,6 +12,14 @@ variable "github_repository" {
   type        = string
 }
 
+variable "github_owner_id" {
+  description = <<-EOT
+    Numeric id of the repository's owner, used in the immutable OIDC subject GitHub issues for this
+    repository. Read it from: gh api /repos/<owner>/<repo>/actions/oidc/customization/sub
+  EOT
+  type        = number
+}
+
 variable "github_reviewer_ids" {
   description = "GitHub user ids who must approve a deployment to this cell's environment. Private repositories need GitHub Enterprise for this; empty on other plans."
   type        = list(number)
