@@ -191,7 +191,7 @@ resource "aws_security_group" "internal_alb" {
     cidr_blocks = var.internal_alb_ingress_cidrs
   }
   ingress {
-    description = "The web app's /api proxy reaches the API over the internal ALB"
+    description = "The web app /api proxy reaches the API over the internal ALB"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -207,7 +207,7 @@ resource "aws_security_group" "internal_alb" {
 
 resource "aws_security_group" "mcp_alb" {
   name        = "${var.name}-mcp-alb"
-  description = "MCP and OAuth for Claude, restricted by WAF to Anthropic's ranges"
+  description = "MCP and OAuth for Claude, restricted by WAF to Anthropic ranges"
   vpc_id      = var.vpc_id
   tags        = var.tags
 
