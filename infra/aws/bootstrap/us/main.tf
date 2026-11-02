@@ -29,7 +29,8 @@ module "bootstrap" {
   cell                = "us"
   region              = "us-east-1"
   github_repository   = "LightConsultingInc/lightci-activate"
-  github_reviewer_ids = [] # required reviewers need GitHub Enterprise on a private repo; the deploy workflow is run by hand instead
+  github_owner_id     = 103854823 # gh api /repos/LightConsultingInc/lightci-activate/actions/oidc/customization/sub
+  github_reviewer_ids = []        # required reviewers need GitHub Enterprise on a private repo; the deploy workflow is run by hand instead
 
   secret_names = {
     workos      = "Activate US cell: WorkOS environment, JSON {\"api-key\",\"client-id\"}"
