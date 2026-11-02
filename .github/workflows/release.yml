@@ -82,6 +82,8 @@ jobs:
           sbom: true
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
       - name: Scan for critical vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -97,6 +99,7 @@ jobs:
           image: ${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}
           format: spdx-json
           output-file: ${{ matrix.name }}-sbom.spdx.json
+          upload-artifact: false
       - name: Attest the SBOM
         run: cosign attest --yes --predicate "${{ matrix.name }}-sbom.spdx.json" --type spdxjson "${{ env.IMAGE_BASE }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}"
       - name: Verify what we just published (what a customer runs)
@@ -176,8 +179,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Only what the bundle needs. The SBOM and build-record uploads the actions add on their own
+      # (long "~"/".spdx.json" names) made the download-everything step fail on the first release.
       - uses: actions/download-artifact@v4
-        with: { path: artifacts }
+        with:
+          path: artifacts
+          pattern: "{notes,digest-*,sbom-*,chart}"
       - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
