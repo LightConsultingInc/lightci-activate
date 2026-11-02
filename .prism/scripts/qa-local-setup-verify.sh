@@ -30,9 +30,9 @@ PGDATA=/var/tmp/activate-pg                    # anywhere outside the repo; db-d
 run mkdir -p "$PGDATA" && run chown postgres:postgres "$PGDATA"
 run sudo -u postgres $PGBIN/initdb -D "$PGDATA" -U postgres --auth=trust --auth-host=md5 -E UTF8 | tail -n 3
 run sudo -u postgres $PGBIN/pg_ctl -D "$PGDATA" -o "-p 5439 -c listen_addresses=localhost" -l "$PGDATA/server.log" start
-run sudo -u postgres $PGBIN/pg_isready -p 5439     # "accepting connections"
-run sudo -u postgres psql -p 5439 -c "ALTER USER postgres PASSWORD 'postgres';"
-run sudo -u postgres createdb -p 5439 lightci_activate
+run sudo -u postgres $PGBIN/pg_isready -h localhost -p 5439 -U postgres   # "accepting connections"
+run sudo -u postgres psql -p 5439 -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
+run sudo -u postgres createdb -p 5439 -U postgres lightci_activate
 run env PGPASSWORD=postgres psql -h localhost -p 5439 -U postgres -d lightci_activate -c 'select 1'
 echo "C3 check: psql -h localhost -p 5439 -U postgres -d lightci_activate -c 'select 1' -> exit $?"
 run env PGPASSWORD=postgres psql -w -h localhost -p 5439 -U postgres -c 'select version()' -tA
@@ -50,7 +50,7 @@ run env PGPASSWORD=postgres psql -w -h localhost -p 5439 -U postgres -d lightci_
 run grep -nE '^(MIGRATIONS_RUN_ON_BOOT|SEED_ON_BOOT|AI_PROVIDER)=' api/.env.example
 
 say "4. Boot the API (PRISM.md section 4, verbatim)"
-cd api && AI_PROVIDER=mock nohup yarn -s start:dev > /tmp/api.log 2>&1 &   # drop AI_PROVIDER=mock for live Claude
+cd api && AI_PROVIDER=mock setsid nohup yarn -s start:dev > /tmp/api.log 2>&1 &   # drop AI_PROVIDER=mock for live Claude
 cd "$ROOT"
 t0=$(date +%s)
 for i in $(seq 1 60); do
@@ -70,7 +70,7 @@ run grep -nE 'seed|migration' /tmp/api.log | head -n 8
 run pgrep -af 'nest start --watch|api/dist/main'
 
 say "5. Boot the web app (PRISM.md section 5, verbatim)"
-cd frontend && nohup yarn -s dev > /tmp/frontend.log 2>&1 &
+cd frontend && setsid nohup yarn -s dev > /tmp/frontend.log 2>&1 &
 cd "$ROOT"
 t0=$(date +%s)
 for i in $(seq 1 45); do
