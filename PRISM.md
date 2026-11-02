@@ -27,7 +27,8 @@ There is **no root `package.json` and no yarn workspaces** — run `yarn install
 
 ## Prerequisites
 
-- Node **22.14.0** (`.nvmrc`; any 22.x works — the sandbox ships 22.22.0) and yarn v1 (`1.22.x`).
+- Node **22.14.0**, pinned in `.nvmrc` (`nvm use`); the sandbox ships 22.22.0, which runs the
+  stack fine. yarn v1 (`1.22.x`).
 - Postgres server binaries: `initdb`, `pg_ctl`, `pg_isready`, `psql`, `createdb`. On the sandbox
   they live in `/usr/lib/postgresql/16/bin`. Or Docker Desktop, in which case `./scripts/dev.sh`
   does the rest.
@@ -62,7 +63,8 @@ OpenAI keys are LightCI platform keys; `ACTIVATE_SECRETS_KEY` is any string loca
 .prism/scripts/stack.sh down        # stop api, web and postgres
 ```
 
-`up` is idempotent: it skips whatever is already running, keeps the Postgres data directory in
+`up` is idempotent: it skips whatever is already running (so to switch an API between mock and
+live, `down` first), keeps the Postgres data directory in
 `/var/tmp/activate-pg` (outside the repo), and leaves logs in `/tmp/api.log`, `/tmp/frontend.log`
 and `/tmp/install-*.log`. Pass `live` instead of `mock` to use the real Anthropic key.
 A cold run (installs + first compile) takes ~3 min; a warm one ~20 s.
@@ -83,14 +85,16 @@ PGDATA=/var/tmp/activate-pg                    # anywhere outside the repo; db-d
 mkdir -p "$PGDATA" && chown postgres:postgres "$PGDATA"
 sudo -u postgres $PGBIN/initdb -D "$PGDATA" -U postgres --auth=trust --auth-host=md5 -E UTF8
 sudo -u postgres $PGBIN/pg_ctl -D "$PGDATA" -o "-p 5439 -c listen_addresses=localhost" -l "$PGDATA/server.log" start
-sudo -u postgres $PGBIN/pg_isready -p 5439     # "accepting connections"
-sudo -u postgres psql -p 5439 -c "ALTER USER postgres PASSWORD 'postgres';"
-sudo -u postgres createdb -p 5439 lightci_activate
+sudo -u postgres $PGBIN/pg_isready -h localhost -p 5439 -U postgres   # "accepting connections"
+sudo -u postgres psql -p 5439 -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
+sudo -u postgres createdb -p 5439 -U postgres lightci_activate
 PGPASSWORD=postgres psql -h localhost -p 5439 -U postgres -d lightci_activate -c 'select 1'
 ```
 
-Stop it with `sudo -u postgres $PGBIN/pg_ctl -D "$PGDATA" stop -m fast`. (Drop the `sudo -u
-postgres` parts when you are not root.) The distro's `service postgresql start` also works if you
+Stop it with `sudo -u postgres $PGBIN/pg_ctl -D "$PGDATA" stop -m fast`. When you are not
+root, drop the `sudo -u postgres` and `chown` parts but keep `-U postgres`: `initdb -U postgres`
+creates only that role, so a bare `psql` would try your OS user and fail with
+`role "<you>" does not exist`. The distro's `service postgresql start` also works if you
 first change `port = 5432` to `5439` in `/etc/postgresql/16/main/postgresql.conf`, but the
 `initdb` route needs no system config and survives a different Postgres major.
 
@@ -117,7 +121,7 @@ the schema is current: `cd api && yarn migration:run` (~7 s). To reseed later:
 ### 4. Boot the API
 
 ```bash
-cd api && AI_PROVIDER=mock nohup yarn -s start:dev > /tmp/api.log 2>&1 &   # drop AI_PROVIDER=mock for live Claude
+cd api && AI_PROVIDER=mock setsid nohup yarn -s start:dev > /tmp/api.log 2>&1 &   # drop AI_PROVIDER=mock for live Claude
 ```
 
 `start:dev` is `nest start --watch`; the compiled server runs as a child process
@@ -132,12 +136,13 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:4310/docs   # 200, Swa
 ```
 
 `/api/health` only says the process answers; `/api/ready` also checks the database connection
-and that no migration is pending — poll `ready`, not `health`, before pointing anything at the API.
+and that no migration is pending, and answers **503** until both hold — poll `ready`, not
+`health`, before pointing anything at the API.
 
 ### 5. Boot the web app
 
 ```bash
-cd frontend && nohup yarn -s dev > /tmp/frontend.log 2>&1 &
+cd frontend && setsid nohup yarn -s dev > /tmp/frontend.log 2>&1 &
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/login    # 200 once ready
 ```
 
@@ -202,6 +207,9 @@ rather than adding a contradicting one. Keep it tight.
   + migrations + seed ~0.3 s); web `/login` first response ~5 s; warm `stack.sh up` ~20 s.
 - Stopping the API: `nest --watch` forks `node api/dist/main`; `pkill -f "nest start --watch"`
   alone leaves the server on :4310. `stack.sh down` kills both.
+- Backgrounding from a real terminal: `nohup yarn start:dev &` shields only yarn — the forked
+  `node dist/main` and `next-server` still die when the terminal (pty) closes. Use
+  `setsid nohup … &` (as the doc and `stack.sh` now do); from a tty-less shell plain `nohup` is enough.
 - Outbound network works: WorkOS sign-in for all five demo roles passes
   (`npx playwright test --project=setup`), as does `smoke.spec.ts` against the mock-AI stack.
 - Evidence recording: `E2E_VIDEO=1` turns on Playwright video in `e2e/playwright.config.ts`

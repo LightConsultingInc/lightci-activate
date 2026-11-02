@@ -20,7 +20,7 @@ MODE="${2:-mock}"
 
 as_pg() { if [[ "$(id -u)" == "0" ]]; then sudo -u postgres "$@"; else "$@"; fi; }
 
-pg_up() { as_pg "$PGBIN/pg_isready" -q -p "$DB_PORT"; }
+pg_up() { as_pg "$PGBIN/pg_isready" -q -h localhost -p "$DB_PORT" -U postgres; }
 
 start_postgres() {
   if pg_up; then echo "==> postgres already up on :$DB_PORT"; return; fi
@@ -35,9 +35,9 @@ start_postgres() {
   for _ in $(seq 1 30); do pg_up && break; sleep 1; done
   pg_up || { echo "postgres did not start; see $PGDATA/server.log" >&2; exit 1; }
   # Password auth for TCP clients (the API connects over localhost with DB_PASSWORD=postgres).
-  as_pg psql -q -p "$DB_PORT" -c "ALTER USER postgres PASSWORD 'postgres';"
-  as_pg psql -q -p "$DB_PORT" -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 \
-    || as_pg createdb -p "$DB_PORT" "$DB_NAME"
+  as_pg psql -q -p "$DB_PORT" -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
+  as_pg psql -q -p "$DB_PORT" -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 \
+    || as_pg createdb -p "$DB_PORT" -U postgres "$DB_NAME"
 }
 
 install_deps() {
@@ -59,11 +59,13 @@ wait_for() { # url, tries, [expected http codes regex]
 }
 
 start_api() {
-  if wait_for http://localhost:4310/api/health 1; then echo "==> api already up on :4310"; return; fi
+  # A running API is left alone whatever its mode; `down` then `up <mode>` switches between mock and live.
+  if wait_for http://localhost:4310/api/health 1; then echo "==> api already up on :4310 (mode unchanged)"; return; fi
   echo "==> api on :4310 ($MODE)"
   local env=()
   [[ "$MODE" == "mock" ]] && env=(AI_PROVIDER=mock)
-  (cd "$ROOT/api" && env "${env[@]}" nohup yarn -s start:dev >"$LOGS/api.log" 2>&1 & echo $! >"$LOGS/api.pid")
+  # setsid: detach from the calling terminal, or the forked node server dies with it (nohup only covers yarn).
+  (cd "$ROOT/api" && env "${env[@]}" setsid nohup yarn -s start:dev >"$LOGS/api.log" 2>&1 &)
   # First boot compiles with nest --watch, runs migrations and seeds the demo org: ~40-60s.
   wait_for http://localhost:4310/api/ready 60 || { echo "api did not become ready; see $LOGS/api.log" >&2; tail -n 40 "$LOGS/api.log" >&2; exit 1; }
 }
@@ -71,7 +73,7 @@ start_api() {
 start_web() {
   if wait_for http://localhost:3000/login 1 '200|302|307'; then echo "==> web already up on :3000"; return; fi
   echo "==> web on :3000"
-  (cd "$ROOT/frontend" && nohup yarn -s dev >"$LOGS/frontend.log" 2>&1 & echo $! >"$LOGS/frontend.pid")
+  (cd "$ROOT/frontend" && setsid nohup yarn -s dev >"$LOGS/frontend.log" 2>&1 &)
   wait_for http://localhost:3000/login 45 '200|302|307' || { echo "web did not come up; see $LOGS/frontend.log" >&2; exit 1; }
 }
 
@@ -82,12 +84,12 @@ status() {
 }
 
 stop_all() {
-  # nest --watch forks the real server (node api/dist/main); kill both or the port stays taken.
-  pkill -f "nest start --watch" 2>/dev/null || true
+  # Only this checkout's processes: the nest watcher and the server it forks (node api/dist/main),
+  # the next dev wrapper, and whatever still holds :4310 / :3000 (next-server carries no path in argv).
+  pkill -f "$ROOT/api/node_modules/.bin/nest start" 2>/dev/null || true
   pkill -f "$ROOT/api/dist/main" 2>/dev/null || true
-  pkill -f "next dev" 2>/dev/null || true
-  pkill -f "next-server" 2>/dev/null || true
-  rm -f "$LOGS/api.pid" "$LOGS/frontend.pid"
+  pkill -f "$ROOT/frontend/node_modules/.bin/next dev" 2>/dev/null || true
+  fuser -k -TERM 4310/tcp 3000/tcp >/dev/null 2>&1 || true
   if pg_up; then as_pg "$PGBIN/pg_ctl" -D "$PGDATA" stop -m fast >/dev/null; fi
   echo "stack stopped"
 }
