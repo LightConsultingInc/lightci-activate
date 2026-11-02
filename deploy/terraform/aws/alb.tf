@@ -1,13 +1,13 @@
-# Two load balancers: one for people (web app + API; internal by default) and a public one for the
-# connector host, fronted by WAF: /mcp only from Anthropic's egress ranges, /oauth and /.well-known
+# Two load balancers: one for people (web app + API; internal by default, on the public subnets when
+# people_alb_internet_facing is set) and a public one for the connector host, fronted by WAF: /mcp only from Anthropic's egress ranges, /oauth and /.well-known
 # open because people sign in there.
 
 resource "aws_lb" "internal" {
   name                       = "${var.name}-internal"
   load_balancer_type         = "application"
-  internal                   = true
+  internal                   = !var.people_alb_internet_facing
   security_groups            = [aws_security_group.internal_alb.id]
-  subnets                    = var.private_subnet_ids
+  subnets                    = var.people_alb_internet_facing ? var.public_subnet_ids : var.private_subnet_ids
   idle_timeout               = 300
   drop_invalid_header_fields = true
   tags                       = var.tags
@@ -76,7 +76,8 @@ resource "aws_lb_listener_rule" "api_host" {
   }
 }
 
-# Plain HTTP inside the VPC for the web app's same-origin /api proxy (API_URL).
+# Plain HTTP inside the VPC for the web app's same-origin /api proxy (API_URL). Only reachable from the
+# VPC range; an internet-facing people load balancer is reached over HTTPS on the API host instead.
 resource "aws_lb_listener" "internal_http" {
   load_balancer_arn = aws_lb.internal.arn
   port              = 80

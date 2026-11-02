@@ -79,12 +79,14 @@ locals {
   secret_arns = distinct([for v in values(local.server_secrets) : split(":json-key:", replace(v, "/:([^:]*)::$/", ":json-key:$1"))[0]])
 
   web_environment = merge({
-    NODE_ENV       = "production"
-    PORT           = "3000"
-    HOSTNAME       = "0.0.0.0"
-    WEB_URL        = local.web_url
-    API_URL        = "http://${aws_lb.internal.dns_name}" # the web app proxies /api from its own origin
-    PUBLIC_API_URL = local.api_url                        # where the browser is sent to sign in (OIDC)
+    NODE_ENV = "production"
+    PORT     = "3000"
+    HOSTNAME = "0.0.0.0"
+    WEB_URL  = local.web_url
+    # The web app proxies /api from its own origin. Internal balancer: plain HTTP inside the VPC. Internet-facing
+    # balancer: the task's traffic leaves through the NAT gateway, so it goes to the public API host over HTTPS.
+    API_URL        = var.people_alb_internet_facing ? local.api_url : "http://${aws_lb.internal.dns_name}"
+    PUBLIC_API_URL = local.api_url # where the browser is sent to sign in (OIDC)
     AUTH_PROVIDER  = var.auth_provider
   }, var.web_extra_environment)
 }

@@ -29,7 +29,7 @@ admins enter under Settings › Integrations.
 
 ```hcl
 module "activate" {
-  source = "github.com/lightci/lightci-activate//deploy/terraform/aws?ref=v1.0.0"
+  source = "github.com/LightConsultingInc/lightci-activate//deploy/terraform/aws?ref=v1.0.0"
 
   name   = "activate"
   region = "eu-central-1"
@@ -38,6 +38,7 @@ module "activate" {
   private_subnet_ids         = ["subnet-a", "subnet-b"]
   public_subnet_ids          = ["subnet-c", "subnet-d"]
   internal_alb_ingress_cidrs = ["10.0.0.0/8"]
+  # For a public service instead: people_alb_internet_facing = true and ["0.0.0.0/0"] above.
 
   image_tag = "1.0.0"
 
