@@ -203,6 +203,11 @@ test.describe("company sign-in setup", () => {
     const status = await api<{ steps: { key: string; done: boolean }[] }>(page, "GET", "/api/org/setup")
     expect(status.steps.map((s) => s.key)).toContain("sso")
     await page.goto("/admin/sign-in")
+    // A self-hosted OIDC install signs in through the identity provider set at install time: no WorkOS steps.
+    if (process.env.E2E_AUTH === "oidc") {
+      await expect(page.getByTestId("sign-in-self-hosted")).toBeVisible()
+      return
+    }
     await expect(page.getByTestId("sign-in-step-roles")).toContainText("activate-champion")
   })
 })

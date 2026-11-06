@@ -30,6 +30,8 @@ import {
  * real WorkOS setup pages; then the old password session stops working and SSO lets the admin in.
  */
 test.describe("identity lifecycle: invite, set up, switch to single sign-on", () => {
+  // WorkOS mode only: an OIDC install signs in through its own identity provider, with no WorkOS at all.
+  test.skip(OIDC_MODE, "WorkOS-mode lifecycle")
   test.describe.configure({ mode: "serial", timeout: 300_000 })
   test.use({ role: "lead" })
 
@@ -47,11 +49,11 @@ test.describe("identity lifecycle: invite, set up, switch to single sign-on", ()
   const cleanup: (() => Promise<unknown>)[] = []
 
   test.beforeAll(async () => {
-    test.skip(OIDC_MODE, "WorkOS-mode lifecycle")
     expect(await keycloakReachable(), "Keycloak must be running (api/test/keycloak/start.sh)").toBe(true)
   })
 
   test.afterAll(async () => {
+    if (OIDC_MODE) return
     for (const fn of cleanup.reverse()) await fn().catch(() => {})
     // Whatever step a run stopped at, no WorkOS user on this run's domain survives it.
     await deleteWorkosUsersOnDomain(domain)
