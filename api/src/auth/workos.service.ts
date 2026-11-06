@@ -10,7 +10,8 @@ export interface WorkosProfile {
   profilePictureUrl?: string | null;
 }
 
-export type PortalIntent = 'sso' | 'dsync';
+/** WorkOS setup pages: connect SSO, connect a directory, or prove ownership of an email domain (DNS). */
+export type PortalIntent = 'sso' | 'dsync' | 'domain_verification';
 
 /** A verified webhook event. `data` is whatever WorkOS sent for that event type. */
 export interface WorkosWebhookEvent {

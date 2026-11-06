@@ -12,7 +12,20 @@ import { lookupSignIn, signInWithOrganization, signInWithPassword, type SignInLo
  * Email first. The API says how this address signs in: a company with single sign-on is sent
  * straight to it; a demo or password account gets the password field; anyone else sees both.
  */
-export function LoginForm({ authError, provider = "workos", next }: { authError: boolean; provider?: "workos" | "oidc"; next?: string }) {
+/** Why the last sign-in did not stick: a generic failure, or the company's sign-in policy. */
+export type AuthError = boolean | "sso" | "setup"
+
+const AUTH_ERROR_TEXT: Record<"sso" | "setup", string> = {
+  sso: "Your company now signs in with its own single sign-on. Enter your work email to continue with it.",
+  setup: "Your company is still setting up sign-in for Activate. Ask your administrator to invite you, or try again once they have finished.",
+}
+
+function authErrorText(authError: AuthError): string | null {
+  if (authError === "sso" || authError === "setup") return AUTH_ERROR_TEXT[authError]
+  return authError ? "We could not complete sign-in. Try again." : null
+}
+
+export function LoginForm({ authError, provider = "workos", next }: { authError: AuthError; provider?: "workos" | "oidc"; next?: string }) {
   // The customer's own identity provider signs everyone in; there is nothing to type here.
   if (provider === "oidc") {
     const href = `/sign-in${next && next.startsWith("/") ? `?next=${encodeURIComponent(next)}` : ""}`
@@ -35,7 +48,7 @@ export function LoginForm({ authError, provider = "workos", next }: { authError:
   return <WorkosLoginForm authError={authError} />
 }
 
-function WorkosLoginForm({ authError }: { authError: boolean }) {
+function WorkosLoginForm({ authError }: { authError: AuthError }) {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [lookup, lookupAction, lookingUp] = useActionState<SignInLookup | null, FormData>(lookupSignIn, null)
@@ -82,7 +95,7 @@ function WorkosLoginForm({ authError }: { authError: boolean }) {
   const redirecting = (lookup?.mode === "sso" && !lookup.passwordAllowed) || lookup?.mode === "setup"
   const showPassword = lookup !== null && lookup.mode !== "sso" && lookup.mode !== "setup"
   const ssoHref = lookup?.mode === "sso" && lookup.organizationId ? `/sign-in?${new URLSearchParams({ organization_id: lookup.organizationId, login_hint: email })}` : "/sign-in"
-  const error = state && !state.ok && "error" in state ? state.error : authError ? "We could not complete sign-in. Try again." : null
+  const error = state && !state.ok && "error" in state ? state.error : authErrorText(authError)
 
   return (
     <div className="mt-8 space-y-6">

@@ -6,7 +6,10 @@ import type { Person } from '../orgs/entities/person.entity';
 import { SignInSetupService } from './sign-in-setup.service';
 
 class SetupLinkDto {
-  @IsIn(['sso', 'dsync']) intent: 'sso' | 'dsync';
+  @IsIn(['sso', 'dsync', 'domain_verification']) intent:
+    | 'sso'
+    | 'dsync'
+    | 'domain_verification';
 }
 
 class InviteAdminDto {

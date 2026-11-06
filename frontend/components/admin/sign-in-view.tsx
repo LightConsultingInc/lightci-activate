@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { ArrowUpRightIcon, CheckCircle2Icon, CircleDashedIcon } from "lucide-react"
-import { useSignInMutations, useSignInStatus } from "@/hooks/mc/use-mc"
+import { useSignInMutations, useSignInStatus, type SetupIntent } from "@/hooks/mc/use-mc"
 import type { SignInStatus } from "@/hooks/mc/types"
 import { ApiError } from "@/lib/api"
 import { fmt } from "@/lib/format"
@@ -45,7 +45,11 @@ function Inner() {
   useEffect(() => {
     if (!returned || !q.data) return
     const s = q.data
-    if (returned === "sso")
+    if (returned === "domain_verification")
+      toast[s.domains?.some((d) => d.state === "verified") ? "success" : "info"](s.domains?.some((d) => d.state === "verified") ? "Your domain is verified" : "Your domain isn't verified yet", {
+        description: s.domains?.some((d) => d.state === "verified") ? "Next, connect your sign-in." : "DNS changes can take a while to show. Check back in a few minutes.",
+      })
+    else if (returned === "sso")
       toast[s.phase === "sso" ? "success" : "info"](s.phase === "sso" ? "Single sign-on is connected" : "Single sign-on isn't active yet", {
         description: s.phase === "sso" ? "From now on everyone at your company signs in with their work account." : "If you finished the steps, give it a minute and refresh this page.",
       })
@@ -53,7 +57,7 @@ function Inner() {
     router.replace("/admin/sign-in")
   }, [returned, q.data, router])
 
-  const go = (intent: "sso" | "dsync") =>
+  const go = (intent: SetupIntent) =>
     setupLink.mutate(intent, {
       onSuccess: ({ url }) => window.location.assign(url),
       onError: (err) => toast.error("Couldn't open the setup page", { description: err instanceof ApiError ? err.detail : String(err) }),
@@ -82,10 +86,13 @@ function SelfHosted() {
   )
 }
 
-function Steps({ s, go, pending }: { s: SignInStatus; go: (intent: "sso" | "dsync") => void; pending: boolean }) {
+function Steps({ s, go, pending }: { s: SignInStatus; go: (intent: SetupIntent) => void; pending: boolean }) {
   const connected = s.phase === "sso"
   const directory = s.directories?.[0] ?? null
   const disabled = s.phase === "none" || pending
+  // WorkOS only activates single sign-on for a company that has proved it owns an email domain.
+  const domainVerified = Boolean(s.domains?.some((d) => d.state === "verified"))
+  const domainsKnown = s.domains !== null
   return (
     <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] animate-rise" data-testid="sign-in-view" data-phase={s.phase}>
       <div className="grid gap-4">
@@ -108,17 +115,30 @@ function Steps({ s, go, pending }: { s: SignInStatus; go: (intent: "sso" | "dsyn
           </div>
         </Panel>
 
-        <Panel title="1. Connect your sign-in" testId="sign-in-step-sso">
+        <Panel title="1. Prove you own your email domain" testId="sign-in-step-domain">
+          <StepState done={domainVerified} />
+          <p className="mt-2 text-sm text-muted-foreground">
+            Add one DNS record to your email domain (your IT or web team can do this in a few minutes). It proves the domain is yours, so only your company&apos;s sign-in can be used for addresses on it.
+          </p>
+          <Button className="mt-3" size="sm" variant={domainVerified ? "outline" : "default"} onClick={() => go("domain_verification")} disabled={disabled} data-testid="sign-in-verify-domain">
+            {domainVerified ? "Review your domain" : "Verify your domain"} <ArrowUpRightIcon data-icon="inline-end" />
+          </Button>
+        </Panel>
+
+        <Panel title="2. Connect your sign-in" testId="sign-in-step-sso">
           <StepState done={connected} />
           <p className="mt-2 text-sm text-muted-foreground">
-            Opens a guided setup page from WorkOS, our sign-in partner. Pick your provider (for Microsoft, choose Microsoft Entra ID with SAML) and follow the steps in your provider&apos;s admin console. You may be asked to add a DNS record that proves your company owns its email domain.
+            Opens a guided setup page from WorkOS, our sign-in partner. Pick your provider (for Microsoft, choose Microsoft Entra ID with SAML) and follow the steps in your provider&apos;s admin console.
           </p>
-          <Button className="mt-3" size="sm" onClick={() => go("sso")} disabled={disabled} data-testid="sign-in-connect-sso">
+          {domainsKnown && !domainVerified && !connected && (
+            <p className="mt-2 text-xs text-muted-foreground" data-testid="sign-in-needs-domain">Verify your domain first: single sign-on can&apos;t be switched on until it is.</p>
+          )}
+          <Button className="mt-3" size="sm" onClick={() => go("sso")} disabled={disabled || (domainsKnown && !domainVerified && !connected)} data-testid="sign-in-connect-sso">
             {connected ? "Review your sign-in" : "Connect your sign-in"} <ArrowUpRightIcon data-icon="inline-end" />
           </Button>
         </Panel>
 
-        <Panel title="2. Keep people in step automatically (optional)" testId="sign-in-step-directory">
+        <Panel title="3. Keep people in step automatically (optional)" testId="sign-in-step-directory">
           <StepState done={directory?.state === "active"} label={directory ? (DIRECTORY_STATE[directory.state] ?? directory.state) : undefined} />
           <p className="mt-2 text-sm text-muted-foreground">
             Connect your directory so new joiners can sign in straight away and leavers lose access the day they leave. You can also choose which groups become admins, sponsors and champions here. Without it, people appear the first time they sign in and you remove leavers by hand.
@@ -128,9 +148,9 @@ function Steps({ s, go, pending }: { s: SignInStatus; go: (intent: "sso" | "dsyn
           </Button>
         </Panel>
 
-        <Panel title="3. Who gets which role" testId="sign-in-step-roles">
+        <Panel title="4. Who gets which role" testId="sign-in-step-roles">
           <p className="text-sm text-muted-foreground">
-            Everyone who signs in can learn. To give people more, put them in a group in your provider and assign that group a role during step 2: <span className="font-medium text-foreground">activate-admin</span> runs Activate for your company, <span className="font-medium text-foreground">activate-sponsor</span> sees company-wide results, <span className="font-medium text-foreground">activate-champion</span> supports a team. You can also change anyone&apos;s role under Teams &amp; People.
+            Everyone who signs in can learn. To give people more, put them in a group in your provider and assign that group a role during step 3: <span className="font-medium text-foreground">activate-admin</span> runs Activate for your company, <span className="font-medium text-foreground">activate-sponsor</span> sees company-wide results, <span className="font-medium text-foreground">activate-champion</span> supports a team. You can also change anyone&apos;s role under Teams &amp; People.
           </p>
         </Panel>
       </div>

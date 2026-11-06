@@ -1,5 +1,5 @@
 name: E2E stack
-description: Build the API, web and MCP app, start them against the job's Postgres (and Keycloak in oidc mode), then run Playwright.
+description: Build the API, web and MCP app, start them against the job's Postgres and Keycloak, then run Playwright.
 inputs:
   auth:
     description: workos | oidc
@@ -34,8 +34,9 @@ runs:
         yarn --cwd frontend build
         cp -r frontend/.next/static frontend/.next/standalone/.next/static
         cp -r frontend/public frontend/.next/standalone/public
+    # OIDC mode: Activate's identity provider. WorkOS mode: the client's identity provider that the
+    # identity lifecycle test connects through WorkOS's setup pages.
     - name: Keycloak with the activate-test realm
-      if: inputs.auth == 'oidc'
       shell: bash
       run: ./api/test/keycloak/start.sh
     - name: WorkOS credentials for the API and the Playwright token helper

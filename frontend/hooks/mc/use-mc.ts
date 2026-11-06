@@ -74,13 +74,15 @@ export function useLicenseMutations() {
   const install = useMutation({ mutationFn: (license: string) => api.post<LicenseState>("/api/admin/license", { license }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "license"] }) })
   return { install }
 }
+/** Which WorkOS setup page to open. */
+export type SetupIntent = "sso" | "dsync" | "domain_verification"
 /** How the company signs in. `fresh` re-asks WorkOS (after returning from its setup pages). */
 export const useSignInStatus = (enabled = true, fresh = false) =>
   useQuery({ queryKey: ["org", "sign-in", fresh], queryFn: () => api.get<SignInStatus>(`/api/org/sign-in${fresh ? "?fresh=1" : ""}`), enabled, staleTime: 5 * 60_000 })
 export function useSignInMutations() {
   const qc = useQueryClient()
   /** A WorkOS setup link, made at click time; the caller sends the browser straight to it. */
-  const setupLink = useMutation({ mutationFn: (intent: "sso" | "dsync") => api.post<{ url: string; intent: "sso" | "dsync" }>("/api/org/sign-in/setup-link", { intent }) })
+  const setupLink = useMutation({ mutationFn: (intent: SetupIntent) => api.post<{ url: string; intent: SetupIntent }>("/api/org/sign-in/setup-link", { intent }) })
   const inviteAdmin = useMutation({
     mutationFn: (body: { email: string; name?: string }) => api.post<AdminInviteResult>("/api/org/sign-in/admins", body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["org", "sign-in"] }),
