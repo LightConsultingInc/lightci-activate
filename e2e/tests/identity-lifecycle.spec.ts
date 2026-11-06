@@ -113,6 +113,16 @@ test.describe("identity lifecycle: invite, set up, switch to single sign-on", ()
     const res = await request.get(`${API_URL}/api/auth/me`, { headers: { authorization: `Bearer ${accessToken}` } })
     expect(res.status()).toBe(403)
     expect(((await res.json()) as { detail: string }).detail).toMatch(/still setting up sign-in/)
+
+    // An account off the company's domains, even inside its WorkOS organisation, never gets in.
+    const outsiderEmail = `outsider-${stamp}@elsewhere-${stamp}.example`
+    const outsiderId = await createWorkosUser(outsiderEmail, password)
+    cleanup.push(() => workos("DELETE", `/user_management/users/${outsiderId}`))
+    await workos("POST", "/user_management/organization_memberships", { user_id: outsiderId, organization_id: workosOrgId })
+    const outsider = await passwordSession(outsiderEmail, password)
+    const off = await request.get(`${API_URL}/api/auth/me`, { headers: { authorization: `Bearer ${outsider.accessToken}` } })
+    expect(off.status()).toBe(403)
+    expect(((await off.json()) as { detail: string }).detail).toMatch(/isn't on your company's email domain/)
   })
 
   test("the admin verifies the domain and connects their identity provider, all from Activate", async ({ browser }) => {
@@ -179,6 +189,13 @@ test.describe("identity lifecycle: invite, set up, switch to single sign-on", ()
       .toBe(401)
     const refused = await request.get(`${API_URL}/api/auth/me`, { headers: { authorization: `Bearer ${adminToken}` } })
     expect(((await refused.json()) as { detail: string }).detail).toMatch(/single sign-on/)
+    // The Claude connector refuses it too, with the OAuth discovery header so Claude signs in again (now through SSO).
+    const mcp = await request.post(`${API_URL}/mcp`, {
+      headers: { authorization: `Bearer ${adminToken}`, "content-type": "application/json", accept: "application/json, text/event-stream" },
+      data: { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "lifecycle", version: "1" } } },
+    })
+    expect(mcp.status()).toBe(401)
+    expect(mcp.headers()["www-authenticate"]).toMatch(/resource_metadata=/)
 
     // The browser still holding the setup-time password session is signed out and told why.
     expect(setupBrowserState).toBeTruthy()

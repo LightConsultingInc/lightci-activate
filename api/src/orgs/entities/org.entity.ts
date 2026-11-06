@@ -17,6 +17,8 @@ export interface ComplianceBoundary {
 /** How sign-ins from this org's identity provider become Activate roles (see auth/role-mapping.ts). */
 export interface IdentitySettings {
   roleMapping?: Partial<Record<'admin' | 'sponsor' | 'champion', string[]>>;
+  /** When the company was first seen on single sign-on; from then on only SSO sessions are accepted. */
+  ssoSince?: string;
 }
 
 export interface OrgSettings {

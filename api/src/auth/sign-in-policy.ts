@@ -1,36 +1,53 @@
 /**
  * How a company signs in, in two phases.
  *
- * `setup`: the company exists in WorkOS but no single sign-on connection is active yet. Only
- * people invited in advance (typically the IT admin who will connect the identity provider)
- * may get in, with whatever WorkOS's hosted sign-in offers them (a password or an emailed
- * code). Nobody else from the company can join on their own.
+ * `setup`: the company exists in WorkOS but no single sign-on connection has ever been active.
+ * Only people invited in advance (typically the IT admin who will connect the identity provider)
+ * may get in, with whatever WorkOS's hosted sign-in offers them (a password or an emailed code).
+ * Nobody else from the company can join on their own.
  *
- * `sso`: at least one connection is active. Every session must come through single sign-on;
- * a password or code session is refused even for people who used one during setup.
+ * `sso`: a connection is, or once was, active. Every session must have signed in with single
+ * sign-on; a password or code session is refused even for people who used one during setup.
+ * The move is one-way: switching the connection off later does not reopen other sign-ins.
  *
- * `unknown` means WorkOS could not be asked and nothing was cached; callers decide how to fail.
+ * `unknown`: WorkOS could not be asked and nothing is known. Treated as strictly as `sso` for
+ * sessions and as strictly as `setup` for newcomers, so an outage never opens a door.
  */
 export type SignInPhase = 'setup' | 'sso' | 'unknown';
 
-/** Session methods accepted once a company is on single sign-on. Impersonation is WorkOS support access. */
+/** Session methods accepted once a company is past setup. Impersonation is WorkOS support access. */
 const SSO_PHASE_METHODS = new Set(['sso', 'impersonation']);
 
-export function phaseFromConnections(active: number | null): SignInPhase {
+export function phaseFromConnections(
+  active: number | null,
+  ssoSince?: string | null,
+): SignInPhase {
+  if (ssoSince) return 'sso';
   if (active === null) return 'unknown';
   return active > 0 ? 'sso' : 'setup';
 }
 
-/** Whether a session authenticated with `method` may act in a company in `phase`. */
+/** Whether a session that signed in with `method` (null: not known) may act in a company in `phase`. */
 export function sessionAllowed(
   phase: SignInPhase,
   method: string | null,
 ): boolean {
-  if (phase !== 'sso') return true;
-  // A session WorkOS cannot describe is not refused on that alone: the token is valid and
-  // signed; refusing would lock everyone out whenever the sessions API is unreachable.
-  if (method === null) return true;
-  return SSO_PHASE_METHODS.has(method);
+  if (phase === 'setup') return true;
+  return method !== null && SSO_PHASE_METHODS.has(method);
+}
+
+/** Whether someone Activate has never seen may join the company now (else only pre-invited people). */
+export function newcomersMayJoin(phase: SignInPhase): boolean {
+  return phase === 'sso';
+}
+
+/** Whether an address belongs to one of the company's email domains (exact, case-insensitive). */
+export function emailOnDomains(
+  email: string,
+  domains: readonly string[],
+): boolean {
+  const domain = email.trim().toLowerCase().split('@').pop() ?? '';
+  return domains.some((d) => d.trim().toLowerCase() === domain);
 }
 
 /** Why a sign-in was refused, in words a person can act on. */
@@ -39,4 +56,6 @@ export const SIGN_IN_MESSAGES = {
     'Your company now signs in with its own single sign-on. Sign in again with your work account.',
   setupInviteOnly:
     'Your company is still setting up sign-in for Activate. Ask your administrator to invite you, or try again once they have finished.',
+  wrongDomain:
+    "This account isn't on your company's email domain, so it can't sign in to your company's Activate. Sign in with your work email address.",
 } as const;

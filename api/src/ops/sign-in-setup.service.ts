@@ -100,7 +100,7 @@ export class SignInSetupService {
         domains: null,
       };
     // Back from WorkOS: ask again instead of trusting a minute-old answer.
-    if (opts.fresh) this.policy.invalidate(workosOrgId);
+    if (opts.fresh) this.policy.refresh(workosOrgId);
     const [ssoConnections, directories, domains, phase] = await Promise.all([
       this.workos.countActiveConnections(workosOrgId),
       this.workos.listDirectories(workosOrgId),
@@ -116,6 +116,18 @@ export class SignInSetupService {
         directories?.map((d) => ({ type: d.type, state: d.state })) ?? null,
       domains,
     };
+  }
+
+  /**
+   * Just the phase, from the policy's cache: cheap enough for the home page and the banner, which
+   * ask on every load. `none` when the company has no WorkOS organisation; `sso` in OIDC mode.
+   */
+  async phase(orgId: string): Promise<{ phase: SignInStatus['phase'] }> {
+    const org = await this.org(orgId);
+    if (authProvider() === 'oidc') return { phase: 'sso' };
+    if (!org.workosOrganizationId || !this.workos.enabled)
+      return { phase: 'none' };
+    return { phase: await this.policy.phase(org.workosOrganizationId) };
   }
 
   /**
@@ -197,8 +209,10 @@ export class SignInSetupService {
           status: 'invited',
         }),
       );
-    } else if (!person.roles.includes('admin')) {
-      person.roles = ['admin', ...person.roles];
+    } else if (!person.roles.includes('admin') || !person.orgId) {
+      // An existing person (a learner, or someone first seen without a company) becomes an admin of this one.
+      if (!person.roles.includes('admin'))
+        person.roles = ['admin', ...person.roles];
       person.orgId = org.id;
       if (input.name?.trim() && person.name === email.split('@')[0])
         person.name = input.name.trim();

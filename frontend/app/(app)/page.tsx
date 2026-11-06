@@ -12,7 +12,7 @@ export default async function Page() {
   // A company admin whose company is still connecting its sign-in (usually the IT admin LightCI
   // invited for exactly that) goes straight to it; onboarding as a learner can wait.
   if (me?.user?.roles?.includes("admin") && me.org && !me.org.isDemo) {
-    const signIn = await api.get<SignInStatus>("/api/org/sign-in").catch(() => null)
+    const signIn = await api.get<{ phase: SignInStatus["phase"] }>("/api/org/sign-in/phase").catch(() => null)
     if (signIn?.phase === "setup") redirect("/admin/sign-in")
   }
   // Only people who belong to a client org are onboarded; leads without a client stay on the home page.

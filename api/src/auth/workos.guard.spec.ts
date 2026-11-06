@@ -1,4 +1,9 @@
-import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpStatus,
+  type ExecutionContext,
+} from '@nestjs/common';
+import { SignInRefusedException } from './sign-in-policy.service';
 import type { Person } from '../orgs/entities/person.entity';
 import { WorkosGuard, resolveOrgId } from './workos.guard';
 
@@ -30,7 +35,10 @@ describe('resolveOrgId (T0.4)', () => {
 });
 
 describe('WorkosGuard.canActivate (T0.4)', () => {
-  function build(user: Person | null, isPublic = false) {
+  function build(
+    user: Person | null | SignInRefusedException,
+    isPublic = false,
+  ) {
     const reflector = { getAllAndOverride: () => isPublic } as never;
     const people = { findByEmail: () => Promise.resolve(null) } as never;
     const workos = { enabled: false } as never;
@@ -38,7 +46,10 @@ describe('WorkosGuard.canActivate (T0.4)', () => {
     const policy = {} as never;
     const guard = new WorkosGuard(reflector, people, workos, moduleRef, policy);
     // Short-circuit token resolution: the JWT path is covered in WS1 identity tests.
-    guard.resolveUser = () => Promise.resolve(user);
+    guard.resolveUser = () =>
+      user instanceof SignInRefusedException
+        ? Promise.reject(user)
+        : Promise.resolve(user);
     const req: Record<string, unknown> = {
       headers: { authorization: 'Bearer t', 'x-activate-org': 'org-b' },
     };
@@ -75,5 +86,25 @@ describe('WorkosGuard.canActivate (T0.4)', () => {
     const { guard, ctx, req } = build(person({ roles: ['lead'], orgId: null }));
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(req.orgId).toBe('org-b');
+  });
+
+  it('passes a sign-in policy refusal through on protected routes, so the person sees why', async () => {
+    const refusal = new SignInRefusedException(
+      'use SSO',
+      HttpStatus.UNAUTHORIZED,
+    );
+    const { guard, ctx } = build(refusal);
+    await expect(guard.canActivate(ctx)).rejects.toBe(refusal);
+  });
+
+  it('runs a public route anonymously on a refused token and keeps the refusal on the request', async () => {
+    const refusal = new SignInRefusedException(
+      'use SSO',
+      HttpStatus.UNAUTHORIZED,
+    );
+    const { guard, ctx, req } = build(refusal, true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.user).toBeUndefined();
+    expect(req.signInRefusal).toBe(refusal);
   });
 });

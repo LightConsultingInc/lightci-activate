@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
+import type { AuthedRequest } from './workos.guard';
 import { LookupService, type SignInLookup } from './lookup.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
@@ -106,9 +107,12 @@ export class AuthController {
       'The signed-in person with org, team and rung; { user: null } when signed out.',
   })
   async me(
+    @Req() req: AuthedRequest,
     @CurrentUser() user?: Person,
     @OrgId() scopedOrgId?: string | null,
   ): Promise<MeResponse> {
+    // A token the company's sign-in policy refused: say why, so the web app can tell the person.
+    if (req.signInRefusal) throw req.signInRefusal;
     if (!user) return { user: null, org: null, team: null, orgs: [] };
     const isLead = user.roles.includes('lead');
     const orgId = scopedOrgId ?? user.orgId;

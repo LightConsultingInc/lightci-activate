@@ -36,6 +36,15 @@ export class SignInSetupController {
     });
   }
 
+  @Get('phase')
+  @ApiOperation({
+    summary:
+      'Just the sign-in phase (setup, sso, unknown, none), from cache: for the home page and the banner.',
+  })
+  phase(@OrgId() orgId: string) {
+    return this.setup.phase(orgId);
+  }
+
   @Post('setup-link')
   @ApiOperation({
     summary:

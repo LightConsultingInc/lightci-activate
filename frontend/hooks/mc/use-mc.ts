@@ -79,6 +79,9 @@ export type SetupIntent = "sso" | "dsync" | "domain_verification"
 /** How the company signs in. `fresh` re-asks WorkOS (after returning from its setup pages). */
 export const useSignInStatus = (enabled = true, fresh = false) =>
   useQuery({ queryKey: ["org", "sign-in", fresh], queryFn: () => api.get<SignInStatus>(`/api/org/sign-in${fresh ? "?fresh=1" : ""}`), enabled, staleTime: 5 * 60_000 })
+/** Just the sign-in phase, from the API's cache (the banner asks on every page). */
+export const useSignInPhase = (enabled = true) =>
+  useQuery({ queryKey: ["org", "sign-in", "phase"], queryFn: () => api.get<{ phase: SignInStatus["phase"] }>("/api/org/sign-in/phase"), enabled, staleTime: 5 * 60_000 })
 export function useSignInMutations() {
   const qc = useQueryClient()
   /** A WorkOS setup link, made at click time; the caller sends the browser straight to it. */

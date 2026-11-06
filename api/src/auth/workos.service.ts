@@ -115,8 +115,12 @@ export class WorkosService {
   /** Active SSO connections on the organisation; null when WorkOS cannot be asked. */
   async countActiveConnections(organizationId: string): Promise<number | null> {
     try {
-      const page = await this.workos.sso.listConnections({ organizationId });
-      return page.data.filter((c) => c.state === 'active').length;
+      const page = await this.workos.sso.listConnections({
+        organizationId,
+        limit: 100,
+      });
+      const all = await page.autoPagination();
+      return all.filter((c) => c.state === 'active').length;
     } catch (e) {
       this.logger.warn(
         `Could not list SSO connections for ${organizationId}: ${
@@ -185,7 +189,9 @@ export class WorkosService {
       const page = await this.workos.userManagement.listSessions(userId, {
         limit: 100,
       });
-      const session = page.data.find((s) => s.id === sessionId);
+      const session = (await page.autoPagination()).find(
+        (s) => s.id === sessionId,
+      );
       return session ? session.authMethod : null;
     } catch (e) {
       this.logger.warn(

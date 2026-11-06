@@ -73,7 +73,11 @@ describeLive('WorkOS provisioning against the test environment', () => {
     await expect(service.listDirectories(orgId as string)).resolves.toEqual([]);
     const domains = await service.organizationDomains(orgId as string);
     expect(domains).toEqual([{ domain, state: 'pending' }]);
-    const policy = new SignInPolicyService(service, {} as never);
+    // No Activate org row: the phase comes from WorkOS alone.
+    const policy = new SignInPolicyService(service, {
+      findOne: () => Promise.resolve(null),
+      query: () => Promise.resolve(),
+    } as never);
     await expect(policy.phase(orgId as string)).resolves.toBe('setup');
   }, 30_000);
 

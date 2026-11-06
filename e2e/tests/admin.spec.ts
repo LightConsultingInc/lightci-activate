@@ -177,7 +177,7 @@ test.describe("company admin", () => {
 test.describe("company sign-in setup", () => {
   test.use({ role: "sponsor" })
 
-  test("shows the company is setting up, lists its admins, and sends the admin straight to WorkOS", async ({ page }) => {
+  test("shows the company is setting up, lists its admins, and sends the admin straight to WorkOS to verify the domain", async ({ page }) => {
     await page.goto("/admin/sign-in")
     await expect(page.getByTestId("admin-tab-sign-in")).toHaveAttribute("aria-current", "page")
     if (process.env.E2E_AUTH === "oidc") {
@@ -189,10 +189,13 @@ test.describe("company sign-in setup", () => {
     await expect(page.getByTestId("sign-in-phase")).toHaveText("Setting up")
     await expect(page.getByTestId("sign-in-admins")).toContainText("elena.marsh@meridianwealth.demo")
     await expect(page.getByTestId("sign-in-domains")).toContainText("meridianwealth.demo")
+    // WorkOS only switches on single sign-on for a verified domain: until then the SSO step waits.
+    await expect(page.getByTestId("sign-in-needs-domain")).toBeVisible()
+    await expect(page.getByTestId("sign-in-connect-sso")).toBeDisabled()
     // The link is made at click time and the browser goes straight to it, so it cannot expire on the way.
     await Promise.all([
       page.waitForURL((u) => /workos\.com$/.test(u.hostname), { timeout: 30_000 }),
-      page.getByTestId("sign-in-connect-sso").click(),
+      page.getByTestId("sign-in-verify-domain").click(),
     ])
   })
 
