@@ -11,9 +11,7 @@ import {
 
 class PortalLinkDto {
   @IsIn(['sso', 'dsync', 'domain_verification']) intent:
-    | 'sso'
-    | 'dsync'
-    | 'domain_verification';
+    'sso' | 'dsync' | 'domain_verification';
   @IsOptional() @IsString() returnUrl?: string;
 }
 import { CurrentUser, Roles } from '../common/decorators';

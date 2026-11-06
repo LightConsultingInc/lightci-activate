@@ -7,9 +7,7 @@ import { SignInSetupService } from './sign-in-setup.service';
 
 class SetupLinkDto {
   @IsIn(['sso', 'dsync', 'domain_verification']) intent:
-    | 'sso'
-    | 'dsync'
-    | 'domain_verification';
+    'sso' | 'dsync' | 'domain_verification';
 }
 
 class InviteAdminDto {
