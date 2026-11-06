@@ -92,7 +92,7 @@ describeLive('WorkOS provisioning against the test environment', () => {
       organizationId: orgId as string,
     });
     const auth = await sdk.userManagement.authenticateWithPassword({
-      clientId: process.env.WORKOS_CLIENT_ID as string,
+      clientId: process.env.WORKOS_CLIENT_ID,
       email,
       password,
     });
