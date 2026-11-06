@@ -52,7 +52,9 @@ export class SignInSetupService {
     @InjectRepository(AuditLog) private readonly audit: Repository<AuditLog>,
   ) {}
 
-  private async org(orgId: string): Promise<Org> {
+  private async org(orgId: string | null | undefined): Promise<Org> {
+    // A lead with no company picked has no org to act in; never fall through to "any org".
+    if (!orgId) throw new BadRequestException('Pick a company first.');
     const org = await this.orgs.findOne({ where: { id: orgId } });
     if (!org) throw new NotFoundException('Org not found');
     return org;

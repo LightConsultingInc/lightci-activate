@@ -5,7 +5,7 @@ import { api } from "@/lib/api"
 import type { LicenseState,
   Adoption, Assignment, Backlog, Cost, CostInput, Escalation, Governance, Groups, GroupsCompare, IntegrationKind, IntegrationSummary,
   Journey, LeadClient, LeadClientDetail, LeadQueue, MarketplaceStatus, McPeople, McSkills, Org, Person, Readout, Setup, Team,
-  UpdateStatus,
+  UpdateStatus, SignInStatus, AdminInviteResult,
 } from "./types"
 
 const qs = (params: Record<string, string | number | boolean | null | undefined>) => {
@@ -74,6 +74,19 @@ export function useLicenseMutations() {
   const install = useMutation({ mutationFn: (license: string) => api.post<LicenseState>("/api/admin/license", { license }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "license"] }) })
   return { install }
 }
+/** How the company signs in. `fresh` re-asks WorkOS (after returning from its setup pages). */
+export const useSignInStatus = (enabled = true, fresh = false) =>
+  useQuery({ queryKey: ["org", "sign-in", fresh], queryFn: () => api.get<SignInStatus>(`/api/org/sign-in${fresh ? "?fresh=1" : ""}`), enabled, staleTime: 5 * 60_000 })
+export function useSignInMutations() {
+  const qc = useQueryClient()
+  /** A WorkOS setup link, made at click time; the caller sends the browser straight to it. */
+  const setupLink = useMutation({ mutationFn: (intent: "sso" | "dsync") => api.post<{ url: string; intent: "sso" | "dsync" }>("/api/org/sign-in/setup-link", { intent }) })
+  const inviteAdmin = useMutation({
+    mutationFn: (body: { email: string; name?: string }) => api.post<AdminInviteResult>("/api/org/sign-in/admins", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["org", "sign-in"] }),
+  })
+  return { setupLink, inviteAdmin }
+}
 export const useIntegrations = () => useQuery({ queryKey: ["org", "integrations"], queryFn: () => api.get<IntegrationSummary[]>("/api/org/integrations") })
 export function useIntegrationMutations() {
   const qc = useQueryClient()
@@ -124,6 +137,7 @@ export function useMarketplaceMutations() {
 // ─────────────── LightCI lead ───────────────
 export const useLeadQueue = () => useQuery({ queryKey: ["lead", "queue"], queryFn: () => api.get<LeadQueue>("/api/lead/queue"), refetchInterval: 60_000 })
 export const useLeadClients = () => useQuery({ queryKey: ["lead", "clients"], queryFn: () => api.get<LeadClient[]>("/api/lead/clients") })
+export const useLeadSignIn = (id: string) => useQuery({ queryKey: ["lead", "clients", id, "sign-in"], queryFn: () => api.get<SignInStatus>(`/api/lead/clients/${id}/sign-in`) })
 export const useLeadClient = (id: string) => useQuery({ queryKey: ["lead", "clients", id], queryFn: () => api.get<LeadClientDetail>(`/api/lead/clients/${id}`) })
 export function useLeadMutations() {
   const qc = useQueryClient()
@@ -137,7 +151,12 @@ export function useLeadMutations() {
   const portalLink = useMutation({
     mutationFn: ({ id, intent }: { id: string; intent: "sso" | "dsync" }) => api.post<{ url: string; intent: "sso" | "dsync" }>(`/api/lead/clients/${id}/portal-link`, { intent, returnUrl: window.location.origin }),
   })
+  /** Pre-create a client admin and have WorkOS email them the invitation; they connect sign-in themselves. */
+  const inviteAdmin = useMutation({
+    mutationFn: ({ id, email, name }: { id: string; email: string; name?: string }) => api.post<AdminInviteResult>(`/api/lead/clients/${id}/admins`, { email, name }),
+    onSuccess: done,
+  })
   const resolve = useMutation({ mutationFn: ({ id, resolution }: { id: string; resolution: string }) => api.post<Escalation>(`/api/escalations/${id}/resolve`, { resolution }), onSuccess: done })
   const assign = useMutation({ mutationFn: ({ id, personId }: { id: string; personId: string }) => api.post<Escalation>(`/api/escalations/${id}/assign`, { personId }), onSuccess: done })
-  return { provision, portalLink, resolve, assign }
+  return { provision, portalLink, inviteAdmin, resolve, assign }
 }

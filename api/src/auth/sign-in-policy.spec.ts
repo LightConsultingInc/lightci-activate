@@ -77,6 +77,17 @@ describe('SignInPolicyService', () => {
     expect(await fresh.service.phase('org_w')).toBe('unknown');
   });
 
+  it('reports no WorkOS organisation for a demo org, so the policy skips it', async () => {
+    const { service, orgs } = build([0], {});
+    orgs.findOne.mockResolvedValueOnce({
+      id: 'org-d',
+      workosOrganizationId: 'org_d',
+      isDemo: true,
+    } as never);
+    await expect(service.workosOrganizationFor('org-d')).resolves.toBeNull();
+    await expect(service.workosOrganizationFor('org-1')).resolves.toBe('org_w');
+  });
+
   it('asks WorkOS for a session method once', async () => {
     const { service, workos } = build([1], { sess_1: 'password' });
     expect(await service.sessionMethod('user_1', 'sess_1')).toBe('password');
@@ -100,13 +111,18 @@ describe('WorkosGuard sign-in policy', () => {
     phase: 'setup' | 'sso' | 'unknown';
     method?: string | null;
     known?: Person | null;
+    demo?: boolean;
   }) {
     const policy = {
       phase: jest.fn(() => Promise.resolve(opts.phase)),
       sessionMethod: jest.fn(() => Promise.resolve(opts.method ?? null)),
       workosOrganizationFor: jest.fn(() => Promise.resolve('org_w')),
       findOrgByWorkosId: jest.fn(() =>
-        Promise.resolve({ id: 'org-1', workosOrganizationId: 'org_w' }),
+        Promise.resolve({
+          id: 'org-1',
+          workosOrganizationId: 'org_w',
+          isDemo: opts.demo ?? false,
+        }),
       ),
     };
     const people = {
@@ -190,6 +206,11 @@ describe('WorkosGuard sign-in policy', () => {
       HttpStatus.FORBIDDEN,
     );
     expect(people.provisionFromWorkos).not.toHaveBeenCalled();
+  });
+
+  it('leaves demo companies alone: their people join with demo passwords', async () => {
+    const { guard } = build({ phase: 'setup', demo: true });
+    await expect(guard.provision('user_1', [], 'org_w')).resolves.toBeTruthy();
   });
 
   it('lets an invited person in during setup, and anyone once on SSO', async () => {

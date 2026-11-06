@@ -12,7 +12,8 @@ const SESSION_CACHE_MAX = 5_000;
 /** A sign-in the policy refuses. The guard lets it through untouched so the person sees why. */
 export class SignInRefusedException extends HttpException {
   constructor(message: string, status: HttpStatus) {
-    super({ status, title: 'Sign-in refused', detail: message }, status);
+    // A string body: the error filter passes it through as the problem detail.
+    super(message, status);
   }
 }
 
@@ -31,7 +32,7 @@ export class SignInPolicyService {
   private readonly methods = new Map<string, string>();
   private readonly orgLinks = new Map<
     string,
-    { workosOrganizationId: string | null; at: number }
+    { workosOrganizationId: string | null; isDemo: boolean; at: number }
   >();
   /** Overridable in tests. */
   now: () => number = () => Date.now();
@@ -62,18 +63,25 @@ export class SignInPolicyService {
     this.phases.delete(workosOrganizationId);
   }
 
-  /** The WorkOS organisation an Activate org is linked to, cached briefly (asked on every request). */
+  /**
+   * The WorkOS organisation an Activate org is linked to, cached briefly (asked on every request).
+   * Demo orgs report none: they sign in with demo passwords on purpose, so the policy skips them.
+   */
   async workosOrganizationFor(orgId: string): Promise<string | null> {
     const cached = this.orgLinks.get(orgId);
     if (cached && this.now() - cached.at < ORG_TTL_MS)
-      return cached.workosOrganizationId;
+      return cached.isDemo ? null : cached.workosOrganizationId;
     const org = await this.orgs.findOne({
       where: { id: orgId },
-      select: { id: true, workosOrganizationId: true },
+      select: { id: true, workosOrganizationId: true, isDemo: true },
     });
-    const workosOrganizationId = org?.workosOrganizationId ?? null;
-    this.orgLinks.set(orgId, { workosOrganizationId, at: this.now() });
-    return workosOrganizationId;
+    const entry = {
+      workosOrganizationId: org?.workosOrganizationId ?? null,
+      isDemo: Boolean(org?.isDemo),
+      at: this.now(),
+    };
+    this.orgLinks.set(orgId, entry);
+    return entry.isDemo ? null : entry.workosOrganizationId;
   }
 
   /** The Activate org linked to a WorkOS organisation, if any. */

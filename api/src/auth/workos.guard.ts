@@ -203,6 +203,7 @@ export class WorkosGuard implements CanActivate {
       const org = await this.policy.findOrgByWorkosId(workosOrgId);
       if (
         org &&
+        !org.isDemo &&
         (await this.policy.phase(workosOrgId)) === 'setup' &&
         !(await this.people.findByEmail(profile.email))
       )

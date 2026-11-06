@@ -172,3 +172,34 @@ test.describe("company admin", () => {
     await expect(page.getByTestId("repo-status")).toContainText(/[1-9]\d* plugins/)
   })
 })
+
+/** Company admin > Sign-in as Elena Marsh: the company connects its own sign-in from here. */
+test.describe("company sign-in setup", () => {
+  test.use({ role: "sponsor" })
+
+  test("shows the company is setting up, lists its admins, and sends the admin straight to WorkOS", async ({ page }) => {
+    await page.goto("/admin/sign-in")
+    await expect(page.getByTestId("admin-tab-sign-in")).toHaveAttribute("aria-current", "page")
+    if (process.env.E2E_AUTH === "oidc") {
+      await expect(page.getByTestId("sign-in-self-hosted")).toBeVisible()
+      return
+    }
+    const view = page.getByTestId("sign-in-view")
+    await expect(view).toHaveAttribute("data-phase", "setup")
+    await expect(page.getByTestId("sign-in-phase")).toHaveText("Setting up")
+    await expect(page.getByTestId("sign-in-admins")).toContainText("elena.marsh@meridianwealth.demo")
+    await expect(page.getByTestId("sign-in-domains")).toContainText("meridianwealth.demo")
+    // The link is made at click time and the browser goes straight to it, so it cannot expire on the way.
+    await Promise.all([
+      page.waitForURL((u) => /workos\.com$/.test(u.hostname), { timeout: 30_000 }),
+      page.getByTestId("sign-in-connect-sso").click(),
+    ])
+  })
+
+  test("the setup checklist points at the Sign-in tab", async ({ page }) => {
+    const status = await api<{ steps: { key: string; done: boolean }[] }>(page, "GET", "/api/org/setup")
+    expect(status.steps.map((s) => s.key)).toContain("sso")
+    await page.goto("/admin/sign-in")
+    await expect(page.getByTestId("sign-in-step-roles")).toContainText("activate-champion")
+  })
+})
