@@ -264,9 +264,16 @@ export class PeopleService {
       person.roles = [...person.roles, 'lead'];
     if (isLead) person.orgId = null;
     else if (!person.orgId && orgId) person.orgId = orgId;
-    // The IdP is the source of truth for mapped roles on every sign-in.
-    if (!isLead && mapping)
+    // The IdP is the source of truth for mapped roles on every sign-in, except that a person
+    // pre-created as an admin keeps admin on their first sign-in (break-glass, as in OIDC mode):
+    // they are usually the one about to connect the IdP that will grant it from then on.
+    if (!isLead && mapping) {
+      const keepAdmin =
+        person.roles.includes('admin') && person.status === 'invited';
       person.roles = applyRoleMapping(person.roles, workosRoles, mapping);
+      if (keepAdmin && !person.roles.includes('admin'))
+        person.roles = ['admin', ...person.roles];
+    }
     person.status = 'active';
     person.lastSeenAt = new Date();
     return repo.save(person);

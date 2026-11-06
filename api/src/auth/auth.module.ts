@@ -19,6 +19,7 @@ import { OAuthService } from './oauth/oauth.service';
 import { AuthController } from './auth.controller';
 import { LookupService } from './lookup.service';
 import { PeopleService } from './people.service';
+import { SignInPolicyService } from './sign-in-policy.service';
 import { WorkosWebhooksController } from './workos-webhooks.controller';
 import { WorkosGuard } from './workos.guard';
 import { WorkosService } from './workos.service';
@@ -42,6 +43,7 @@ import { WorkosService } from './workos.service';
     PeopleService,
     WorkosService,
     LookupService,
+    SignInPolicyService,
     KeysService,
     UpstreamOidcService,
     OAuthService,
@@ -53,6 +55,7 @@ import { WorkosService } from './workos.service';
   exports: [
     PeopleService,
     WorkosService,
+    SignInPolicyService,
     WorkosGuard,
     OAuthService,
     IdentityService,

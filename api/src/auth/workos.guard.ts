@@ -2,18 +2,25 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  HttpStatus,
   Injectable,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ModuleRef, Reflector } from '@nestjs/core';
-import { authProvider } from '../config/env';
+import { authProvider, leadEmailDomains } from '../config/env';
 import { OAuthService } from './oauth/oauth.service';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { IS_PUBLIC } from '../common/decorators';
 import { currentStore, requestContext } from '../common/request-context';
 import type { Person } from '../orgs/entities/person.entity';
 import { PeopleService } from './people.service';
+import { emailDomain } from './email-domains';
+import { SIGN_IN_MESSAGES, sessionAllowed } from './sign-in-policy';
+import {
+  SignInPolicyService,
+  SignInRefusedException,
+} from './sign-in-policy.service';
 import { WorkosService } from './workos.service';
 
 const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
@@ -41,6 +48,8 @@ export function resolveOrgId(
 
 interface WorkosClaims extends JWTPayload {
   org_id?: string;
+  /** WorkOS session id: tells the guard how this session signed in. */
+  sid?: string;
   role?: string;
   roles?: string[];
   permissions?: string[];
@@ -62,6 +71,7 @@ export class WorkosGuard implements CanActivate {
     private readonly people: PeopleService,
     private readonly workos: WorkosService,
     private readonly moduleRef: ModuleRef,
+    private readonly policy: SignInPolicyService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -92,6 +102,8 @@ export class WorkosGuard implements CanActivate {
       try {
         user = await this.resolveBearer(token);
       } catch (error) {
+        // A sign-in the company's policy refuses says why; any other failure is a bad token.
+        if (error instanceof SignInRefusedException) throw error;
         this.logger.debug(
           `Token rejected: ${error instanceof Error ? error.message : String(error)}`,
         );
@@ -148,34 +160,79 @@ export class WorkosGuard implements CanActivate {
       (r): r is string => Boolean(r),
     );
     const existing = await this.people.findByWorkosId(workosUserId);
-    if (existing) {
-      if (
-        !existing.lastSeenAt ||
-        Date.now() - existing.lastSeenAt.getTime() > TOUCH_INTERVAL_MS
-      ) {
-        await this.people.touch(existing);
-        // A fresh token means a fresh view of the person's IdP roles.
-        await this.people.syncRoles(existing, idpRoles);
-      }
-      // A person provisioned before their company existed (or after a demo reset) is linked as soon as the org row appears.
-      if (
-        !existing.orgId &&
-        payload.org_id &&
-        !existing.roles.includes('lead')
-      ) {
-        const linked = await this.people.linkToWorkosOrg(
-          existing,
-          payload.org_id,
-        );
-        if (linked) return linked;
-      }
-      return existing;
+    const person = existing
+      ? await this.refresh(existing, idpRoles, payload.org_id)
+      : await this.provision(workosUserId, idpRoles, payload.org_id ?? null);
+    await this.enforcePhase(person, workosUserId, payload.sid);
+    return person;
+  }
+
+  private async refresh(
+    existing: Person,
+    idpRoles: string[],
+    workosOrgId: string | undefined,
+  ): Promise<Person> {
+    if (
+      !existing.lastSeenAt ||
+      Date.now() - existing.lastSeenAt.getTime() > TOUCH_INTERVAL_MS
+    ) {
+      await this.people.touch(existing);
+      // A fresh token means a fresh view of the person's IdP roles.
+      await this.people.syncRoles(existing, idpRoles);
     }
+    // A person provisioned before their company existed (or after a demo reset) is linked as soon as the org row appears.
+    if (!existing.orgId && workosOrgId && !existing.roles.includes('lead')) {
+      const linked = await this.people.linkToWorkosOrg(existing, workosOrgId);
+      if (linked) return linked;
+    }
+    return existing;
+  }
+
+  /**
+   * First sign-in. While the person's company is still setting up sign-in, only people
+   * invited in advance get in: an unexpected address would otherwise join on its own.
+   */
+  private async provision(
+    workosUserId: string,
+    idpRoles: string[],
+    workosOrgId: string | null,
+  ): Promise<Person> {
     const profile = await this.workos.getUser(workosUserId);
-    return this.people.provisionFromWorkos(
-      profile,
-      payload.org_id ?? null,
-      idpRoles,
-    );
+    const isLead = leadEmailDomains().includes(emailDomain(profile.email));
+    if (workosOrgId && !isLead) {
+      const org = await this.policy.findOrgByWorkosId(workosOrgId);
+      if (
+        org &&
+        (await this.policy.phase(workosOrgId)) === 'setup' &&
+        !(await this.people.findByEmail(profile.email))
+      )
+        throw new SignInRefusedException(
+          SIGN_IN_MESSAGES.setupInviteOnly,
+          HttpStatus.FORBIDDEN,
+        );
+    }
+    return this.people.provisionFromWorkos(profile, workosOrgId, idpRoles);
+  }
+
+  /**
+   * Once a company is on single sign-on, a session that signed in any other way (a password or
+   * an emailed code used during setup) is refused. Leads are LightCI's own staff and exempt.
+   */
+  private async enforcePhase(
+    person: Person,
+    workosUserId: string,
+    sessionId: string | undefined,
+  ): Promise<void> {
+    if (!sessionId || !person.orgId || person.roles.includes('lead')) return;
+    const workosOrgId = await this.policy.workosOrganizationFor(person.orgId);
+    if (!workosOrgId) return;
+    const phase = await this.policy.phase(workosOrgId);
+    if (phase !== 'sso') return;
+    const method = await this.policy.sessionMethod(workosUserId, sessionId);
+    if (!sessionAllowed(phase, method))
+      throw new SignInRefusedException(
+        SIGN_IN_MESSAGES.ssoRequired,
+        HttpStatus.UNAUTHORIZED,
+      );
   }
 }

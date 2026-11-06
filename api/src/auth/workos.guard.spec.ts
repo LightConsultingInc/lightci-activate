@@ -35,7 +35,8 @@ describe('WorkosGuard.canActivate (T0.4)', () => {
     const people = { findByEmail: () => Promise.resolve(null) } as never;
     const workos = { enabled: false } as never;
     const moduleRef = { get: () => ({}) } as never;
-    const guard = new WorkosGuard(reflector, people, workos, moduleRef);
+    const policy = {} as never;
+    const guard = new WorkosGuard(reflector, people, workos, moduleRef, policy);
     // Short-circuit token resolution: the JWT path is covered in WS1 identity tests.
     guard.resolveUser = () => Promise.resolve(user);
     const req: Record<string, unknown> = {
