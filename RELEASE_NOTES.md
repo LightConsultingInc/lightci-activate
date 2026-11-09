@@ -4,6 +4,22 @@ Each release has a section headed by its exact tag. The release workflow refuses
 without one. Operators read these before upgrading: new configuration keys, changed defaults,
 migrations, and anything they must do are listed first.
 
+## v1.0.5
+
+**Operator actions**
+None.
+
+**New configuration keys**
+None.
+
+**Migrations**
+None.
+
+**Security advisory:** no
+
+**Behaviour changes**
+- Company admin > Sign-in: "Who gets which role" now points to where group-to-role mapping actually lives (WorkOS's single sign-on setup, "Groups and role assignments"), says to send group membership in the sign-in, and notes that Microsoft Entra identifies groups by Object ID.
+
 ## v1.0.4
 
 Fixes from the admin, champion and sponsor part of the EU production walkthrough.

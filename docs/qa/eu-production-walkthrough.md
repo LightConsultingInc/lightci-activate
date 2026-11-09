@@ -126,6 +126,7 @@ the QA inbox and its links opened in the same browser.
 | F27 | Champion (E) | Team page, review queue, approval queue and person page full of internal terms (Rung, Scorer, Grader, rubric, Coach notes, Mastery avg, fork, boundary, RMD letters); 0% / 0.0h figures with no data; the team backlog was empty though its members had mapped workflows; a champion with no team saw an error. | Plain-language pass, unmeasured figures hidden, backlog includes members' workflows, plain "not on a team yet" (1.0.4). |
 | F28 | Person page (E) | "Hours back / wk 9.8h" showed the starting time as time saved; "Judgement 0%" (a retired metric); every skill below the person's starting level flagged red as "Decayed" on day one. | Time saved shows only once measured; judgement removed; only something once learned can be flagged as fading (1.0.4). |
 | F29 | Admin pages (C1, C4, C5) | Internal agent names on Integrations & Keys, literal `<client>` / `<firm>` placeholders, "local-nested" mode, and a License page describing "your self-hosted Activate" on the hosted service. | Plain wording (1.0.4). Entering a deliberately wrong key on production was not done (no keys are typed into production pages); the automated tests cover it. |
+| F30 | Sign-in setup (B6) | Step 4 told admins to map groups to roles "during step 3" (directory setup); the mapping is in WorkOS's single sign-on setup page. An Entra admin also needs to know to send a group claim and that groups are identified by Object ID. | Wording corrected (1.0.5). |
 
 
 ## Housekeeping
@@ -133,3 +134,18 @@ the QA inbox and its links opened in the same browser.
 - A first QA company, "LightCI QA (EU)" on `qa-activate.lciventure.com`, was created by a server task
   before the browser-only rule was set. It is unused; its TXT record on `qa-activate.lciventure.com`
   and the company itself should be removed.
+
+
+## Results after 1.0.4 (2026-11-09, EU production)
+
+- B5 Pass: an admin refused for a pre-SSO password session signs back in through the company's sign-in (no loop); WorkOS shows its "Verify it's you" approval once.
+- B6 Pass: with Role assignment on in the WorkOS environment, Iris mapped activate-admin / sponsor / champion in WorkOS's setup page; Sam arrived as sponsor, Chloe as champion, Iris as admin.
+- C2 Pass: policy and boundary saved as version 1; the policy shows on the onboarding consent screen.
+- C3 Pass: team created, champion set, people moved; levels and "last in Activate" shown.
+- C1 Partial: keys not entered on production by policy (no keys typed into production pages); the bad-key path is covered by E2E.
+- C4/C5/C6 Pass: marketplace status, License wording, setup checklist reflects each step.
+- D Pass: two learners onboarded (L1 and L2 placements), tailored lessons, graded practice moving progress; access limits hold.
+- E Pass: champion team page, roster with real levels and baselines, backlog with members' workflows, plain wording; person page without false figures.
+- F Pass: Mission Control pages load this company's data only; with no Claude usage feed the pages say so instead of showing zeros; a readout generated from real data.
+- H Pass: leaver switched off is refused at once (open session and fresh sign-in), switched back on gets in; phone width; lead console numbers match the walkthrough.
+- G Not run: the Claude connector needs a Claude workspace to add it to.
