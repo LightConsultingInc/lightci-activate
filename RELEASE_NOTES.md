@@ -4,6 +4,31 @@ Each release has a section headed by its exact tag. The release workflow refuses
 without one. Operators read these before upgrading: new configuration keys, changed defaults,
 migrations, and anything they must do are listed first.
 
+## v1.0.1
+
+Self-serve sign-in setup for WorkOS installs, and stricter sign-in rules.
+
+**Operator actions**
+- WorkOS installs: run `WORKOS_API_KEY=… node scripts/workos-roles.mjs` once per WorkOS environment to create the `activate-admin`, `activate-sponsor` and `activate-champion` roles customers assign their groups to.
+- WorkOS installs: subscribe the webhook endpoint to `connection.activated`, `connection.deactivated`, `connection.deleted`, `dsync.activated` and `dsync.deleted` as well, so a company's move to single sign-on takes effect at once (otherwise within a minute).
+- Nothing to do for OIDC installs.
+
+**New configuration keys**
+None.
+
+**Migrations**
+None. The move to single sign-on is recorded in the existing `orgs.settings` JSON (`identity.ssoSince`).
+
+**Security advisory:** no
+
+**Behaviour changes**
+- Company admin > Sign-in: the company's admin verifies its email domain, connects its identity provider and, optionally, its directory, each through a WorkOS setup page opened at click time. A banner reminds admins until single sign-on is on; an admin whose company is still setting up lands on this page instead of onboarding.
+- Lead console: invite a client's admin by email; WorkOS sends the invitation.
+- Sign-in phases (WorkOS mode). Until a company's single sign-on is active, only people invited in advance can sign in. Once it is active (recorded, and never undone by switching the connection off), every session must have signed in through single sign-on; password and emailed-code sessions are refused, including Claude connector tokens, which are asked to sign in again. When WorkOS cannot be reached the strictest rule applies. A sign-in through a company's organisation must use an address on the company's email domains. LightCI leads and demo organisations are exempt.
+- A refused session is signed out and the login page says why.
+- `GET /api/auth/lookup` can return `mode: "setup"`.
+- Admins pre-created as admins keep admin on their first WorkOS sign-in.
+
 ## v1.0.0
 
 First self-hosted release.
