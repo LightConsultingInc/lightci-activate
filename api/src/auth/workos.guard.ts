@@ -222,6 +222,7 @@ export class WorkosGuard implements CanActivate {
     idpRoles: string[],
     workosOrgId: string | undefined,
   ): Promise<Person> {
+    existing = await this.people.ensureLead(existing);
     if (
       !existing.lastSeenAt ||
       Date.now() - existing.lastSeenAt.getTime() > TOUCH_INTERVAL_MS
