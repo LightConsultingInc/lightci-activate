@@ -211,6 +211,17 @@ test.describe("identity lifecycle: invite, set up, switch to single sign-on", ()
     await stalePage.goto("/admin/sign-in")
     await expect(stalePage).toHaveURL(/\/login\?authError=sso/, { timeout: 30_000 })
     await expect(stalePage.getByTestId("login-error")).toContainText("now signs in with its own single sign-on")
+    // Signing in again from that same browser goes to their identity provider and gets in. (Through the
+    // hosted AuthKit page WorkOS reused the old password session, and the policy refused it in a loop.)
+    await stalePage.getByTestId("login-email").fill(adminEmail)
+    await stalePage.getByTestId("login-continue").click()
+    // This browser may still hold the identity provider's own session from the setup test, in which case
+    // Keycloak lets them straight through without its form.
+    await stalePage.waitForURL((u) => u.port === "8089" || u.pathname.includes("/sso/signin-consent") || (u.port === "3000" && !u.pathname.startsWith("/login")), { timeout: 45_000 })
+    if (new URL(stalePage.url()).port === "8089" && (await stalePage.locator("#username").isVisible().catch(() => false))) await keycloakSignIn(stalePage, adminEmail, idpPassword)
+    else if (stalePage.url().includes("/sso/signin-consent")) await stalePage.getByRole("button").filter({ hasText: /approve|continue|confirm|allow/i }).first().click()
+    await stalePage.waitForURL((u) => u.port === "3000" && !u.pathname.startsWith("/callback") && !u.pathname.startsWith("/login"), { timeout: 45_000 })
+    expect(await latestSessionMethod(adminUserId)).toBe("sso")
     await stale.close()
 
     const ctx = await browser.newContext({ storageState: undefined })

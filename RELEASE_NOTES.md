@@ -21,6 +21,8 @@ None.
 
 **Behaviour changes**
 - Sign-out, the sign-in callback and the signed-out redirect build their URLs from `WEB_URL`. Behind a load balancer they sent people to the container's own address (`https://0.0.0.0:3000`), which broke Sign out and the "your company now uses single sign-on" hand-off.
+- A company on single sign-on now goes straight to its own identity provider instead of WorkOS's hosted page. Through the hosted page WorkOS quietly reused any earlier session (an admin's password sign-in from before single sign-on), which Activate then refused, so that admin could never get back in.
+- Sign out also ends the session at WorkOS, so the next sign-in asks again instead of silently reusing it.
 - The single sign-on, domain and directory setup pages (hosted by WorkOS) open in a new tab, so Activate stays open behind them; coming back to the Activate tab refreshes the status.
 - Plainer labels in the lead console and admin screens (no raw metric names, spec references or "rung").
 

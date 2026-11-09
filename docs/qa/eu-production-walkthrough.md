@@ -105,6 +105,7 @@ the QA inbox and its links opened in the same browser.
 | F6 | Lead console (A1, A2) | Learner-hostile or internal copy: raw `weeklyActivePct` on Stalled cards, "Spec §2.1.", "lightci-hosted", "Rung" labels, and a create-client option that still said the admin connects SSO "from a link you send them". | Plain labels (1.0.3). |
 | F7 | SSO hand-off (B4) | After SSO went live, Iris's password session was correctly refused, but the sign-out redirect landed on `https://0.0.0.0:3000/login`. The ordinary Sign out menu item had the same bug in production. | Redirects use `WEB_URL` (1.0.3). |
 | F8 | Invitation email (B1) | The WorkOS emails are branded "LightCI", not "Activate". | Dashboard setting (environment name and branding); the user's call. |
+| F9 | SSO hand-off (B5) | After the refusal, Iris could never sign in again: Activate sent her to WorkOS's hosted page, which reused her old password session (WorkOS still listed only that one session) instead of asking her identity provider, and Activate refused it again. Our Sign out never ended the WorkOS session either, so signing out did not really sign out. Every admin who signs in before SSO would hit this. The E2E missed it because its SSO sign-in used a fresh browser. | SSO companies go straight to their identity provider; Sign out revokes the WorkOS session; the E2E now signs in again from the refused browser (1.0.3). |
 
 
 ## Housekeeping

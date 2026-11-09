@@ -35,10 +35,16 @@ export async function GET(request: NextRequest) {
       }),
     )
   }
-  const url = await getSignInUrl({
-    organizationId: sp.get("organization_id") ?? undefined,
-    loginHint: sp.get("login_hint") ?? undefined,
-    redirectUri: redirectUri(),
-  })
+  const organizationId = sp.get("organization_id") ?? undefined
+  const url = await getSignInUrl({ organizationId, loginHint: sp.get("login_hint") ?? undefined, redirectUri: redirectUri() })
+  // A company on single sign-on goes straight to its own identity provider. Through the hosted AuthKit
+  // page WorkOS would quietly reuse any earlier AuthKit session (say, the admin's password sign-in from
+  // before SSO), which the sign-in policy then refuses: a loop. Without `provider`, WorkOS sends an
+  // organization_id to that organisation's SSO connection; state and PKCE are unchanged.
+  if (organizationId) {
+    const direct = new URL(url)
+    direct.searchParams.delete("provider")
+    redirect(direct.toString())
+  }
   redirect(url)
 }
