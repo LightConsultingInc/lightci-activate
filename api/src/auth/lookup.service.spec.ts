@@ -10,6 +10,30 @@ describe('decideSignIn (T1.3)', () => {
     ).toEqual({ mode: 'sso', organizationId: 'org_1', passwordAllowed: false });
   });
 
+  it('sends a company that is still connecting its sign-in to the hosted page (setup)', () => {
+    expect(
+      decideSignIn(
+        { workosOrganizationId: 'org_1', isDemo: false },
+        { passwordLogin: false },
+        'setup',
+      ),
+    ).toEqual({
+      mode: 'setup',
+      organizationId: 'org_1',
+      passwordAllowed: false,
+    });
+  });
+
+  it('keeps routing to SSO when WorkOS cannot be asked', () => {
+    expect(
+      decideSignIn(
+        { workosOrganizationId: 'org_1', isDemo: false },
+        { passwordLogin: false },
+        'unknown',
+      ).mode,
+    ).toBe('sso');
+  });
+
   it('keeps the password form for demo organisations and when explicitly allowed', () => {
     expect(
       decideSignIn(

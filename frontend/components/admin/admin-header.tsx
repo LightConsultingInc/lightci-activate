@@ -7,6 +7,7 @@ import { useMe } from "@/hooks/use-me"
 import { cn } from "@/lib/utils"
 
 const ADMIN_TABS = [
+  { href: "/admin/sign-in", label: "Sign-in", id: "sign-in" },
   { href: "/admin/integrations", label: "Integrations & Keys", id: "integrations" },
   { href: "/admin/policy", label: "Policy & Boundary", id: "policy" },
   { href: "/admin/teams", label: "Teams & People", id: "teams" },

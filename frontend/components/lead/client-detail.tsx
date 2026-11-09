@@ -1,12 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { toast } from "sonner"
 import { ArrowUpRightIcon, Building2Icon, KeyRoundIcon, ShieldCheckIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/shell/page-header"
-import { useLeadClient, useLeadMutations } from "@/hooks/mc/use-mc"
+import { useLeadClient, useLeadMutations, useLeadSignIn } from "@/hooks/mc/use-mc"
 import type { IntegrationSummary, LeadClientDetail } from "@/hooks/mc/types"
 import { ApiError } from "@/lib/api"
 import { fmt } from "@/lib/format"
@@ -32,32 +34,61 @@ function switchAndGo(orgId: string, href: string) {
 }
 
 /**
- * Single sign-on for this client. LightCI never configures the IdP: the buttons mint a
- * one-time Admin Portal link that the client's IT admin opens to connect SSO or a directory.
+ * Sign-in for this client. LightCI never configures the IdP: the lead invites the client's admin,
+ * WorkOS emails them, and they connect their own provider from Company admin > Sign-in. The setup
+ * links remain for walking a client through it on a call (they expire within minutes).
  */
 function IdentityPanel({ c }: { c: LeadClientDetail }) {
-  const { portalLink } = useLeadMutations()
+  const { portalLink, inviteAdmin } = useLeadMutations()
   const org = c.org
-  const sso = (c.setup?.steps ?? c.checklist?.steps ?? []).find((s) => s.key === "sso")
+  const status = useLeadSignIn(org.id)
+  const s = status.data
+  const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
   const open = (intent: "sso" | "dsync") =>
     portalLink.mutate(
       { id: org.id, intent },
       {
         onSuccess: ({ url }) => {
           window.open(url, "_blank", "noopener")
-          toast.success(intent === "sso" ? "Single sign-on setup link opened" : "Directory setup link opened", { description: "Send this link to the client's IT admin, or walk through it with them. It works once." })
+          toast.success(intent === "sso" ? "Single sign-on setup opened" : "Directory setup opened", { description: "Use it now, with the client on a call: the link expires within minutes." })
         },
         onError: (err) => toast.error("Couldn't create the setup link", { description: err instanceof ApiError ? err.detail : String(err) }),
       },
     )
+  const invite = (e: React.FormEvent) => {
+    e.preventDefault()
+    inviteAdmin.mutate(
+      { id: org.id, email, name: name || undefined },
+      {
+        onSuccess: (r) => {
+          setEmail("")
+          setName("")
+          status.refetch()
+          if (r.invitation === "sent") toast.success("Invitation sent", { description: `${r.person.email} gets an email from WorkOS, signs in, and connects their company's sign-in from Company admin > Sign-in.` })
+          else toast.warning("Admin added, but the email didn't go out", { description: r.detail ?? "Try again in a minute." })
+        },
+        onError: (err) => toast.error("Couldn't invite them", { description: err instanceof ApiError ? err.detail : String(err) }),
+      },
+    )
+  }
+  const phaseLabel = !org.workosOrganizationId
+    ? "No identity organisation"
+    : !s
+      ? "Checking…"
+      : s.phase === "sso"
+        ? "Single sign-on is on"
+        : s.phase === "setup"
+          ? "Waiting for the client to connect"
+          : "Couldn't check right now"
   return (
-    <Panel title={<span className="inline-flex items-center gap-2"><ShieldCheckIcon className="size-4" /> Single sign-on</span>} description="The client connects their own identity provider. Roles follow their IdP groups on every sign-in." testId="client-identity">
+    <Panel title={<span className="inline-flex items-center gap-2"><ShieldCheckIcon className="size-4" /> Sign-in</span>} description="Invite the client's admin. They connect their own identity provider; roles follow their groups on every sign-in." testId="client-identity">
       <dl className="grid gap-2 text-sm">
         <div className="flex items-center justify-between gap-2">
           <dt className="text-muted-foreground">Status</dt>
           <dd>
-            <Badge variant="outline" className={cn("text-foreground", sso?.done ? "border-pass/40 bg-pass-soft" : "text-muted-foreground")} data-testid="client-sso-status">
-              {!org.workosOrganizationId ? "No identity organisation" : sso?.done ? "Connected" : "Waiting for the client"}
+            <Badge variant="outline" className={cn("text-foreground", s?.phase === "sso" ? "border-pass/40 bg-pass-soft" : "text-muted-foreground")} data-testid="client-sso-status" data-phase={s?.phase ?? ""}>
+              {phaseLabel}
             </Badge>
           </dd>
         </div>
@@ -65,14 +96,30 @@ function IdentityPanel({ c }: { c: LeadClientDetail }) {
           <dt className="text-muted-foreground">Email domains</dt>
           <dd className="text-right font-mono text-xs" data-testid="client-domains">{(org.emailDomains ?? []).length ? (org.emailDomains ?? []).join(", ") : "none yet"}</dd>
         </div>
-        {sso?.detail && <p className="text-xs text-muted-foreground">{sso.detail}</p>}
+        <div className="flex items-start justify-between gap-2">
+          <dt className="text-muted-foreground">Admins</dt>
+          <dd className="text-right text-xs" data-testid="client-admins">
+            {s?.admins.length ? s.admins.map((a) => <span key={a.id} className="block">{a.email} · {a.status === "invited" ? "invited" : "signed in"}</span>) : "none yet"}
+          </dd>
+        </div>
       </dl>
+      {org.workosOrganizationId && (
+        <form onSubmit={invite} className="mt-3 grid gap-2" data-testid="client-invite-admin">
+          <div className="flex flex-wrap gap-2">
+            <Input aria-label="Admin email" type="email" required placeholder={`admin@${(org.emailDomains ?? [])[0] ?? "client.com"}`} value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-48 flex-1" />
+            <Input aria-label="Admin name" placeholder="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} className="min-w-36 flex-1" />
+          </div>
+          <Button type="submit" size="xs" disabled={inviteAdmin.isPending || !email} data-testid="client-invite-admin-submit">
+            {inviteAdmin.isPending ? "Inviting…" : "Invite an admin"}
+          </Button>
+        </form>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="xs" onClick={() => open("sso")} disabled={!org.workosOrganizationId || portalLink.isPending} data-testid="client-sso-link">
-          Set up single sign-on <ArrowUpRightIcon data-icon="inline-end" />
+        <Button size="xs" variant="ghost" onClick={() => open("sso")} disabled={!org.workosOrganizationId || portalLink.isPending} data-testid="client-sso-link">
+          Open single sign-on setup <ArrowUpRightIcon data-icon="inline-end" />
         </Button>
-        <Button size="xs" variant="outline" onClick={() => open("dsync")} disabled={!org.workosOrganizationId || portalLink.isPending} data-testid="client-dsync-link">
-          Connect their directory <ArrowUpRightIcon data-icon="inline-end" />
+        <Button size="xs" variant="ghost" onClick={() => open("dsync")} disabled={!org.workosOrganizationId || portalLink.isPending} data-testid="client-dsync-link">
+          Open directory setup <ArrowUpRightIcon data-icon="inline-end" />
         </Button>
       </div>
     </Panel>

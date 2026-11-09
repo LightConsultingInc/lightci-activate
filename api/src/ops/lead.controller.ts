@@ -10,7 +10,8 @@ import {
 } from 'class-validator';
 
 class PortalLinkDto {
-  @IsIn(['sso', 'dsync']) intent: 'sso' | 'dsync';
+  @IsIn(['sso', 'dsync', 'domain_verification']) intent:
+    'sso' | 'dsync' | 'domain_verification';
   @IsOptional() @IsString() returnUrl?: string;
 }
 import { CurrentUser, Roles } from '../common/decorators';

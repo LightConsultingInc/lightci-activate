@@ -12,12 +12,18 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Public } from '../common/decorators';
 import { PeopleService } from './people.service';
+import { SignInPolicyService } from './sign-in-policy.service';
 import { WorkosService, type WorkosWebhookEvent } from './workos.service';
 
 export interface WebhookOutcome {
   received: true;
   event: string;
-  action: 'deactivated' | 'roles_synced' | 'ignored' | 'unknown_person';
+  action:
+    | 'deactivated'
+    | 'roles_synced'
+    | 'phase_refreshed'
+    | 'ignored'
+    | 'unknown_person';
 }
 
 /**
@@ -35,6 +41,7 @@ export class WorkosWebhooksController {
   constructor(
     private readonly workos: WorkosService,
     private readonly people: PeopleService,
+    private readonly policy: SignInPolicyService,
   ) {}
 
   @Post()
@@ -120,6 +127,22 @@ export class WorkosWebhooksController {
           ? await this.people.deactivate({ email: primary }, event.event)
           : null;
         return outcome(person ? 'deactivated' : 'unknown_person');
+      }
+      // A connection or directory changed state: the company may have just moved to single
+      // sign-on (or back), so its phase is re-read on the next request instead of in a minute.
+      case 'connection.activated':
+      case 'connection.deactivated':
+      case 'connection.deleted':
+      case 'dsync.activated':
+      case 'dsync.deleted': {
+        const orgId =
+          str(data.organizationId) ??
+          str(data.organization_id) ??
+          str(rawData.organization_id);
+        if (!orgId) return outcome('ignored');
+        this.policy.invalidate(orgId);
+        this.logger.log(`${event.event}: sign-in phase refreshed for ${orgId}`);
+        return outcome('phase_refreshed');
       }
       default:
         return outcome('ignored');

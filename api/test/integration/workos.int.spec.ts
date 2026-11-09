@@ -5,6 +5,9 @@
  */
 import 'dotenv/config';
 import { WorkOS } from '@workos-inc/node';
+import { randomBytes } from 'node:crypto';
+import { decodeJwt } from 'jose';
+import { SignInPolicyService } from '../../src/auth/sign-in-policy.service';
 import { WorkosService } from '../../src/auth/workos.service';
 
 const KEY = process.env.WORKOS_API_KEY;
@@ -18,7 +21,13 @@ describeLive('WorkOS provisioning against the test environment', () => {
   const domain = `activate-it-${stamp}.example`;
   let orgId: string | null = null;
 
+  let userId: string | null = null;
+  let invitationId: string | null = null;
+
   afterAll(async () => {
+    if (invitationId)
+      await sdk.userManagement.revokeInvitation(invitationId).catch(() => {});
+    if (userId) await sdk.userManagement.deleteUser(userId).catch(() => {});
     if (orgId) await sdk.organizations.deleteOrganization(orgId);
   });
 
@@ -57,5 +66,60 @@ describeLive('WorkOS provisioning against the test environment', () => {
     expect(sso).toMatch(/^https:\/\//);
     expect(dsync).toMatch(/^https:\/\//);
     expect(sso).not.toBe(dsync);
+  }, 30_000);
+
+  it('describes a company that is still setting up: no directory, domain pending, phase setup', async () => {
+    expect(orgId).toBeTruthy();
+    await expect(service.listDirectories(orgId as string)).resolves.toEqual([]);
+    const domains = await service.organizationDomains(orgId as string);
+    expect(domains).toEqual([{ domain, state: 'pending' }]);
+    // No Activate org row: the phase comes from WorkOS alone.
+    const policy = new SignInPolicyService(service, {
+      findOne: () => Promise.resolve(null),
+      query: () => Promise.resolve(),
+    } as never);
+    await expect(policy.phase(orgId as string)).resolves.toBe('setup');
+  }, 30_000);
+
+  it('tells how a session signed in (a password session is not SSO)', async () => {
+    expect(orgId).toBeTruthy();
+    const email = `it-${stamp}@${domain}`;
+    const password = `It-${randomBytes(12).toString('base64url')}!9`;
+    const user = await sdk.userManagement.createUser({
+      email,
+      password,
+      emailVerified: true,
+    });
+    userId = user.id;
+    await sdk.userManagement.createOrganizationMembership({
+      userId: user.id,
+      organizationId: orgId as string,
+    });
+    const auth = await sdk.userManagement.authenticateWithPassword({
+      clientId: process.env.WORKOS_CLIENT_ID,
+      email,
+      password,
+    });
+    const sid = decodeJwt(auth.accessToken).sid as string;
+    expect(sid).toMatch(/^session_/);
+    await expect(service.sessionAuthMethod(user.id, sid)).resolves.toBe(
+      'password',
+    );
+    await expect(
+      service.sessionAuthMethod(user.id, 'session_unknown'),
+    ).resolves.toBeNull();
+  }, 60_000);
+
+  it('invites an admin into the organisation with the admin role', async () => {
+    expect(orgId).toBeTruthy();
+    const invitation = await service.sendInvitation(
+      `admin-${stamp}@${domain}`,
+      orgId,
+      null,
+      'admin',
+    );
+    invitationId = invitation.id;
+    expect(invitation.organizationId).toBe(orgId);
+    expect(invitation.state).toBe('pending');
   }, 30_000);
 });

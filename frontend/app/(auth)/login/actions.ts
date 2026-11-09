@@ -11,7 +11,7 @@ export type SignInResult =
   | { ok: false; chooseOrg: { pendingToken: string; organizations: OrgChoice[] } }
 
 /** What the API says about how this address signs in. */
-export type SignInLookup = { mode: "sso" | "password" | "unknown"; organizationId?: string; passwordAllowed: boolean }
+export type SignInLookup = { mode: "sso" | "setup" | "password" | "unknown"; organizationId?: string; passwordAllowed: boolean }
 
 const origin = () => webUrl()
 

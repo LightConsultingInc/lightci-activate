@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 /** Where each provisioning step is completed. Keys follow GET /org/setup. */
 const STEP_LINKS: Record<string, { href: string; cta: string }> = {
   keys: { href: "/admin/integrations", cta: "Integrations & Keys" },
-  sso: { href: "/admin/teams", cta: "Invite people" },
+  sso: { href: "/admin/sign-in", cta: "Connect sign-in" },
   groups: { href: "/admin/teams", cta: "Import groups" },
   context: { href: "/admin/policy", cta: "Company context" },
   governance: { href: "/admin/policy", cta: "Policy & Boundary" },

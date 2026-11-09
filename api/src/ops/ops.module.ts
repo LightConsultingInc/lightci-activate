@@ -35,6 +35,11 @@ import { AuditorService } from './auditor.service';
 import { EscalationsController } from './escalations.controller';
 import { LeadController } from './lead.controller';
 import { LeadService } from './lead.service';
+import {
+  LeadSignInController,
+  SignInSetupController,
+} from './sign-in-setup.controller';
+import { SignInSetupService } from './sign-in-setup.service';
 import { MetricsService } from './metrics.service';
 import { MissionControlController } from './mission-control.controller';
 import { MissionControlService } from './mission-control.service';
@@ -85,6 +90,8 @@ import { TeamService } from './team.service';
     MissionControlController,
     EscalationsController,
     LeadController,
+    LeadSignInController,
+    SignInSetupController,
     AnalyticsSyncController,
   ],
   providers: [
@@ -93,6 +100,7 @@ import { TeamService } from './team.service';
     MissionControlService,
     AuditorService,
     LeadService,
+    SignInSetupService,
     AnalyticsSyncService,
     OpsJobs,
   ],

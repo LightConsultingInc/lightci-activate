@@ -2,6 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "activate-api-mock",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "AI_PROVIDER=mock",
+        "yarn",
+        "--cwd",
+        "api",
+        "start:dev"
+      ],
+      "port": 4310
+    },
+    {
       "name": "mcp-app-preview",
       "runtimeExecutable": "yarn",
       "runtimeArgs": [

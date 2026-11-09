@@ -133,7 +133,7 @@ test.describe("lead console", () => {
     // WorkOS mode: the identity organisation was really created; the client has not connected SSO yet.
     // OIDC mode: identity lives with the customer's IdP, so no WorkOS organisation exists.
     const identity = page.getByTestId("client-identity")
-    await expect(identity.getByTestId("client-sso-status")).toHaveText(OIDC_MODE ? "No identity organisation" : "Waiting for the client")
+    await expect(identity.getByTestId("client-sso-status")).toHaveText(OIDC_MODE ? "No identity organisation" : "Waiting for the client to connect")
     await expect(identity.getByTestId("client-domains")).toHaveText(clientDomain)
     await expect(page.getByTestId("setup-step-sso")).toHaveAttribute("data-done", "false")
 
@@ -144,15 +144,16 @@ test.describe("lead console", () => {
     await page.keyboard.press("Escape")
   })
 
-  test("sign-in lookup routes the new client's domain to SSO and the demo org to a password", async ({ page, request }) => {
+  test("sign-in lookup routes a client still connecting sign-in to setup, and the demo org to a password", async ({ page, request }) => {
     test.skip(OIDC_MODE, "the lookup is a WorkOS-mode feature")
     expect(clientId, "provisioning test must run first").toBeTruthy()
     const detail = await api<{ org: { workosOrganizationId: string | null; emailDomains: string[] } }>(page, "GET", `/api/lead/clients/${clientId}`)
     expect(detail.org.workosOrganizationId).toMatch(/^org_/)
     expect(detail.org.emailDomains).toEqual([clientDomain])
 
-    const sso = await (await request.get(`${API_URL}/api/auth/lookup?email=${encodeURIComponent(`someone@${clientDomain}`)}`)).json()
-    expect(sso).toEqual({ mode: "sso", organizationId: detail.org.workosOrganizationId, passwordAllowed: false })
+    // No SSO connection yet: the company is setting up, so its invited admins use the hosted page.
+    const setup = await (await request.get(`${API_URL}/api/auth/lookup?email=${encodeURIComponent(`someone@${clientDomain}`)}`)).json()
+    expect(setup).toEqual({ mode: "setup", organizationId: detail.org.workosOrganizationId, passwordAllowed: false })
     const demo = await (await request.get(`${API_URL}/api/auth/lookup?email=priya.nair@meridianwealth.demo`)).json()
     expect(demo).toEqual({ mode: "password", passwordAllowed: true })
     const unknown = await (await request.get(`${API_URL}/api/auth/lookup?email=nobody@nowhere-at-all.example`)).json()
@@ -161,7 +162,7 @@ test.describe("lead console", () => {
     expect(malformed).toEqual({ mode: "unknown", passwordAllowed: true })
   })
 
-  test("the login page sends a company with SSO straight to it", async ({ browser }) => {
+  test("the login page sends a company that is still setting up to the hosted sign-in page", async ({ browser }) => {
     test.skip(OIDC_MODE, "WorkOS-mode routing")
     expect(clientDomain, "provisioning test must run first").toBeTruthy()
     const ctx = await browser.newContext({ storageState: undefined })
@@ -169,10 +170,29 @@ test.describe("lead console", () => {
     await page.goto("/login")
     await page.getByTestId("login-email").fill(`someone@${clientDomain}`)
     await page.getByTestId("login-continue").click()
-    // /sign-in redirects to hosted AuthKit for that organisation; the password field never appears.
+    // /sign-in redirects to hosted AuthKit (no organisation forced, since there is no SSO yet); Activate's own password form never appears.
     await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 })
-    await expect(page.getByLabel("Password")).toHaveCount(0)
+    expect(new URL(page.url()).hostname).toMatch(/authkit\.app|workos\.com/)
     await ctx.close()
+  })
+
+  test("a lead invites the client's admin; addresses off the client's domain are refused", async ({ page }) => {
+    test.skip(OIDC_MODE, "WorkOS invitations are a WorkOS-mode feature")
+    expect(clientId, "provisioning test must run first").toBeTruthy()
+    await page.goto(`/lead/clients/${clientId}`)
+    const identity = page.getByTestId("client-identity")
+    const form = identity.getByTestId("client-invite-admin")
+    await form.getByLabel("Admin email").fill("it.admin@not-their-domain.example")
+    await form.getByTestId("client-invite-admin-submit").click()
+    await expectToast(page, /Couldn't invite them/)
+    await form.getByLabel("Admin email").fill(`it.admin@${clientDomain}`)
+    await form.getByLabel("Admin name").fill("IT Admin")
+    await form.getByTestId("client-invite-admin-submit").click()
+    await expectToast(page, /Invitation sent/)
+    await expect(identity.getByTestId("client-admins")).toContainText(`it.admin@${clientDomain} · invited`)
+    const status = await api<{ phase: string; admins: { email: string; status: string }[] }>(page, "GET", `/api/lead/clients/${clientId}/sign-in`)
+    expect(status.phase).toBe("setup")
+    expect(status.admins).toEqual([expect.objectContaining({ email: `it.admin@${clientDomain}`, status: "invited" })])
   })
 
   test("the SSO setup button opens a one-time WorkOS Admin Portal link", async ({ page }) => {
@@ -185,7 +205,7 @@ test.describe("lead console", () => {
     await portal.waitForLoadState("domcontentloaded")
     expect(portal.url()).toMatch(/workos\.com/)
     await portal.close()
-    await expectToast(page, /Single sign-on setup link opened/)
+    await expectToast(page, /Single sign-on setup opened/)
   })
 
   test("the sign-in lookup is rate limited", async ({ request }) => {

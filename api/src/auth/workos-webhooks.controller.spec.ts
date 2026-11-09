@@ -49,7 +49,15 @@ function build(opts: { secret?: string } = {}) {
     },
   ]);
   const peopleService = new PeopleService(people as never, orgs as never);
-  const controller = new WorkosWebhooksController(workos, peopleService);
+  const invalidated: string[] = [];
+  const policy = {
+    invalidate: (id: string) => invalidated.push(id),
+  } as never;
+  const controller = new WorkosWebhooksController(
+    workos,
+    peopleService,
+    policy,
+  );
   const request = (body: unknown, header: string | undefined) => {
     const raw = JSON.stringify(body);
     return controller.receive(
@@ -61,6 +69,7 @@ function build(opts: { secret?: string } = {}) {
     controller,
     request,
     people,
+    invalidated,
     sign: (b: unknown) => sign(JSON.stringify(b)),
   };
 }
@@ -150,8 +159,27 @@ describe('WorkOS webhooks (T1.5)', () => {
     await expect(request(unknown, sign(unknown))).resolves.toMatchObject({
       action: 'unknown_person',
     });
-    const other = event('connection.activated', { id: 'conn_1' });
+    const other = event('activate.unrelated_event', { id: 'x_1' });
     await expect(request(other, sign(other))).resolves.toMatchObject({
+      action: 'ignored',
+    });
+  });
+
+  it('re-reads a company sign-in phase as soon as a connection or directory changes', async () => {
+    const { request, sign, invalidated } = build({ secret: SECRET });
+    for (const type of [
+      'connection.activated',
+      'connection.deactivated',
+      'dsync.activated',
+    ]) {
+      const body = event(type, { id: 'conn_1', organization_id: 'org_x' });
+      await expect(request(body, sign(body))).resolves.toMatchObject({
+        action: 'phase_refreshed',
+      });
+    }
+    expect(invalidated).toEqual(['org_x', 'org_x', 'org_x']);
+    const orphan = event('connection.activated', { id: 'conn_2' });
+    await expect(request(orphan, sign(orphan))).resolves.toMatchObject({
       action: 'ignored',
     });
   });

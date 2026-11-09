@@ -3,12 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Org } from '../orgs/entities/org.entity';
 import { emailDomain } from './email-domains';
+import type { SignInPhase } from './sign-in-policy';
+import { SignInPolicyService } from './sign-in-policy.service';
 
-export type SignInMode = 'sso' | 'password' | 'unknown';
+/**
+ * `sso`: the company's own single sign-on. `setup`: the company is still connecting it, so
+ * the people it invited sign in on WorkOS's hosted page instead. `password`: demo orgs.
+ */
+export type SignInMode = 'sso' | 'setup' | 'password' | 'unknown';
 
 export interface SignInLookup {
   mode: SignInMode;
-  /** WorkOS organisation to start SSO against (only for `sso`). */
+  /** WorkOS organisation to start SSO against (`sso` and `setup`). */
   organizationId?: string;
   /** Whether the password form may be shown alongside. */
   passwordAllowed: boolean;
@@ -24,11 +30,13 @@ export type LookupOrg = Pick<Org, 'workosOrganizationId' | 'isDemo'>;
 export function decideSignIn(
   org: LookupOrg | null,
   opts: { passwordLogin: boolean },
+  phase: SignInPhase = 'sso',
 ): SignInLookup {
   if (org?.isDemo) return { mode: 'password', passwordAllowed: true };
   if (org?.workosOrganizationId)
     return {
-      mode: 'sso',
+      // When WorkOS cannot be asked, keep sending people to SSO as before.
+      mode: phase === 'setup' ? 'setup' : 'sso',
       organizationId: org.workosOrganizationId,
       passwordAllowed: opts.passwordLogin,
     };
@@ -71,7 +79,10 @@ export class RateLimiter {
 export class LookupService {
   readonly limiter = new RateLimiter(30, 60_000);
 
-  constructor(@InjectRepository(Org) private readonly orgs: Repository<Org>) {}
+  constructor(
+    @InjectRepository(Org) private readonly orgs: Repository<Org>,
+    private readonly policy: SignInPolicyService,
+  ) {}
 
   async lookup(email: string): Promise<SignInLookup> {
     const domain = emailDomain(email);
@@ -81,8 +92,14 @@ export class LookupService {
           .where(':domain = ANY(o."emailDomains")', { domain })
           .getOne()
       : null;
-    return decideSignIn(org, {
-      passwordLogin: process.env.AUTH_PASSWORD_LOGIN === 'true',
-    });
+    const phase =
+      org?.workosOrganizationId && !org.isDemo
+        ? await this.policy.phase(org.workosOrganizationId)
+        : 'sso';
+    return decideSignIn(
+      org,
+      { passwordLogin: process.env.AUTH_PASSWORD_LOGIN === 'true' },
+      phase,
+    );
   }
 }

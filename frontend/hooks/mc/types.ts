@@ -420,6 +420,24 @@ export type LeadClientDetail = LeadClient & {
   industry?: string | null
 }
 
+/** GET /api/org/sign-in (admins) or /api/lead/clients/:id/sign-in (leads): how the company signs in. */
+export type SignInStatus = {
+  provider: "workos" | "oidc"
+  /** setup: connecting single sign-on, invited admins only. sso: single sign-on is live. none: no identity organisation yet. */
+  phase: "setup" | "sso" | "unknown" | "none"
+  ssoConnections: number | null
+  directories: { type: string; state: string }[] | null
+  domains: { domain: string; state: string }[] | null
+  emailDomains: string[]
+  admins: { id: string; name: string; email: string; status: string; lastSeenAt: string | null }[]
+}
+
+export type AdminInviteResult = {
+  person: { id: string; email: string; status: string }
+  invitation: "sent" | "skipped" | "failed"
+  detail?: string
+}
+
 /** GET /api/admin/updates: the running release and whether a newer one is published (self-hosted). */
 export type UpdateStatus = {
   enabled: boolean

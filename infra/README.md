@@ -88,6 +88,11 @@ rotate it, write the new pair and roll the services. The LightCI activation lead
 `activate-lead-signin` (us-east-1), declared by the US bootstrap root.
 
 - Redirect URIs: `node scripts/workos-redirects.mjs [us|eu]` registers `<web>/callback` for each cell (idempotent).
+- Roles: `WORKOS_API_KEY=… node scripts/workos-roles.mjs` creates the environment roles `activate-admin`,
+  `activate-sponsor` and `activate-champion` (idempotent; run once per environment, done for test, US and EU on
+  2026-11-06). Customers assign their own IdP groups to these while connecting their directory or SSO.
+- Customer onboarding is self-serve: a lead creates the client and invites its admin from the client page; the
+  admin connects the IdP from Company admin > Sign-in. Nobody at LightCI handles a setup link.
 - Webhooks (dashboard only): endpoint `<api>/api/webhooks/workos`, events `organization_membership.*`,
   `user.deleted`, `dsync.user.deleted`. Put the signing secret in `activate-<cell>-workos-webhook` and set
   `workos_webhook_secret_name` on the cell root.

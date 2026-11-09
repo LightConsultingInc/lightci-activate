@@ -10,7 +10,8 @@ export interface WorkosProfile {
   profilePictureUrl?: string | null;
 }
 
-export type PortalIntent = 'sso' | 'dsync';
+/** WorkOS setup pages: connect SSO, connect a directory, or prove ownership of an email domain (DNS). */
+export type PortalIntent = 'sso' | 'dsync' | 'domain_verification';
 
 /** A verified webhook event. `data` is whatever WorkOS sent for that event type. */
 export interface WorkosWebhookEvent {
@@ -114,8 +115,12 @@ export class WorkosService {
   /** Active SSO connections on the organisation; null when WorkOS cannot be asked. */
   async countActiveConnections(organizationId: string): Promise<number | null> {
     try {
-      const page = await this.workos.sso.listConnections({ organizationId });
-      return page.data.filter((c) => c.state === 'active').length;
+      const page = await this.workos.sso.listConnections({
+        organizationId,
+        limit: 100,
+      });
+      const all = await page.autoPagination();
+      return all.filter((c) => c.state === 'active').length;
     } catch (e) {
       this.logger.warn(
         `Could not list SSO connections for ${organizationId}: ${
@@ -130,12 +135,72 @@ export class WorkosService {
     email: string,
     organizationId?: string | null,
     inviterUserId?: string | null,
+    roleSlug?: string | null,
   ) {
     return this.workos.userManagement.sendInvitation({
       email,
       ...(organizationId ? { organizationId } : {}),
       ...(inviterUserId ? { inviterUserId } : {}),
+      ...(roleSlug ? { roleSlug } : {}),
     });
+  }
+
+  /** Directories (SCIM) on the organisation with their state; null when WorkOS cannot be asked. */
+  async listDirectories(
+    organizationId: string,
+  ): Promise<{ id: string; type: string; state: string }[] | null> {
+    try {
+      const page = await this.workos.directorySync.listDirectories({
+        organizationId,
+      });
+      return page.data.map((d) => ({ id: d.id, type: d.type, state: d.state }));
+    } catch (e) {
+      this.logger.warn(
+        `Could not list directories for ${organizationId}: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+      return null;
+    }
+  }
+
+  /** The organisation's email domains and whether WorkOS has verified them; null on error. */
+  async organizationDomains(
+    organizationId: string,
+  ): Promise<{ domain: string; state: string }[] | null> {
+    try {
+      const org =
+        await this.workos.organizations.getOrganization(organizationId);
+      return org.domains.map((d) => ({ domain: d.domain, state: d.state }));
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * How a WorkOS session was authenticated ('sso', 'password', 'magic_code', ...), or null
+   * when the session cannot be found or WorkOS cannot be asked.
+   */
+  async sessionAuthMethod(
+    userId: string,
+    sessionId: string,
+  ): Promise<string | null> {
+    try {
+      const page = await this.workos.userManagement.listSessions(userId, {
+        limit: 100,
+      });
+      const session = (await page.autoPagination()).find(
+        (s) => s.id === sessionId,
+      );
+      return session ? session.authMethod : null;
+    } catch (e) {
+      this.logger.warn(
+        `Could not read sessions for ${userId}: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+      return null;
+    }
   }
 
   /**
