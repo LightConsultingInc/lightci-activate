@@ -22,7 +22,7 @@ locals {
       AUTH_PROVIDER          = var.auth_provider
       AUTH_ROLE_MAP          = jsonencode(var.role_mapping)
       AUTH_PASSWORD_LOGIN    = tostring(var.password_login)
-      LEAD_EMAIL_DOMAINS     = ""
+      LEAD_EMAIL_DOMAINS     = join(",", var.lead_email_domains)
       AI_PROVIDER            = "live"
       ANTHROPIC_MODEL        = var.anthropic_model
       ANTHROPIC_FAST_MODEL   = var.anthropic_fast_model

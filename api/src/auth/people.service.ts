@@ -144,6 +144,20 @@ export class PeopleService {
     return this.people.save(person);
   }
 
+  /**
+   * Make someone on a LightCI lead domain a lead (cross-organisation, never bound to one company).
+   * New people get this at provisioning; this catches people seen before their domain was a lead
+   * domain, for example when a cell started without LEAD_EMAIL_DOMAINS. Returns the person.
+   */
+  async ensureLead(person: Person): Promise<Person> {
+    if (person.roles.includes('lead')) return person;
+    if (!leadEmailDomains().includes(emailDomain(person.email))) return person;
+    person.roles = ['lead', ...person.roles.filter((r) => r !== 'lead')];
+    person.orgId = null;
+    this.logger.log(`Person ${person.id} is now a LightCI lead`);
+    return this.people.save(person);
+  }
+
   async touch(person: Person) {
     await this.people.update(person.id, {
       lastSeenAt: new Date(),

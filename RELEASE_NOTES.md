@@ -4,6 +4,26 @@ Each release has a section headed by its exact tag. The release workflow refuses
 without one. Operators read these before upgrading: new configuration keys, changed defaults,
 migrations, and anything they must do are listed first.
 
+## v1.0.2
+
+Fixes found by the EU production walkthrough.
+
+**Operator actions**
+- WorkOS installs: make sure Email + Password (and optionally Magic Auth) is switched on in the WorkOS environment (dashboard: Authentication, Methods). New environments start with it off, and a company's invited admin has no other way in before single sign-on exists.
+
+**New configuration keys**
+None.
+
+**Migrations**
+None.
+
+**Security advisory:** no
+
+**Behaviour changes**
+- Terraform module: `lead_email_domains` now reaches the API as `LEAD_EMAIL_DOMAINS` (it was always empty, so a cloud cell had no LightCI leads). Self-hosted installs are unaffected: the default is still none.
+- Someone on a lead domain who signed in before the domain was configured becomes a lead on their next request.
+- The login page names WorkOS errors plainly: a disabled sign-in method no longer reads as a wrong password.
+
 ## v1.0.1
 
 Self-serve sign-in setup for WorkOS installs, and stricter sign-in rules.
