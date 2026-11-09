@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 
 /**
  * Safe, minimal markdown → React. Supports headings (#..###), paragraphs, unordered and
- * ordered lists, fenced code blocks, inline code, **bold** and *italic*. Never injects HTML:
+ * ordered lists, pipe tables, fenced code blocks, inline code, **bold** and *italic*. Never injects HTML:
  * every piece of text is rendered as a React text node.
  */
 export function MarkdownLite({ text, className }: { text: string; className?: string }) {
@@ -17,6 +17,11 @@ type Block =
   | { kind: "ol"; items: string[] }
   | { kind: "code"; lang: string; code: string }
   | { kind: "quote"; text: string }
+  | { kind: "table"; head: string[]; rows: string[][] }
+
+const isRow = (l: string) => /^\s*\|.*\|\s*$/.test(l)
+const isRule = (l: string) => /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(l)
+const cells = (l: string) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim())
 
 function parseBlocks(src: string): Block[] {
   const lines = src.replace(/\r\n/g, "\n").split("\n")
@@ -35,6 +40,15 @@ function parseBlocks(src: string): Block[] {
       while (i < lines.length && !/^```\s*$/.test(lines[i])) code.push(lines[i++])
       i++
       blocks.push({ kind: "code", lang: fence[1] ?? "", code: code.join("\n") })
+      continue
+    }
+    // A pipe table: header row, then a --- rule, then rows.
+    if (isRow(line) && i + 1 < lines.length && isRule(lines[i + 1])) {
+      const head = cells(line)
+      i += 2
+      const rows: string[][] = []
+      while (i < lines.length && isRow(lines[i])) rows.push(cells(lines[i++]))
+      blocks.push({ kind: "table", head, rows })
       continue
     }
     const h = line.match(/^(#{1,3})\s+(.*)$/)
@@ -62,7 +76,7 @@ function parseBlocks(src: string): Block[] {
       continue
     }
     const p: string[] = []
-    while (i < lines.length && lines[i].trim() !== "" && !/^(#{1,3})\s|^```|^\s*[-*•]\s+|^\s*\d+[.)]\s+|^>/.test(lines[i])) p.push(lines[i++])
+    while (i < lines.length && lines[i].trim() !== "" && !/^(#{1,3})\s|^```|^\s*[-*•]\s+|^\s*\d+[.)]\s+|^>/.test(lines[i]) && !(isRow(lines[i]) && isRule(lines[i + 1] ?? ""))) p.push(lines[i++])
     blocks.push({ kind: "p", text: p.join(" ") })
   }
   return blocks
@@ -110,6 +124,23 @@ function renderBlocks(src: string): ReactNode {
         )
       case "quote":
         return <blockquote key={i} className="border-l-2 border-glow pl-3 text-muted-foreground italic">{renderInline(b.text)}</blockquote>
+      case "table":
+        return (
+          <div key={i} className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted/60">
+                <tr>{b.head.map((c, j) => <th key={j} className="px-2.5 py-1.5 font-medium">{renderInline(c)}</th>)}</tr>
+              </thead>
+              <tbody>
+                {b.rows.map((r, j) => (
+                  <tr key={j} className="border-t align-top">
+                    {b.head.map((_, k) => <td key={k} className="px-2.5 py-1.5">{renderInline(r[k] ?? "")}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       case "code":
         return (
           <pre key={i} className="overflow-x-auto rounded-lg bg-ink p-3 font-mono text-xs leading-relaxed text-paper dark:bg-black/40">

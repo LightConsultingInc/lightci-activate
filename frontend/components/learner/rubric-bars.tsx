@@ -5,7 +5,7 @@ import type { RubricScore } from "@/hooks/learner/types"
 
 /** One horizontal bar per rubric criterion: label, score 0..1 and the grader's note. */
 export function RubricBars({ rubric, className, compact = false }: { rubric: RubricScore[]; className?: string; compact?: boolean }) {
-  if (!rubric?.length) return <p className="text-sm text-muted-foreground">No rubric detail was returned for this grade.</p>
+  if (!rubric?.length) return null
   return (
     <ul className={cn("space-y-3", className)} data-testid="rubric-bars">
       {rubric.map((r) => {

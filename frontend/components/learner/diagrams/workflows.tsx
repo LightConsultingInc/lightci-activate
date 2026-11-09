@@ -62,7 +62,7 @@ export function PromotionQueue() {
     { label: "Approved", sub: "your champion signed off", tone: "glow" as const },
     { label: "Published", sub: "the team can use it", tone: "pass" as const },
   ]
-  const gates = ["checklist passed", "boundary written down", "in the library"]
+  const gates = ["checklist passed", "data rules written down", "in the library"]
   return (
     <Frame w={640} h={172} label="A skill moves from draft to published through a review, a sign-off and the library">
       {stages.map((s, i) => {

@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
   if (organizationId) {
     const direct = new URL(url)
     direct.searchParams.delete("provider")
+    // AuthKit's screen hint is only valid for the hosted page; WorkOS sends a direct SSO request carrying it to its error page.
+    direct.searchParams.delete("screen_hint")
     redirect(direct.toString())
   }
   redirect(url)

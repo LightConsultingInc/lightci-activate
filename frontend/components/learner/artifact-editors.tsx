@@ -271,7 +271,7 @@ export function PromptInput({ value, onChange, disabled, rung, reminder, onRun, 
             <DropdownMenuContent align="start" className="w-64" data-testid="composer-menu">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Connectors</DropdownMenuLabel>
-                {value.available.length === 0 && <p className="px-2 pb-1.5 text-xs text-muted-foreground">None yet. Name the tools you work in at your next interview and they appear here.</p>}
+                {value.available.length === 0 && <p className="px-2 pb-1.5 text-xs text-muted-foreground">None yet. Tell us which tools you work in and they show up here.</p>}
                 {value.available.map((name) => (
                   <DropdownMenuCheckboxItem key={name} checked={value.connectors.includes(name)} onCheckedChange={() => toggle(name)} data-testid="composer-connector" data-name={name}>
                     {name}
@@ -489,7 +489,7 @@ export function ReviewInput({ value, onChange, disabled, review }: EditorProps<R
         </div>
         <div className="max-h-[32rem] overflow-y-auto p-4">
           {!a ? (
-            <p className="text-sm text-muted-foreground italic">Nothing to review arrived with this exercise.</p>
+            <p className="text-sm text-muted-foreground italic">There&apos;s nothing to look over in this practice yet.</p>
           ) : mono ? (
             <pre className="whitespace-pre-wrap font-mono text-[13px] leading-relaxed">{a.content}</pre>
           ) : (

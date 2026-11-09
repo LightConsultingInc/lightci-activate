@@ -35,7 +35,7 @@ export function RevisitSheet({ revisit, onOpenChange }: Props) {
         {revisit && (
           <>
             <SheetHeader>
-              <p className="eyebrow">Revisit · step {revisit.intervalStep + 1} of {INTERVALS.length}</p>
+              <p className="eyebrow">Quick recap {revisit.intervalStep + 1} of {INTERVALS.length}</p>
               <SheetTitle className="font-display text-xl">{revisit.competencyName}</SheetTitle>
               <SheetDescription className="flex items-center gap-1.5">
                 <Clock className="size-3.5" /> {revisit.overdue ? "Overdue" : "Due"} {fmt.ago(revisit.dueAt)} · 2–5 minutes, from memory
@@ -50,7 +50,7 @@ export function RevisitSheet({ revisit, onOpenChange }: Props) {
                   <Textarea
                     value={response}
                     onChange={(e) => setResponse(e.target.value)}
-                    placeholder="Answer in your own words. No looking it up — the point is retrieval."
+                    placeholder="Answer in your own words. Try not to look it up: remembering it is what makes it stick."
                     className="min-h-40"
                     data-testid="revisit-answer-input"
                   />
@@ -60,7 +60,7 @@ export function RevisitSheet({ revisit, onOpenChange }: Props) {
                     onClick={() => answer.mutate({ id: revisit.id, response }, { onSuccess: setResult })}
                     data-testid="revisit-submit"
                   >
-                    {answer.isPending ? "Grading…" : "Submit answer"}
+                    {answer.isPending ? "Checking…" : "Send answer"}
                   </Button>
                 </>
               ) : (
@@ -71,9 +71,9 @@ export function RevisitSheet({ revisit, onOpenChange }: Props) {
                       <p className="font-display text-3xl tabular">{Math.round(result.score * 100)}<span className="text-sm text-muted-foreground"> / 100</span></p>
                     </div>
                     <div className="text-right">
-                      <p className="eyebrow">Next revisit</p>
+                      <p className="eyebrow">Next recap</p>
                       <p className={cn("text-sm font-medium", result.score >= 0.8 ? "text-pass" : "text-glow-foreground")}>{fmt.date(result.nextDueAt)}</p>
-                      <p className="text-[11px] text-muted-foreground">{result.score >= 0.8 ? `Advanced to the ${INTERVALS[Math.min(result.intervalStep, INTERVALS.length - 1)]}-day interval` : "Reset to the 2-day interval"}</p>
+                      <p className="text-[11px] text-muted-foreground">{result.score >= 0.8 ? `Next one in ${INTERVALS[Math.min(result.intervalStep, INTERVALS.length - 1)]} days` : "Back in 2 days, while it's fresh"}</p>
                     </div>
                   </div>
                   <div>

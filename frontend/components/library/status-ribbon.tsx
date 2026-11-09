@@ -6,7 +6,7 @@ export const STATUS_META: Record<SkillStatus, { label: string; cls: string }> = 
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground" },
   in_review: { label: "In review", cls: "bg-info-soft text-info" },
   published: { label: "Published", cls: "bg-pass-soft text-pass" },
-  deprecated: { label: "Deprecated", cls: "bg-fail-soft text-fail" },
+  deprecated: { label: "Retired", cls: "bg-fail-soft text-fail" },
 }
 
 /** Status ribbon: a small angled tab at the top-left of a card, or an inline chip. Deprecated shows the successor. */

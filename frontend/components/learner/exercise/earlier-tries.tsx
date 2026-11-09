@@ -36,7 +36,7 @@ export function EarlierTries({ submissions }: { submissions: SubmissionView[] })
               <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm" data-testid="earlier-try" data-decision={decision ?? "ungraded"}>
                 <span className="text-muted-foreground">Try {s.attempt} · {fmt.ago(s.submittedAt)}</span>
                 {score == null ? (
-                  <span className="text-xs text-muted-foreground">Not scored yet</span>
+                  <span className="text-xs text-muted-foreground">Waiting for feedback</span>
                 ) : (
                   <span className="tabular font-medium" data-testid="earlier-try-score">{score} / 10{decision === "pass" ? " · Pass" : ""}</span>
                 )}

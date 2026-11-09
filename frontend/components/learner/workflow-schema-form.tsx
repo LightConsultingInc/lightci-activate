@@ -33,7 +33,7 @@ export function WorkflowSchemaForm({ value, onChange, disabled }: Props) {
     <div className="space-y-6" data-testid="workflow-schema-form">
       <Section title="What and when">
         <Field label="Purpose" hint="One sentence: what this workflow produces and for whom.">
-          <Textarea value={value.purpose ?? ""} onChange={(e) => set("purpose", e.target.value)} disabled={disabled} placeholder="Prepare the Monday client review pack for each advisor" data-testid="wf-purpose" />
+          <Textarea value={value.purpose ?? ""} onChange={(e) => set("purpose", e.target.value)} disabled={disabled} placeholder="Prepare the Monday account review pack for each manager" data-testid="wf-purpose" />
         </Field>
         <Field label="Trigger" hint="What kicks it off.">
           <Input value={value.trigger ?? ""} onChange={(e) => set("trigger", e.target.value)} disabled={disabled} placeholder="Friday 3pm, once the CRM export lands" data-testid="wf-trigger" />
@@ -50,10 +50,10 @@ export function WorkflowSchemaForm({ value, onChange, disabled }: Props) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Minutes per run">
+          <Field label="Minutes each time">
             <Input type="number" min={0} value={value.minutesPerRun ?? ""} onChange={(e) => set("minutesPerRun", Number(e.target.value))} disabled={disabled} data-testid="wf-minutes" />
           </Field>
-          <Field label="Runs per week">
+          <Field label="Times a week">
             <Input type="number" min={0} step="0.5" value={value.runsPerWeek ?? ""} onChange={(e) => set("runsPerWeek", Number(e.target.value))} disabled={disabled} data-testid="wf-runs" />
           </Field>
         </div>
@@ -65,7 +65,7 @@ export function WorkflowSchemaForm({ value, onChange, disabled }: Props) {
           <Row key={i} onRemove={disabled ? undefined : () => set("inputs", inputs.filter((_, j) => j !== i))}>
             <Input value={inp.name} placeholder="Input" disabled={disabled} onChange={(e) => set("inputs", inputs.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
             <Input value={inp.source} placeholder="Source system" disabled={disabled} onChange={(e) => set("inputs", inputs.map((x, j) => (j === i ? { ...x, source: e.target.value } : x)))} />
-            <Input value={inp.dataClass ?? ""} placeholder="Data class" disabled={disabled} onChange={(e) => set("inputs", inputs.map((x, j) => (j === i ? { ...x, dataClass: e.target.value } : x)))} />
+            <Input value={inp.dataClass ?? ""} placeholder="Kind of information" disabled={disabled} onChange={(e) => set("inputs", inputs.map((x, j) => (j === i ? { ...x, dataClass: e.target.value } : x)))} />
           </Row>
         ))}
       </Section>
@@ -109,15 +109,15 @@ export function WorkflowSchemaForm({ value, onChange, disabled }: Props) {
         ))}
       </Section>
 
-      <Section title="Systems and boundary">
+      <Section title="Systems and private information">
         <Field label="Systems touched">
-          <ChipListEditor value={value.systems ?? []} onChange={(v) => set("systems", v)} placeholder="Salesforce, Outlook, eMoney…" disabled={disabled} testId="wf-systems" />
+          <ChipListEditor value={value.systems ?? []} onChange={(v) => set("systems", v)} placeholder="Salesforce, Outlook, Excel…" disabled={disabled} testId="wf-systems" />
         </Field>
-        <Field label="Must never leave" hint="Data classes that never enter Claude.">
+        <Field label="Must never leave" hint="Kinds of information that must never go into Claude.">
           <ChipListEditor value={value.mustNeverLeave ?? []} onChange={(v) => set("mustNeverLeave", v)} tone="fail" placeholder="Client SSNs, account numbers…" disabled={disabled} testId="wf-must-never-leave" />
         </Field>
         <Field label="Human review points" hint="Where a person signs off before anything is sent or entered.">
-          <ChipListEditor value={value.humanReview ?? []} onChange={(v) => set("humanReview", v)} tone="revise" placeholder="Before the pack goes to the advisor" disabled={disabled} testId="wf-human-review" />
+          <ChipListEditor value={value.humanReview ?? []} onChange={(v) => set("humanReview", v)} tone="revise" placeholder="Before it goes to the customer" disabled={disabled} testId="wf-human-review" />
         </Field>
       </Section>
 

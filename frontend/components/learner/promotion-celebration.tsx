@@ -28,11 +28,11 @@ export function PromotionCelebration({ newRung }: { newRung: number }) {
     >
       <Grain opacity={0.14} />
       <div className="relative">
-        <p className="eyebrow text-paper/60">Promotion</p>
+        <p className="eyebrow text-paper/60">Moving up</p>
         <h3 className="mt-1 font-display text-2xl font-medium">
           You are now <span className="text-glow">{m.code} {m.name}</span>
         </h3>
-        <p className="mt-1 text-sm text-paper/70">{m.short}. Earned on real work, with your prediction and critique on record.</p>
+        <p className="mt-1 text-sm text-paper/70">{m.short}. Earned on your own real work.</p>
         <div className="mt-3 flex items-center gap-2">
           <RungBadge rung={newRung} className="border-glow/60 text-paper" />
           <ArrowUpRight className="size-4 text-glow" />

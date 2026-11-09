@@ -25,7 +25,7 @@ export function UpNext({ module, lesson, practice, queuedCount }: Props) {
       {primary === null && (
         <>
           <h2 className="mt-1 font-display text-2xl font-medium">You&apos;re caught up</h2>
-          <p className="mt-2 max-w-md text-sm text-muted-foreground">Coach is planning your next practice from the work you named at intake. Check back later today, or reread a lesson in {module.code} {module.name}.</p>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">We&apos;re setting up your next practice from the work you told us about when you started. Check back later today, or reread a lesson in {module.code} {module.name}.</p>
         </>
       )}
       {primary === "lesson" && lesson && (
@@ -47,12 +47,12 @@ export function UpNext({ module, lesson, practice, queuedCount }: Props) {
       )}
       <div className="mt-5 flex flex-wrap items-center gap-3">
         {lesson && (
-          <Button size="lg" variant={primary === "lesson" ? "default" : "outline"} render={<Link href={`/modules/${module.code}/learn/${lesson.slug}`} />} data-testid="up-next-lesson">
+          <Button size="lg" variant={primary === "lesson" ? "default" : "outline"} render={<Link href={`/modules/${module.code}/learn/${lesson.slug}`} />} className="h-auto min-h-10 max-w-full whitespace-normal py-2 text-left" data-testid="up-next-lesson">
             <Play data-icon="inline-start" /> {primary === "lesson" ? "Watch now" : `Or watch '${lesson.title}' (${lesson.minutes} min)`}
           </Button>
         )}
         {practice && action && (
-          <Button size="lg" variant={primary === "practice" ? "default" : "outline"} render={<Link href={`/exercise/${practice.id}`} />} data-testid="next-up-start">
+          <Button size="lg" variant={primary === "practice" ? "default" : "outline"} render={<Link href={`/exercise/${practice.id}`} />} className="h-auto min-h-10 max-w-full whitespace-normal py-2 text-left" data-testid="next-up-start">
             {primary === "practice" ? (
               <>{action.label} <ArrowRight data-icon="inline-end" /></>
             ) : (

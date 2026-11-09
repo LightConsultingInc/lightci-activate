@@ -6,7 +6,7 @@ export const metadata = { title: "My Workflows" }
 export default function Page() {
   return (
     <>
-      <PageHeader eyebrow="Learner" title="My Workflows" description="The repeated work you have mapped, ranked by Scorer. Candidate → in build → shipped → measured." />
+      <PageHeader eyebrow="Learner" title="My Workflows" description="The work you repeat each week, with the pieces most worth handing to Claude at the top." />
       <WorkflowsList />
     </>
   )

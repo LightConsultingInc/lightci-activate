@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, Check } from "lucide-react"
+import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { IntakeProfile, WorkflowSchema } from "@/hooks/learner/types"
 
@@ -8,6 +8,7 @@ type Props = {
   scribe: IntakeProfile | Partial<WorkflowSchema>
   mode: "intake" | "workflow" | "champion"
   completeness: number
+  /** The checker's notes steer the interviewer's next question; they are not shown to the learner. */
   checkerFlags: { field: string; issue: string }[]
   className?: string
 }
@@ -17,7 +18,6 @@ export function ScribeCard({
   scribe,
   mode,
   completeness,
-  checkerFlags,
   className,
 }: Props) {
   const pct = Math.round(Math.max(0, Math.min(1, completeness)) * 100)
@@ -31,7 +31,7 @@ export function ScribeCard({
     >
       <div className="flex items-baseline justify-between">
         <p className="eyebrow">
-          Scribe · {mode === "intake" ? "your profile" : "workflow map"}
+          {mode === "intake" ? "What we've noted" : "Your workflow, so far"}
         </p>
         <span
           className="text-xs text-muted-foreground tabular"
@@ -59,7 +59,7 @@ export function ScribeCard({
       <p className="mt-1 text-[11px] text-muted-foreground">
         {pct >= 85
           ? "Enough to place you. Finish whenever you like."
-          : "The interviewer proposes finishing at 85%."}
+          : "Keep going: a few more details and we're done."}
       </p>
 
       <dl className="mt-5 space-y-4 text-sm">
@@ -70,23 +70,6 @@ export function ScribeCard({
         )}
       </dl>
 
-      {checkerFlags?.length > 0 && (
-        <div
-          className="mt-5 rounded-lg border border-revise/40 bg-revise-soft p-3"
-          data-testid="checker-flags"
-        >
-          <p className="flex items-center gap-1.5 text-xs font-medium text-glow-foreground">
-            <AlertTriangle className="size-3.5" /> Checker noticed
-          </p>
-          <ul className="mt-1.5 space-y-1 text-xs">
-            {checkerFlags.map((f, i) => (
-              <li key={i}>
-                <span className="font-medium">{f.field}:</span> {f.issue}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </aside>
   )
 }

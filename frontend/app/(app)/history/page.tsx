@@ -6,7 +6,7 @@ export const metadata = { title: "History" }
 export default function Page() {
   return (
     <>
-      <PageHeader eyebrow="Learner" title="History" description="Every submission with your expectation, the artifact, your critique and the grade. This is your evidence trail." />
+      <PageHeader eyebrow="Learner" title="History" description="Everything you have practised: what you sent in, what Claude made of it, and the feedback you got." />
       <HistoryView />
     </>
   )

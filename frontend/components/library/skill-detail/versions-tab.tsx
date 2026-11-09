@@ -11,7 +11,7 @@ import type { SkillDetail } from "@/hooks/library/types"
 
 export function VersionsTab({ skill, isChampion }: { skill: SkillDetail; isChampion: boolean }) {
   const versions = [...skill.versions].sort((a, b) => b.version - a.version)
-  if (versions.length === 0) return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No versions committed yet. Saving the skill creates v1.</p>
+  if (versions.length === 0) return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No versions saved yet. Saving the skill creates v1.</p>
   return (
     <ol className="relative ml-3 border-l pl-6" data-testid="versions-timeline">
       {versions.map((v, i) => {
@@ -36,7 +36,7 @@ export function VersionsTab({ skill, isChampion }: { skill: SkillDetail; isChamp
                 </span>
               )}
             </div>
-            <p className="mt-1.5 text-sm">{v.changelog || <span className="text-muted-foreground italic">No changelog</span>}</p>
+            <p className="mt-1.5 text-sm">{v.changelog || <span className="text-muted-foreground italic">No notes</span>}</p>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
               <PersonChip person={v.author} size="xs" muted />
               {v.approvers.length > 0 && (
@@ -59,7 +59,7 @@ export function VersionsTab({ skill, isChampion }: { skill: SkillDetail; isChamp
                       <RotateCcw data-icon="inline-start" /> Roll back
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{isChampion ? "Opens a revert PR to this version; goes through the promotion queue." : "Only the team champion can roll back a version."}</TooltipContent>
+                  <TooltipContent>{isChampion ? "Asks to go back to this version. It goes through the same approval as sharing." : "Only the team champion can roll back a version."}</TooltipContent>
                 </Tooltip>
               )}
             </div>

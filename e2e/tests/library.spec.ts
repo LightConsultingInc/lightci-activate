@@ -145,7 +145,7 @@ test.describe("library", () => {
     await page.goto(`/library/${source}`)
     await expect(page.getByTestId("skill-action-bar")).toBeVisible()
     await page.getByTestId("skill-action-bar").getByTestId("skill-fork").click()
-    await expectToast(page, /Forked/)
+    await expectToast(page, /Copied/)
     await expect(page).toHaveURL(/\/library\/[a-z0-9-]+\?edit=1/)
     forkSlug = page.url().match(/\/library\/([a-z0-9-]+)\?/)![1]
     expect(forkSlug).not.toBe(source)
@@ -189,9 +189,9 @@ test.describe("library", () => {
     await expect(request).toBeDisabled()
 
     await page.getByTestId("skill-grade").click()
-    const t = toast(page, /Graded (pass|revise)/).first()
+    const t = toast(page, /Checked: (pass|needs changes)/).first()
     await expect(t).toBeVisible({ timeout: 60_000 })
-    forkGradeDecision = /Graded pass/.test((await t.textContent()) ?? "") ? "pass" : "revise"
+    forkGradeDecision = /Checked: pass/.test((await t.textContent()) ?? "") ? "pass" : "revise"
     const card = page.getByTestId("grade-card")
     await expect(card).toBeVisible()
     await expect(card).toContainText(/\/10/)

@@ -26,13 +26,13 @@ export function UsageTab({ skill }: { skill: SkillDetail }) {
     <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
       <div className="rounded-xl border bg-card p-4" data-testid="usage-chart">
         <div className="flex items-baseline justify-between">
-          <p className="eyebrow">Activations · 90 days</p>
+          <p className="eyebrow">Times used · last 90 days</p>
           <p className="font-display text-2xl tabular">{fmt.num(total90)}</p>
         </div>
         <p className="text-xs text-muted-foreground">From the Claude Analytics API, joined on skill name. Active users 30d: {fmt.num(skill.activeUsers30d)} · runs 30d: {fmt.num(skill.runs30d)}.</p>
         <div className="mt-4 h-56">
           {series.length === 0 ? (
-            <p className="grid h-full place-items-center text-sm text-muted-foreground">No activations recorded yet. Usage appears once the skill is published and someone runs it on real work.</p>
+            <p className="grid h-full place-items-center text-sm text-muted-foreground">Nobody has used it yet. Use shows up here once the skill is shared and someone runs it on real work.</p>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
@@ -54,7 +54,7 @@ export function UsageTab({ skill }: { skill: SkillDetail }) {
       </div>
       <div className="space-y-4">
         <div className="rounded-xl border bg-card p-4" data-testid="usage-by-team">
-          <p className="eyebrow">By team · 30 days</p>
+          <p className="eyebrow">By team · last 30 days</p>
           {byTeam.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No team activity yet.</p> : (
             <div className="mt-3 h-[calc(1.75rem*var(--n))]" style={{ "--n": byTeam.length } as React.CSSProperties}>
               <ResponsiveContainer width="100%" height="100%">
@@ -70,8 +70,8 @@ export function UsageTab({ skill }: { skill: SkillDetail }) {
         </div>
         <div className="rounded-xl border bg-card p-4" data-testid="usage-adopters">
           <p className="eyebrow">Who else uses this</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Opt-in visibility. Ask them how they adapted it.</p>
-          {skill.adopters.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">Nobody has opted in yet.</p> : (
+          <p className="mt-0.5 text-xs text-muted-foreground">Only people who chose to be listed. Ask them how they made it work for them.</p>
+          {skill.adopters.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">Nobody has chosen to be listed yet.</p> : (
             <ul className="mt-3 space-y-2">{skill.adopters.map((p) => <li key={p.id}><PersonChip person={p} size="sm" showTitle /></li>)}</ul>
           )}
         </div>

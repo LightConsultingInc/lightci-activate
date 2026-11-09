@@ -5,7 +5,7 @@ export function SkillTrigger() {
   return (
     <Frame w={640} h={256} label="A skill fires when a request matches its trigger line and stays quiet otherwise">
       <Card x={20} y={40} w={250} h={68} title="Someone asks" lines={["Prep me for tomorrow's", "call with Harbor Trust"]} tone="ink" />
-      <Card x={20} y={158} w={250} h={68} title="Someone asks" lines={["Draft the RMD letter", "for Mr Ayers"]} tone="ink" />
+      <Card x={20} y={158} w={250} h={68} title="Someone asks" lines={["Draft the renewal letter", "for Mr Ayers"]} tone="ink" />
       <Line d="M270 74 C 320 74, 330 118, 368 118" tone="pass" arrow opacity={0.7} width={2} />
       <Cap x={318} y={62} tone="pass" size={9.5}>Fires</Cap>
       <Line d="M270 192 C 305 192, 320 175, 342 165" tone="fail" dashed opacity={0.6} />

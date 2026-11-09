@@ -14,7 +14,7 @@ export function MemoryCard({ className }: { className?: string }) {
   if (!m || !m.summary?.trim()) return null
   return (
     <section className={cn("rounded-xl border bg-card p-5", className)} data-testid="memory-card" data-version={m.version}>
-      <h2 className="flex items-center gap-2 font-display text-xl font-medium"><Brain className="size-4 text-glow-foreground" /> What Coach knows about you</h2>
+      <h2 className="flex items-center gap-2 font-display text-xl font-medium"><Brain className="size-4 text-glow-foreground" /> What we know about you</h2>
       <p className="mt-2 text-sm leading-relaxed" data-testid="memory-summary">{m.summary}</p>
       {m.strengths?.length > 0 && (
         <div className="mt-3">
@@ -41,7 +41,7 @@ export function MemoryLine({ moduleCode, className }: { moduleCode: string; clas
   return (
     <p className={cn("flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground", className)} data-testid="memory-line">
       <Brain className="size-3.5 text-glow-foreground" />
-      <span className="min-w-0 truncate"><span className="font-medium text-foreground">Coach&apos;s picture of you:</span> {m.summary}</span>
+      <span className="min-w-0 truncate"><span className="font-medium text-foreground">What we know about you:</span> {m.summary}</span>
       <span aria-hidden>·</span>
       <span>updated {fmt.ago(m.updatedAt)}</span>
       <span aria-hidden>·</span>

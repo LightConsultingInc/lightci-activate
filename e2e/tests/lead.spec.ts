@@ -202,8 +202,8 @@ test.describe("lead console", () => {
     const popup = page.waitForEvent("popup")
     await page.getByTestId("client-sso-link").click()
     const portal = await popup
-    await portal.waitForLoadState("domcontentloaded")
-    expect(portal.url()).toMatch(/workos\.com/)
+    // The tab opens during the click and is sent to the portal once the link is made.
+    await portal.waitForURL(/workos\.com/, { timeout: 30_000 })
     await portal.close()
     await expectToast(page, /Single sign-on setup opened/)
   })

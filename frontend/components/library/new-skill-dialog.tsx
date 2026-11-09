@@ -30,7 +30,7 @@ description: ${triggerLine || "Use when …"}
 ${triggerLine || "Describe the moment a teammate should reach for this."}
 
 ## Inputs
-- What Claude may read (keep to the boundary you declare)
+- What Claude may read (keep to the data rules you set)
 
 ## Steps
 1. …
@@ -82,17 +82,17 @@ export function NewSkillDialog({ teams }: { teams: { id: string; name: string }[
         <form onSubmit={submit} className="contents">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Start a skill</DialogTitle>
-            <DialogDescription>A draft on its own branch. Nothing is published until it is graded and approved through the promotion queue.</DialogDescription>
+            <DialogDescription>It starts as a draft. Nobody else gets it until it passes a check and someone approves it for sharing.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="grid gap-1.5">
               <Label htmlFor="ns-name">Name</Label>
-              <Input id="ns-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="RMD letter drafter" autoFocus data-testid="new-skill-name" />
+              <Input id="ns-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Meeting prep notes" autoFocus data-testid="new-skill-name" />
               {name && <p className="font-mono text-[11px] text-muted-foreground">slug: {slugify(name)}</p>}
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="ns-trigger">Trigger line</Label>
-              <Input id="ns-trigger" value={triggerLine} onChange={(e) => setTriggerLine(e.target.value)} placeholder="Use when an advisor needs an RMD reminder letter from a CRM summary export" data-testid="new-skill-trigger" />
+              <Label htmlFor="ns-trigger">When to use it</Label>
+              <Input id="ns-trigger" value={triggerLine} onChange={(e) => setTriggerLine(e.target.value)} placeholder="Use when someone needs prep notes for a customer meeting from the CRM record" data-testid="new-skill-trigger" />
               <p className="text-xs text-muted-foreground">One sentence starting with “Use when”. This is what Claude matches against.</p>
             </div>
             <div className="grid gap-1.5 sm:grid-cols-2 sm:gap-3">

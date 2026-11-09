@@ -25,6 +25,10 @@ None.
 - Sign out also ends the session at WorkOS, so the next sign-in asks again instead of silently reusing it.
 - The single sign-on, domain and directory setup pages (hosted by WorkOS) open in a new tab, so Activate stays open behind them; coming back to the Activate tab refreshes the status.
 - Plainer labels in the lead console and admin screens (no raw metric names, spec references or "rung").
+- Learner screens in plain language throughout (onboarding, My Ladder, My Workflows, History, the Skill Library); lines with no data yet are hidden instead of showing 0. The interview no longer shows its internal checker notes, and placement explains itself to the learner in their own words.
+- Tailored lessons can no longer show leaked raw JSON from the model, and Claude's tables in practice answers render as tables.
+- Right after placement, the list of work to practise on waits for the interview's workflows instead of showing "Workflow" placeholders.
+- My Ladder fits a phone screen. The approval queue and team page are closed to learners with a plain notice instead of an error.
 
 ## v1.0.2
 

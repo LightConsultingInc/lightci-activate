@@ -12,10 +12,10 @@ import { useSkipExercise } from "@/hooks/learner/queries"
 
 type Reason = "no_time" | "blocked" | "tool_issue" | "not_relevant"
 const REASONS: { value: Reason; label: string; hint: string }[] = [
-  { value: "no_time", label: "No time this week", hint: "Coach reschedules it." },
-  { value: "blocked", label: "I'm blocked", hint: "Two in a row escalate to your champion." },
+  { value: "no_time", label: "No time this week", hint: "We'll move it to later." },
+  { value: "blocked", label: "I'm blocked", hint: "If it happens twice in a row, your champion hears about it." },
   { value: "tool_issue", label: "Tool issue", hint: "Something in Claude or Activate isn't working." },
-  { value: "not_relevant", label: "Not relevant to my work", hint: "Coach re-plans your path." },
+  { value: "not_relevant", label: "Not relevant to my work", hint: "We'll change your plan." },
 ]
 
 export function SkipMenu({ exerciseId, disabled }: { exerciseId: string; disabled?: boolean }) {
@@ -30,7 +30,7 @@ export function SkipMenu({ exerciseId, disabled }: { exerciseId: string; disable
       { reason, note: note.trim() || undefined },
       {
         onSuccess: (res) => {
-          toast.success(res.nextUp ? `Skipped. Next up: ${res.nextUp.title}` : "Skipped. Coach will queue something new.")
+          toast.success(res.nextUp ? `Skipped. Next up: ${res.nextUp.title}` : "Skipped. We'll set up something new.")
           setReason(null)
           router.push(res.nextUp ? `/exercise/${res.nextUp.id}` : "/")
         },
@@ -60,8 +60,8 @@ export function SkipMenu({ exerciseId, disabled }: { exerciseId: string; disable
       <Dialog open={reason !== null} onOpenChange={(o) => !o && setReason(null)}>
         <DialogContent data-testid="skip-dialog">
           <DialogHeader>
-            <DialogTitle>Skip this exercise</DialogTitle>
-            <DialogDescription>{REASONS.find((r) => r.value === reason)?.label}. A note helps Coach pick something better.</DialogDescription>
+            <DialogTitle>Skip this practice</DialogTitle>
+            <DialogDescription>{REASONS.find((r) => r.value === reason)?.label}. A note helps us pick something better.</DialogDescription>
           </DialogHeader>
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional: what got in the way?" data-testid="skip-note" />
           <DialogFooter showCloseButton>

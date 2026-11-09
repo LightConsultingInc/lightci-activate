@@ -5,12 +5,12 @@ import { cn } from "@/lib/utils"
 import type { HealthFlag } from "@/hooks/library/types"
 
 export const HEALTH_META: Record<HealthFlag, { label: string; explain: string; tone: "fail" | "revise" | "info" }> = {
-  unused_30d: { label: "Unused 30d", explain: "No activations in the last 30 days. Worth checking the trigger line still matches how people ask for it.", tone: "info" },
-  grade_below_threshold: { label: "Grade slipped", explain: "The scheduled re-grade came back below the publishing threshold. A revision is recommended.", tone: "fail" },
-  boundary_gap: { label: "Boundary gap", explain: "The org boundary gained a restricted class this skill does not declare. Update the declaration before the next promotion.", tone: "fail" },
-  owner_left: { label: "Owner left", explain: "The owner is no longer in the org (from the Admin API). The champion should reassign it.", tone: "revise" },
-  overlapping_trigger: { label: "Overlaps", explain: "The Grader flagged a trigger line that overlaps another skill in the library. Consider merging or sharpening the trigger.", tone: "revise" },
-  pending_review: { label: "In queue", explain: "A promotion request is waiting on an approver.", tone: "info" },
+  unused_30d: { label: "Not used lately", explain: "Nobody has used it in the last 30 days. Worth checking its description still matches how people ask for it.", tone: "info" },
+  grade_below_threshold: { label: "Score dropped", explain: "Its latest check scored below the bar for sharing. Worth revising.", tone: "fail" },
+  boundary_gap: { label: "Data list out of date", explain: "Your firm added a kind of private information this skill does not mention yet. Update what it may use before sharing a new version.", tone: "fail" },
+  owner_left: { label: "Owner left", explain: "The person who owns it has left the firm. Your champion should hand it to someone else.", tone: "revise" },
+  overlapping_trigger: { label: "Overlaps", explain: "Its description overlaps another skill in the library. Consider merging them or making the description sharper.", tone: "revise" },
+  pending_review: { label: "Waiting for approval", explain: "A request to share it is waiting for someone to approve it.", tone: "info" },
 }
 
 const TONE = { fail: "bg-fail-soft text-fail border-fail/30", revise: "bg-revise-soft text-glow-foreground border-revise/40", info: "bg-info-soft text-info border-info/30" }

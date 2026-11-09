@@ -11,9 +11,9 @@ const TONE: Record<Decision, string> = {
 /** Grade as a score-out-of-ten chip with the decision colour. `null` renders an honest "Ungraded". */
 export function GradeChip({ grade, className, size = "sm" }: { grade: { score: number; decision: Decision } | null | undefined; className?: string; size?: "sm" | "md" }) {
   const base = cn("inline-flex items-center gap-1 rounded-full border font-medium tabular", size === "sm" ? "h-5 px-2 text-xs" : "h-7 px-3 text-sm", className)
-  if (!grade) return <span className={cn(base, "border-dashed border-border text-muted-foreground")} data-testid="grade-chip" data-decision="none">Ungraded</span>
+  if (!grade) return <span className={cn(base, "border-dashed border-border text-muted-foreground")} data-testid="grade-chip" data-decision="none">Not checked yet</span>
   return (
-    <span className={cn(base, TONE[grade.decision] ?? TONE.revise)} data-testid="grade-chip" data-decision={grade.decision} title={`Grader decision: ${grade.decision}`}>
+    <span className={cn(base, TONE[grade.decision] ?? TONE.revise)} data-testid="grade-chip" data-decision={grade.decision} title={`Result: ${grade.decision === "pass" ? "pass" : grade.decision === "fail" ? "not ready" : "needs changes"}`}>
       {fmt.score(grade.score)}
       <span className="opacity-70">/10</span>
     </span>
@@ -37,10 +37,10 @@ export function GradeRing({ grade, size = 72 }: { grade: { score: number; decisi
         {grade ? (
           <div>
             <div className="font-display font-medium tabular" style={{ fontSize: size / 3.4 }}>{fmt.score(grade.score)}</div>
-            <div className="eyebrow mt-0.5" style={{ fontSize: Math.max(8, size / 11) }}>{grade.decision}</div>
+            <div className="eyebrow mt-0.5" style={{ fontSize: Math.max(8, size / 11) }}>{grade.decision === "pass" ? "pass" : grade.decision === "fail" ? "not ready" : "needs work"}</div>
           </div>
         ) : (
-          <div className="eyebrow" style={{ fontSize: Math.max(8, size / 10) }}>Ungraded</div>
+          <div className="eyebrow" style={{ fontSize: Math.max(8, size / 10) }}>Not checked</div>
         )}
       </div>
     </div>

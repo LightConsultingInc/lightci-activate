@@ -19,7 +19,7 @@ import { NewSkillDialog } from "./new-skill-dialog"
 import { describeError } from "./skill-actions"
 import { cn } from "@/lib/utils"
 
-const SORT_LABEL: Record<LibrarySort, string> = { most_used: "Most used", newest: "Newest", grade: "Highest grade" }
+const SORT_LABEL: Record<LibrarySort, string> = { most_used: "Most used", newest: "Newest", grade: "Highest score" }
 
 /** Facet counts arrive either as arrays or as key→count maps; normalise to a map. */
 function countMap<K extends string>(v: LibraryFacets["rungs"] | LibraryFacets["statuses"] | undefined, key: "rung" | "status"): Record<string, number> {
@@ -54,7 +54,7 @@ export function LibraryBrowser() {
       <PageHeader
         eyebrow="Library"
         title="Skill Library"
-        description="Every skill here has an owner, a grade, a boundary declaration and an approver. Adopting a teammate's skill is the fastest way through L3."
+        description="Skills your teammates have built and had checked. Each one has an owner and says what information it may use. Trying a teammate's skill on your own work is the quickest way into L3."
         actions={<NewSkillDialog teams={facets?.teams ?? []} />}
       />
 
@@ -62,7 +62,7 @@ export function LibraryBrowser() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-56 flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or trigger: “meeting prep”, “RMD”, “IPS”…" className="pl-8" data-testid="library-search" aria-label="Search skills" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or what it does: “meeting prep”, “follow-up email”, “weekly report”…" className="pl-8" data-testid="library-search" aria-label="Search skills" />
           </div>
           <Select value={filters.team ?? "all"} onValueChange={(v) => set({ team: v as string })} items={[{ value: "all", label: "All teams" }, ...(facets?.teams ?? []).map((t) => ({ value: t.id, label: `${t.name} (${t.count})` }))]}>
             <SelectTrigger className="w-44" data-testid="filter-team"><SelectValue /></SelectTrigger>
@@ -125,8 +125,8 @@ export function LibraryBrowser() {
               title={activeCount > 0 ? "Nothing matches those filters" : "The library is empty so far"}
               description={
                 activeCount > 0
-                  ? "Try widening the rung or clearing the team. Skills nearby are below: the most-used across the firm right now."
-                  : "The first skills usually come from a mapped workflow: advisor meeting prep, RMD reminder letters, annual review decks. Start one, or convert a backlog item on the Team page."
+                  ? "Try a different level or clear the team. Below are the skills people at your firm use most right now."
+                  : "The first skills usually come from work people repeat every week, like meeting prep, follow-up emails or a weekly report. Start one now."
               }
               action={activeCount > 0 ? <Button variant="outline" onClick={() => { clear(); setSearch("") }} data-testid="empty-clear-filters">Clear filters</Button> : <NewSkillDialog teams={[]} />}
             />
