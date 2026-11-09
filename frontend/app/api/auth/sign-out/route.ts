@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   jar.delete("activate_org")
   // A session the company's sign-in policy refused: say why on the login page (whitelisted reasons only).
   const reason = request.nextUrl.searchParams.get("reason")
-  const query = reason === "sso" || reason === "setup" ? `?authError=${reason}` : ""
+  const query = reason === "sso" || reason === "setup" || reason === "deactivated" ? `?authError=${reason}` : ""
   return NextResponse.redirect(publicUrl(`/login${query}`))
 }
 export const POST = GET

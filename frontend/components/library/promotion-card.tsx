@@ -22,7 +22,7 @@ export function DecisionChip({ decision, className }: { decision: PromotionDecis
 export function PrRef({ p, className }: { p: Pick<PromotionView, "prNumber" | "prUrl">; className?: string }) {
   const label = p.prNumber != null ? `#${p.prNumber}` : "PR"
   if (p.prUrl) return <a href={p.prUrl} target="_blank" rel="noopener noreferrer" className={cn("inline-flex items-center gap-1 font-mono text-xs underline-offset-4 hover:underline", className)} data-testid="pr-link"><GitPullRequest className="size-3.5" />{label}</a>
-  return <span className={cn("inline-flex items-center gap-1 font-mono text-xs text-muted-foreground", className)} title="No GitHub repo configured; Activate is tracking this PR locally" data-testid="pr-local"><GitPullRequest className="size-3.5" />{label} <span className="rounded bg-muted px-1 text-[10px] font-sans">local PR</span></span>
+  return <span className={cn("inline-flex items-center gap-1 font-mono text-xs text-muted-foreground", className)} title="Not connected to GitHub yet, so this request is tracked inside Activate" data-testid="pr-local"><GitPullRequest className="size-3.5" />{label} <span className="rounded bg-muted px-1 text-[10px] font-sans">not on GitHub</span></span>
 }
 
 /** Compact promotion row: skill, version, requester, PR, grade, approvals progress. Links to the one-screen approval. */
@@ -42,7 +42,7 @@ export function PromotionCard({ p, className }: { p: PromotionView; className?: 
         <PrRef p={p} />
         <GradeChip grade={p.grade ? { score: p.grade.score, decision: p.grade.decision } : null} />
         {p.highExposure && <span className="rounded-full bg-fail-soft px-2 py-0.5 font-medium text-fail">Compliance required</span>}
-        <span className="ml-auto flex items-center gap-1" title="Required approver roles">
+        <span className="ml-auto flex items-center gap-1" title="Who needs to sign off">
           {p.requiredApproverRoles.map((r) => (
             <span key={r} className={cn("rounded-full border px-1.5 py-0.5 capitalize", approved.has(r) ? "border-pass/40 bg-pass-soft text-pass" : "border-dashed text-muted-foreground")}>{r}</span>
           ))}

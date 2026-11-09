@@ -20,7 +20,7 @@ export function PromotionQueue() {
       <PageHeader
         eyebrow="Champion"
         title="Promotion Queue"
-        description="Every publish goes through here: grade card, boundary check, diff and required approvers on one screen. Nothing reaches the marketplace repo without a signature."
+        description="Skills your teammates want to share with everyone. Each one shows its score, what it's allowed to use, what changed and who needs to sign off. Nothing is shared until it's approved."
         actions={
           <ToggleGroup value={[state]} onValueChange={(v) => { const s = v[0] as "pending" | "all" | undefined; if (s) setState(s) }} variant="outline" spacing={0} data-testid="promotions-state">
             <ToggleGroupItem value="pending">Pending</ToggleGroupItem>
@@ -31,9 +31,9 @@ export function PromotionQueue() {
       {q.isPending ? (
         <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
       ) : q.isError ? (
-        <ErrorState title="Couldn't load the promotion queue" detail={describeError(q.error)} retry={() => q.refetch()} />
+        <ErrorState title="Couldn't load the skills waiting for approval" detail={describeError(q.error)} retry={() => q.refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState icon={<GitPullRequest className="size-5" />} title={state === "pending" ? "Nothing waiting on you" : "No promotion requests yet"} description={state === "pending" ? "When a teammate's skill passes its grade and they request promotion, the packaged PR shows up here. Switch to All to see history." : "The first request usually comes from a converted backlog workflow, like the annual review deck builder, once the author has a passing grade."} />
+        <EmptyState icon={<GitPullRequest className="size-5" />} title={state === "pending" ? "Nothing waiting on you" : "No requests to share a skill yet"} description={state === "pending" ? "When a teammate's skill passes its check and they ask to share it, it shows up here. Switch to All to see past requests." : "The first one usually comes from a backlog task someone turned into a skill, once it has a passing score."} />
       ) : (
         <div className="space-y-6">
           {high.length > 0 && (

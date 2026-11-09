@@ -3,6 +3,7 @@
 import { Check, Eye, EyeOff, Keyboard, Mic, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useConsent } from "@/hooks/learner/queries"
+import { useMe } from "@/hooks/use-me"
 import type { InputMode } from "./onboarding-flow"
 
 const COLUMNS: {
@@ -58,6 +59,9 @@ export function ConsentStep({
   name: string
 }) {
   const consent = useConsent()
+  const me = useMe()
+  const policy = typeof me.org?.settings?.usagePolicy === "string" ? me.org.settings.usagePolicy.trim() : ""
+  const orgName = me.org?.isDemo ? null : me.org?.name
   const first = name.split(" ")[0]
   const go = (mode: InputMode) =>
     consent.mutate(undefined, { onSuccess: () => onDone(mode) })
@@ -105,6 +109,13 @@ export function ConsentStep({
         ))}
       </div>
 
+      {policy && (
+        <section className="mt-6 rounded-xl border bg-card p-5" data-testid="consent-policy">
+          <h2 className="font-display text-lg font-medium">{orgName ? `${orgName}'s rules for using Claude` : "Your company's rules for using Claude"}</h2>
+          <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{policy}</p>
+        </section>
+      )}
+
       <div className="mt-10 flex flex-col items-start gap-3">
         <Button
           size="lg"
@@ -126,9 +137,9 @@ export function ConsentStep({
           <Keyboard className="size-3.5" /> Prefer to type?
         </button>
         <p className="mt-2 text-xs text-muted-foreground">
-          Starting records your consent to the above. Your firm&apos;s usage
-          policy applies to everything you submit; leaderboards are off by
-          default.
+          Starting records your consent to the above.{" "}
+          {policy ? "Your company's rules above apply to everything you hand in." : "Your company's rules for using Claude apply to everything you hand in."}{" "}
+          Nobody is ranked against colleagues unless your company switches that on.
         </p>
       </div>
     </div>

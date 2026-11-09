@@ -145,7 +145,7 @@ test.describe("company admin", () => {
     await expect(status).toBeVisible()
     await expect(status).toContainText("Repo")
     await expect(status).toContainText(/\d+ plugins · \d+ skills/)
-    await expect(status).toContainText(/local|github/)
+    await expect(status).toContainText(/Not linked yet|GitHub|Git/)
     await expect(page.getByTestId("panel-assignments")).toBeVisible()
 
     const checklist = page.getByTestId("setup-checklist")

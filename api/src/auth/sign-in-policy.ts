@@ -56,6 +56,8 @@ export const SIGN_IN_MESSAGES = {
     'Your company now signs in with its own single sign-on. Sign in again with your work account.',
   setupInviteOnly:
     'Your company is still setting up sign-in for Activate. Ask your administrator to invite you, or try again once they have finished.',
+  deactivated:
+    "Your access to Activate has been switched off. If you think that's a mistake, ask whoever runs Activate at your company.",
   wrongDomain:
     "This account isn't on your company's email domain, so it can't sign in to your company's Activate. Sign in with your work email address.",
 } as const;

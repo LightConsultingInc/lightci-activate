@@ -43,7 +43,7 @@ function Inner() {
     <>
       <AdminHeader
         title="Marketplace repo"
-        description="The client-owned <firm>-claude-marketplace repository is the source of truth for published skills. Promotions merge into it; Claude Enterprise syncs from it."
+        description="Your company's own skill repository is where published skills live. Approved skills are added to it, and Claude Enterprise picks them up from there."
         actions={
           canWrite && (
             <Button size="sm" disabled={sync.isPending} data-testid="marketplace-sync" onClick={() => sync.mutate(undefined, { onSuccess: () => toast.success("Repo synced", { description: "Published skills re-read from the repo." }), onError: (e) => toast.error("Sync failed", { description: e instanceof ApiError ? e.detail : String(e) }) })}>
@@ -69,7 +69,7 @@ function Inner() {
                   <dt className="text-muted-foreground">Last sync</dt>
                   <dd>{s.lastSyncAt ? `${fmt.ago(s.lastSyncAt)} (${fmt.date(s.lastSyncAt)})` : "never"}</dd>
                   <dt className="text-muted-foreground">Mode</dt>
-                  <dd><Badge variant="outline" className={cn("text-foreground", s.mode === "github" || s.mode === "git" ? "border-pass/40 bg-pass-soft" : "border-border")}>{s.mode}</Badge></dd>
+                  <dd><Badge variant="outline" className={cn("text-foreground", s.mode === "github" || s.mode === "git" ? "border-pass/40 bg-pass-soft" : "border-border")}>{({ github: "GitHub", git: "Git", local: "Not linked yet", "local-nested": "Not linked yet" } as Record<string, string>)[s.mode] ?? s.mode}</Badge></dd>
                   {s.lastError && (
                     <>
                       <dt className="text-muted-foreground">Last problem</dt>

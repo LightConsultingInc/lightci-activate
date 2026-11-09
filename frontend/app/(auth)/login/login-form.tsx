@@ -13,15 +13,16 @@ import { lookupSignIn, signInWithOrganization, signInWithPassword, type SignInLo
  * straight to it; a demo or password account gets the password field; anyone else sees both.
  */
 /** Why the last sign-in did not stick: a generic failure, or the company's sign-in policy. */
-export type AuthError = boolean | "sso" | "setup"
+export type AuthError = boolean | "sso" | "setup" | "deactivated"
 
-const AUTH_ERROR_TEXT: Record<"sso" | "setup", string> = {
+const AUTH_ERROR_TEXT: Record<"sso" | "setup" | "deactivated", string> = {
+  deactivated: "Your access to Activate has been switched off. If you think that's a mistake, ask whoever runs Activate at your company.",
   sso: "Your company now signs in with its own single sign-on. Enter your work email to continue with it.",
   setup: "Your company is still setting up sign-in for Activate. Ask your administrator to invite you, or try again once they have finished.",
 }
 
 function authErrorText(authError: AuthError): string | null {
-  if (authError === "sso" || authError === "setup") return AUTH_ERROR_TEXT[authError]
+  if (authError === "sso" || authError === "setup" || authError === "deactivated") return AUTH_ERROR_TEXT[authError]
   return authError ? "We could not complete sign-in. Try again." : null
 }
 

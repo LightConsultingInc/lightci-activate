@@ -234,7 +234,7 @@ export type TeamView = {
   reviewQueue: ReviewItem[]
   promotionQueue: PromotionView[]
   library: SkillCard[]
-  stats: { activePct7d: number; rungDistribution: number[]; hoursBackPerWeek: number; skillsPublished: number; promotionsPending: number }
+  stats: { activePct7d: number; hasUsage?: boolean; hasBaseline?: boolean; rungDistribution: number[]; hoursBackPerWeek: number; skillsPublished: number; promotionsPending: number }
 }
 
 export type Readout = {

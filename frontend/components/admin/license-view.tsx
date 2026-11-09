@@ -40,7 +40,7 @@ function Inner() {
   const [token, setToken] = useState("")
   return (
     <>
-      <AdminHeader title="License" description="Your self-hosted Activate runs under a license from LightCI: how many seats, until when. Nothing is ever deleted when it lapses." />
+      <AdminHeader title="License" description="Installations your company runs itself need a license from LightCI: how many seats, until when. Nothing is ever deleted when it lapses." />
       <QueryState query={q} skeleton={<Skeleton className="h-64 rounded-xl" />}>
         {(s) => (
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr] animate-rise" data-testid="license-view">

@@ -17,7 +17,7 @@ export const KEY_META: Record<IntegrationKind, { title: string; owner: string; u
   anthropic: {
     title: "Anthropic API key",
     owner: "Optional · your firm's key",
-    unlocks: "Runs the Coach, Grader, Interviewer, Builder and Auditor on your own Anthropic account, so model spend and data handling sit under your agreement.",
+    unlocks: "Every AI step in Activate (the interview, feedback on practice, drafting skills, readouts) runs on your own Anthropic account, so model spend and data handling sit under your agreement.",
     without: "Without it, Activate uses LightCI's platform key. Everything works; usage is billed to LightCI and shows as “Using LightCI's key”.",
     placeholder: "sk-ant-…",
     help: "Create it in console.anthropic.com → API keys. Grant it to a workspace you can see spend for.",
@@ -36,7 +36,7 @@ export const KEY_META: Record<IntegrationKind, { title: string; owner: string; u
     title: "Claude Analytics API key",
     owner: "Recommended · your firm's key",
     unlocks: "Daily active-on-real-work, surfaces, connectors, premium seat utilisation and skill activations across Adoption, Groups, Skills and Cost.",
-    without: "Without it, adoption and cost views rely on Activate's own activity (exercises, submissions) and show that as the source.",
+    without: "Without it, adoption and seat-cost figures say they are not connected yet; progress on the ladder still shows.",
     placeholder: "Analytics key with read:analytics",
     help: "Claude Enterprise → Organization settings → API keys → Analytics (scope read:analytics).",
     platformFallback: false,
@@ -53,7 +53,7 @@ export const KEY_META: Record<IntegrationKind, { title: string; owner: string; u
   github: {
     title: "GitHub token",
     owner: "Optional · your firm's marketplace repo",
-    unlocks: "Promotion requests open real pull requests in your <client>-claude-marketplace repo; merges commit to main.",
+    unlocks: "Promotion requests open real pull requests in your company's skill repository; merges commit to main.",
     without: "Without it, promotions are recorded locally with a PR number but no PR URL, and the repo is synced from the local working tree.",
     placeholder: "github_pat_…",
     help: "A fine-grained PAT with contents:write and pull_requests:write on the marketplace repo.",

@@ -4,6 +4,29 @@ Each release has a section headed by its exact tag. The release workflow refuses
 without one. Operators read these before upgrading: new configuration keys, changed defaults,
 migrations, and anything they must do are listed first.
 
+## v1.0.4
+
+Fixes from the admin, champion and sponsor part of the EU production walkthrough.
+
+**Operator actions**
+- WorkOS installs: switch on Role assignment (dashboard: Authorization, Role assignment) with Single Sign-On groups as the mapping source, so a company's IT admin can map their groups to activate-admin / activate-sponsor / activate-champion in the setup pages.
+
+**New configuration keys**
+None.
+
+**Migrations**
+None.
+
+**Security advisory:** yes. Someone marked inactive (by an admin, or by the company's directory when they leave) kept access to the web app, the API and the Claude connector until their sign-in expired. They are now refused at once.
+
+**Behaviour changes**
+- Teams & People: admins can switch someone's access off and back on. It shows each person's level and when they were last in Activate.
+- The company's usage policy is shown to every learner before they start, as the admin page always said.
+- Champion screens (team page, review queue, approval queue, person page) in plain language. The team backlog includes workflows its members mapped before joining the team. Figures with no data behind them are hidden.
+- A champion not yet on a team sees a plain message instead of an error.
+- Person page: the retired judgement figure is gone, and skills below someone's starting level are no longer flagged as fading.
+- Admin pages: no internal agent names or placeholders, and the Analytics key description matches what the screens do.
+
 ## v1.0.3
 
 More fixes from the EU production walkthrough.

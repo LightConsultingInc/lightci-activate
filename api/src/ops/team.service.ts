@@ -100,9 +100,15 @@ export class TeamService {
       .map((p) => this.rosterEntry(f, p));
     const memberIds = new Set(roster.map((r) => r.id));
 
+    // The team's work: workflows filed to the team, plus those its members mapped before they joined it
+    // (an interview files workflows under the person's team at that moment, often none).
     const backlogTop = backlogRank(
       f.workflows
-        .filter((w) => w.teamId === team.id)
+        .filter(
+          (w) =>
+            w.teamId === team.id ||
+            (!w.teamId && !!w.ownerPersonId && memberIds.has(w.ownerPersonId)),
+        )
         .map((w) => workflowSummary(w, f, user.id)),
     ).slice(0, 5);
 
@@ -158,6 +164,8 @@ export class TeamService {
       library,
       stats: {
         activePct7d: roster.length ? round(active7 / roster.length) : 0,
+        /** False until Claude's usage reports have sent anything for this company: activePct7d is then unmeasured. */
+        hasUsage: f.usage.length > 0,
         rungDistribution: rungDistribution(roster.map((r) => r.rung)),
         hoursBackPerWeek: hb.measuredTasks
           ? round(hb.minutesBackPerWeek / 60, 1)

@@ -14,14 +14,14 @@ import { cn } from "@/lib/utils"
 import type { WorkflowStatus, WorkflowSummary } from "@/hooks/library/types"
 
 const STATUS: Record<WorkflowStatus, { label: string; cls: string }> = {
-  candidate: { label: "Candidate", cls: "bg-muted text-muted-foreground" },
-  scored: { label: "Scored", cls: "bg-info-soft text-info" },
+  candidate: { label: "Idea", cls: "bg-muted text-muted-foreground" },
+  scored: { label: "Ranked", cls: "bg-info-soft text-info" },
   in_build: { label: "In build", cls: "bg-glow-soft text-glow-foreground" },
   shipped: { label: "Shipped", cls: "bg-pass-soft text-pass" },
   measured: { label: "Measured", cls: "bg-pass text-paper" },
 }
 
-/** Backlog ranked by the Scorer. Value / hours / readiness / exposure as micro-bars so the composite is never opaque. */
+/** Backlog ranked by time saved, readiness and risk. Value / hours / readiness / exposure as micro-bars so the composite is never opaque. */
 export function BacklogTable({ items, className }: { items: WorkflowSummary[]; className?: string }) {
   const router = useRouter()
   const build = useBuildWorkflow()
@@ -30,7 +30,7 @@ export function BacklogTable({ items, className }: { items: WorkflowSummary[]; c
 
   const onBuild = (w: WorkflowSummary) =>
     build.mutate(w.id, {
-      onSuccess: (d) => toast.success(`Builder drafted “${d.skill.name}”`, { description: "Sample cases and boundary pre-filled from the workflow map.", action: { label: "Open draft", onClick: () => router.push(`/library/${d.skill.slug}?edit=1`) } }),
+      onSuccess: (d) => toast.success(`Claude drafted “${d.skill.name}”`, { description: "Example requests and limits are filled in from what we know about this task.", action: { label: "Open draft", onClick: () => router.push(`/library/${d.skill.slug}?edit=1`) } }),
       onError: (e) => toast.error("Couldn't start the build", { description: describeError(e) }),
     })
   const onWave = (w: WorkflowSummary) =>
@@ -42,16 +42,16 @@ export function BacklogTable({ items, className }: { items: WorkflowSummary[]; c
         <TableHeader>
           <TableRow>
             <TableHead className="w-10">#</TableHead>
-            <TableHead>Workflow</TableHead>
+            <TableHead>Task</TableHead>
             <TableHead className="text-right">Score</TableHead>
-            <TableHead>Why</TableHead>
+            <TableHead>Why it ranks here</TableHead>
             <TableHead>Owner</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">No scored workflows yet. Run the champion interview to seed the map (meeting prep, RMD letters, annual review decks are the usual first three), then the Scorer ranks them.</TableCell></TableRow>}
+          {items.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">No tasks ranked yet. Tell us which tasks take up your team’s week (meeting prep, follow-up emails and weekly reports are common first picks) and they’ll be ranked here.</TableCell></TableRow>}
           {items.map((w, i) => {
             const s = w.score
             const st = STATUS[w.status] ?? STATUS.candidate
@@ -62,7 +62,7 @@ export function BacklogTable({ items, className }: { items: WorkflowSummary[]; c
                 <TableCell className="text-muted-foreground tabular">{i + 1}</TableCell>
                 <TableCell>
                   <p className="font-medium">{w.name}</p>
-                  <p className="text-xs text-muted-foreground">{w.teamName}{w.championVerified ? " · verified" : " · unverified"}{w.nextWave && <span className="ml-1 rounded-full bg-glow px-1.5 text-[10px] font-semibold text-glow-foreground">next wave</span>}</p>
+                  <p className="text-xs text-muted-foreground">{w.teamName}{w.championVerified ? " · confirmed by you" : " · not confirmed yet"}{w.nextWave && <span className="ml-1 rounded-full bg-glow px-1.5 text-[10px] font-semibold text-glow-foreground">next wave</span>}</p>
                 </TableCell>
                 <TableCell className="text-right"><span className="font-display text-xl tabular">{s ? Math.round(s.composite) : "—"}</span></TableCell>
                 <TableCell>
@@ -71,16 +71,16 @@ export function BacklogTable({ items, className }: { items: WorkflowSummary[]; c
                       <MicroBar label="value" value={s.value} color="var(--pass)" width={40} />
                       <MicroBar label="hours" value={s.hours / maxHours} color="var(--glow)" width={40} showValue={false} />
                       <MicroBar label="ready" value={s.readiness} color="var(--info)" width={40} />
-                      <MicroBar label="exposure" value={s.exposure} color="var(--fail)" width={40} />
+                      <MicroBar label="risk" value={s.exposure} color="var(--fail)" width={40} />
                     </div>
-                  ) : <span className="text-xs text-muted-foreground">Not scored</span>}
+                  ) : <span className="text-xs text-muted-foreground">Not ranked yet</span>}
                 </TableCell>
                 <TableCell><PersonChip person={w.owner} size="xs" /></TableCell>
                 <TableCell><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", st.cls)}>{st.label}</span></TableCell>
                 <TableCell className="text-right">
                   <div className="inline-flex items-center gap-1">
-                    <Button size="xs" variant={w.nextWave ? "secondary" : "ghost"} onClick={() => onWave(w)} disabled={waving} data-testid="backlog-next-wave" title="Toggle next wave">{waving ? <Spinner className="size-3" /> : <Waves data-icon="inline-start" />}{w.nextWave ? "In wave" : "Next wave"}</Button>
-                    <Button size="xs" variant="outline" onClick={() => onBuild(w)} disabled={building || w.status === "in_build" || w.status === "shipped" || w.status === "measured"} data-testid="backlog-convert" title={w.linkedSkills.length ? `Linked: ${w.linkedSkills.map((k) => k.name).join(", ")}` : "Builder drafts a skill from this map"}>{building ? <Spinner className="size-3" /> : <Hammer data-icon="inline-start" />}Convert to build</Button>
+                    <Button size="xs" variant={w.nextWave ? "secondary" : "ghost"} onClick={() => onWave(w)} disabled={waving} data-testid="backlog-next-wave" title="Add to or remove from the next group to roll out">{waving ? <Spinner className="size-3" /> : <Waves data-icon="inline-start" />}{w.nextWave ? "In wave" : "Next wave"}</Button>
+                    <Button size="xs" variant="outline" onClick={() => onBuild(w)} disabled={building || w.status === "in_build" || w.status === "shipped" || w.status === "measured"} data-testid="backlog-convert" title={w.linkedSkills.length ? `Linked: ${w.linkedSkills.map((k) => k.name).join(", ")}` : "Claude drafts a skill from this task"}>{building ? <Spinner className="size-3" /> : <Hammer data-icon="inline-start" />}Turn into a skill</Button>
                   </div>
                 </TableCell>
               </TableRow>

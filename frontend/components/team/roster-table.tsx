@@ -47,16 +47,16 @@ export function RosterTable({ roster, className }: { roster: RosterRow[]; classN
         <TableHeader>
           <TableRow>
             <SortHead k="name" active={sort.key === "name"} onToggle={toggle}>Name</SortHead>
-            <SortHead k="rung" active={sort.key === "rung"} onToggle={toggle}>Rung</SortHead>
-            <SortHead k="lastActive" active={sort.key === "lastActive"} onToggle={toggle}>Last active on real work</SortHead>
-            <SortHead k="hoursBack" active={sort.key === "hoursBack"} onToggle={toggle}>Hours back vs baseline</SortHead>
-            <SortHead k="stalled" active={sort.key === "stalled"} onToggle={toggle}>Stalled</SortHead>
-            <SortHead k="revisits" className="text-right" active={sort.key === "revisits"} onToggle={toggle}>Revisits overdue</SortHead>
-            <SortHead k="mastery" className="text-right" active={sort.key === "mastery"} onToggle={toggle}>Mastery avg</SortHead>
+            <SortHead k="rung" active={sort.key === "rung"} onToggle={toggle}>Level</SortHead>
+            <SortHead k="lastActive" active={sort.key === "lastActive"} onToggle={toggle}>Last used Claude for work</SortHead>
+            <SortHead k="hoursBack" active={sort.key === "hoursBack"} onToggle={toggle}>Time saved per week</SortHead>
+            <SortHead k="stalled" active={sort.key === "stalled"} onToggle={toggle}>Stuck</SortHead>
+            <SortHead k="revisits" className="text-right" active={sort.key === "revisits"} onToggle={toggle}>Recaps overdue</SortHead>
+            <SortHead k="mastery" className="text-right" active={sort.key === "mastery"} onToggle={toggle}>Practice score</SortHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">Nobody on the roster yet. Invite advisors from Company admin; their intake interview places them on the ladder.</TableCell></TableRow>}
+          {rows.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">Nobody on your team yet. Once your admin adds people, they show up here after a short first chat sets their starting level.</TableCell></TableRow>}
           {rows.map((r) => {
             const baselineH = (r.baselineMinutesPerWeek ?? 0) / 60
             const hoursBack = r.hoursBackPerWeek ?? 0
@@ -71,13 +71,16 @@ export function RosterTable({ roster, className }: { roster: RosterRow[]; classN
                 </TableCell>
                 <TableCell>
                   {r.hasBaseline === false ? (
-                    <span className="text-xs text-muted-foreground italic" data-testid="no-baseline">no baseline</span>
+                    <span className="text-xs text-muted-foreground italic" data-testid="no-baseline">not tracked yet</span>
+                  ) : r.hasMeasurement === false && !hoursBack ? (
+                    // Nothing measured since the "before" time, so 0h saved would be a guess: show the before time only.
+                    <span className="text-xs text-muted-foreground"><span className="tabular">{baselineH.toFixed(1)}h</span> a week before · <span className="italic">not checked yet</span></span>
                   ) : (
                     <div className="flex items-center gap-2">
                       <MicroBar value={ratio} color="var(--glow)" showValue={false} width={64} />
                       <span className="text-sm tabular">{hoursBack.toFixed(1)}h</span>
-                      <span className="text-xs text-muted-foreground tabular">/ {baselineH.toFixed(1)}h</span>
-                      {r.hasMeasurement === false && <span className="text-xs text-muted-foreground italic">not measured</span>}
+                      <span className="text-xs text-muted-foreground tabular">of {baselineH.toFixed(1)}h</span>
+                      {r.hasMeasurement === false && <span className="text-xs text-muted-foreground italic">not checked yet</span>}
                     </div>
                   )}
                 </TableCell>
