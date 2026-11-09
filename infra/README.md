@@ -88,6 +88,9 @@ rotate it, write the new pair and roll the services. The LightCI activation lead
 (`zain+activate-lead@lightci.com`) exists in both environments; its password is in the shared secret
 `activate-lead-signin` (us-east-1), declared by the US bootstrap root.
 
+- Authentication methods (dashboard only): turn on **Email + Password** (and **Magic Auth** if invited admins
+  should be able to sign in with an emailed code) in each production environment. New WorkOS environments
+  start with them off, and a client's invited admin has no other way in before single sign-on exists.
 - Redirect URIs: `node scripts/workos-redirects.mjs [us|eu]` registers `<web>/callback` for each cell (idempotent).
 - Roles: `WORKOS_API_KEY=… node scripts/workos-roles.mjs` creates the environment roles `activate-admin`,
   `activate-sponsor` and `activate-champion` (idempotent; run once per environment, done for test, US and EU on

@@ -93,6 +93,14 @@ the QA inbox and its links opened in the same browser.
 
 (filled in as the walkthrough runs)
 
+### Findings
+
+| # | Found at | What happened | Fix |
+|---|---|---|---|
+| F1 | Lead sign-in (A1) | Both production WorkOS environments had email + password sign-in off (WorkOS's default for new environments). The lead could not sign in, and a client's invited admin could not do their first sign-in before single sign-on, which blocks onboarding at step one. | Enable Email + Password (and optionally Magic Auth) in the production environments: WorkOS dashboard, Authentication, Methods. Dashboard-only setting; added to the cell setup checklist in `infra/README.md`. |
+| F2 | Lead sign-in (A1) | The login page reported the disabled method as "That email and password did not match", sending people hunting for a password that was right. | WorkOS error codes now map to their own plain messages (PR #24). |
+
+
 ## Housekeeping
 
 - A first QA company, "LightCI QA (EU)" on `qa-activate.lciventure.com`, was created by a server task
