@@ -120,14 +120,14 @@ function ApprovalCard({ p }: { p: PromotionView }) {
   )
 }
 
-const METRIC_LABEL: Record<string, string> = { activePct: "Active on real work", hoursBack: "Hours back / wk", stalledDays: "Days stalled", revisitCompliance: "Revisit compliance", championQueueAgeDays: "Champion queue age", baselineCoveragePct: "Baseline coverage" }
-const fmtMetric = (k: string, v: number) => (/pct|compliance|rate/i.test(k) ? fmt.pct(v) : /days|age/i.test(k) ? `${Math.round(v)}d` : /hours/i.test(k) ? `${v.toFixed(1)}h` : String(v))
+const METRIC_LABEL: Record<string, string> = { weeklyActivePct: "Active on real work this week", activityDrop: "Days since activity dropped", activePct: "Active on real work", hoursBack: "Hours back / wk", stalledDays: "Days stalled", revisitCompliance: "Revisit compliance", championQueueAgeDays: "Champion queue age", baselineCoveragePct: "Baseline coverage" }
+const fmtMetric = (k: string, v: number) => (/pct|compliance|rate/i.test(k) ? fmt.pct(v) : /days|age|drop/i.test(k) ? `${Math.round(v)}d` : /hours/i.test(k) ? `${v.toFixed(1)}h` : String(v))
 
 function StalledCard({ s }: { s: StalledItem }) {
   const href = s.person ? `/people/${s.person.id}` : s.team ? `/mission-control/groups?team=${s.team.id}` : `/lead/clients/${s.org.id}`
   const who = s.person ? s.person.name : s.team ? s.team.name : "Whole client"
   return (
-    <QueueCard org={s.org.name} title={who} meta={`${METRIC_LABEL[s.metric] ?? s.metric}: ${fmtMetric(s.metric, s.value)} vs threshold ${fmtMetric(s.metric, s.threshold)}${s.since ? ` · since ${fmt.dateShort(s.since)}` : ""}`} right={<SlaTimer dueAt={s.slaDueAt} />} testId="lead-stalled-card">
+    <QueueCard org={s.org.name} title={who} meta={`${METRIC_LABEL[s.metric] ?? s.metric}: ${fmtMetric(s.metric, s.value)} vs target ${fmtMetric(s.metric, s.threshold)}${s.since ? ` · since ${fmt.dateShort(s.since)}` : ""}`} right={<SlaTimer dueAt={s.slaDueAt} />} testId="lead-stalled-card">
       <div className="mt-2 flex justify-end">
         <Button size="xs" variant="outline" render={<Link href={href} />} data-testid="stalled-open">
           Open {s.person ? "person" : s.team ? "team" : "client"} <ArrowUpRightIcon data-icon="inline-end" />

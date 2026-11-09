@@ -28,19 +28,19 @@ export function ActionBar({ skill, isOwner, isChampion }: { skill: SkillDetail; 
   const latest = skill.grades?.[0] ?? null
   const pending = skill.promotion && skill.promotion.decision === "pending" ? skill.promotion : null
   let blocked: string | null = null
-  if (skill.status === "published") blocked = "This version is already published."
-  else if (skill.status === "deprecated") blocked = "Deprecated skills cannot be promoted."
-  else if (pending) blocked = `Promotion #${pending.prNumber ?? ""} is already awaiting approval.`
-  else if (!latest) blocked = "Grade this version first. Promotion requires a passing grade."
-  else if (latest.decision !== "pass") blocked = `Latest grade is “${latest.decision}” (${(latest.score * 10).toFixed(1)}/10). Revise and re-grade to reach a pass.`
+  if (skill.status === "published") blocked = "This version is already shared."
+  else if (skill.status === "deprecated") blocked = "Retired skills can't be shared."
+  else if (pending) blocked = "This version is already waiting for approval."
+  else if (!latest) blocked = "Check this version first. It needs a pass before it can be shared."
+  else if (latest.decision !== "pass") blocked = `Its latest check needs changes (${(latest.score * 10).toFixed(1)}/10). Change it and check it again to get a pass.`
 
   const onRequest = () =>
     request.mutate(skill.id, {
-      onSuccess: (p) => { setResult(p); toast.success("Promotion requested", { description: p.prUrl ? `PR #${p.prNumber} opened.` : `Local PR #${p.prNumber} recorded; no GitHub repo is configured.` }) },
-      onError: (e) => toast.error("Couldn't request promotion", { description: describeError(e) }),
+      onSuccess: (p) => { setResult(p); toast.success("Sent for approval", { description: p.prUrl ? `Request #${p.prNumber} opened.` : `Request #${p.prNumber} recorded.` }) },
+      onError: (e) => toast.error("Couldn't send it for approval", { description: describeError(e) }),
     })
   const onDeprecate = () =>
-    deprecate.mutate({ id: skill.id, successorSkillId: successorId ?? undefined }, { onSuccess: () => { setConfirmDeprecate(false); toast.success(`${skill.name} deprecated`, { description: successorName ? `The library now points adopters to ${successorName}.` : "It stays readable in the library; adopting is off." }) }, onError: (e) => toast.error("Couldn't deprecate", { description: describeError(e) }) })
+    deprecate.mutate({ id: skill.id, successorSkillId: successorId ?? undefined }, { onSuccess: () => { setConfirmDeprecate(false); toast.success(`${skill.name} retired`, { description: successorName ? `The library now points people using it to ${successorName}.` : "It stays readable in the library, but nobody new can pick it up." }) }, onError: (e) => toast.error("Couldn't retire it", { description: describeError(e) }) })
 
   return (
     <>
@@ -49,19 +49,19 @@ export function ActionBar({ skill, isOwner, isChampion }: { skill: SkillDetail; 
         <Tooltip>
           <TooltipTrigger render={<span className="inline-flex" />}>
             <Button variant="outline" onClick={onRequest} disabled={Boolean(blocked) || request.isPending} data-testid="skill-request-promotion" aria-disabled={Boolean(blocked)}>
-              {request.isPending ? <Spinner className="size-4" /> : <GitPullRequest data-icon="inline-start" />} Request promotion
+              {request.isPending ? <Spinner className="size-4" /> : <GitPullRequest data-icon="inline-start" />} Ask to share
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="max-w-72">{blocked ?? "Packages this version as a PR with the grade card, boundary check and diff summary for the champion."}</TooltipContent>
+          <TooltipContent className="max-w-72">{blocked ?? "Sends this version to your champion to approve, with its score, its data rules and what changed."}</TooltipContent>
         </Tooltip>
         {pending && (
           <Button variant="ghost" render={<Link href={`/promotions/${pending.id}`} />} data-testid="skill-open-promotion">
-            View promotion <ArrowUpRight data-icon="inline-end" />
+            View request <ArrowUpRight data-icon="inline-end" />
           </Button>
         )}
         {(isOwner || isChampion) && skill.status !== "deprecated" && (
           <Button variant="ghost" className="ml-auto text-muted-foreground hover:text-fail" onClick={() => setConfirmDeprecate(true)} data-testid="skill-deprecate">
-            <Archive data-icon="inline-start" /> Deprecate
+            <Archive data-icon="inline-start" /> Retire
           </Button>
         )}
       </div>
@@ -69,20 +69,20 @@ export function ActionBar({ skill, isOwner, isChampion }: { skill: SkillDetail; 
       <Dialog open={Boolean(result)} onOpenChange={(o) => { if (!o) setResult(null) }}>
         <DialogContent className="sm:max-w-lg" data-testid="promotion-result">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Promotion request packaged</DialogTitle>
-            <DialogDescription>The Promoter ran the boundary check and summarised the diff. Required approvers: {result?.requiredApproverRoles.join(" + ")}.</DialogDescription>
+            <DialogTitle className="font-display text-xl">Sent for approval</DialogTitle>
+            <DialogDescription>We checked its data rules and summarised what changed. Needs approval from: {result?.requiredApproverRoles.join(" and ")}.</DialogDescription>
           </DialogHeader>
           {result && (
             <>
               <PromotionCard p={result} />
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-                <p className="font-medium">{result.boundaryCheck.ok ? "Boundary check passed" : "Boundary check flagged"}</p>
+                <p className="font-medium">{result.boundaryCheck.ok ? "Data rules check passed" : "Data rules check found a problem"}</p>
                 <p className="text-muted-foreground">{result.boundaryCheck.notes || result.diffSummary.summary}</p>
               </div>
             </>
           )}
           <DialogFooter showCloseButton>
-            {result && <Button render={<Link href={`/promotions/${result.id}`} />}>Open approval screen</Button>}
+            {result && <Button render={<Link href={`/promotions/${result.id}`} />}>Open the request</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -90,21 +90,21 @@ export function ActionBar({ skill, isOwner, isChampion }: { skill: SkillDetail; 
       <Dialog open={confirmDeprecate} onOpenChange={setConfirmDeprecate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Deprecate {skill.name}?</DialogTitle>
-            <DialogDescription>The plugin is removed from group assignments. Existing adopters keep read access; name a successor so the library can point them to it.</DialogDescription>
+            <DialogTitle className="font-display text-xl">Retire {skill.name}?</DialogTitle>
+            <DialogDescription>It stops being handed out to teams. People already using it can still read it; pick a replacement so the library can point them to it.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-1.5">
-            <p className="text-sm font-medium">Successor <span className="text-muted-foreground">(optional)</span></p>
-            <Select value={successorId} onValueChange={(v) => setSuccessorId((v as string | null) || null)} items={[{ value: null, label: "No successor" }, ...successors.map((s) => ({ value: s.id, label: s.name }))]}>
-              <SelectTrigger className="w-full" data-testid="deprecate-successor"><SelectValue placeholder="No successor" /></SelectTrigger>
+            <p className="text-sm font-medium">Replacement <span className="text-muted-foreground">(optional)</span></p>
+            <Select value={successorId} onValueChange={(v) => setSuccessorId((v as string | null) || null)} items={[{ value: null, label: "No replacement" }, ...successors.map((s) => ({ value: s.id, label: s.name }))]}>
+              <SelectTrigger className="w-full" data-testid="deprecate-successor"><SelectValue placeholder="No replacement" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={null}>No successor</SelectItem>
+                <SelectItem value={null}>No replacement</SelectItem>
                 {successors.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} <span className="text-muted-foreground">· {s.status.replace("_", " ")}</span></SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter showCloseButton>
-            <Button variant="destructive" onClick={onDeprecate} disabled={deprecate.isPending} data-testid="skill-deprecate-confirm">{deprecate.isPending && <Spinner className="size-4" />} Deprecate</Button>
+            <Button variant="destructive" onClick={onDeprecate} disabled={deprecate.isPending} data-testid="skill-deprecate-confirm">{deprecate.isPending && <Spinner className="size-4" />} Retire</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

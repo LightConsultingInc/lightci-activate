@@ -7,20 +7,20 @@ import type { BoundaryBadgeLevel } from "@/hooks/library/types"
 
 export const BOUNDARY_META: Record<BoundaryBadgeLevel, { label: string; explain: string; icon: typeof ShieldCheck; cls: string }> = {
   green: {
-    label: "Clear boundary",
-    explain: "Reads no restricted data classes and has no human-review steps. Anyone at the required rung can adopt it.",
+    label: "No private data",
+    explain: "Uses no information your firm keeps private, and needs no sign-off. Anyone at the right level can use it.",
     icon: ShieldCheck,
     cls: "bg-pass-soft text-pass border-pass/30",
   },
   amber: {
-    label: "Human review",
-    explain: "Declares human-review steps (for example before send or before CRM entry). Output is a draft until a named person signs it.",
+    label: "Needs a sign-off",
+    explain: "A named person checks the result before it is sent or entered anywhere (for example before it goes into the CRM). Until then it is a draft.",
     icon: ShieldEllipsis,
     cls: "bg-revise-soft text-glow-foreground border-revise/40",
   },
   red: {
-    label: "Restricted classes",
-    explain: "Touches data classes your compliance boundary restricts. Publishing requires compliance approval in addition to the champion.",
+    label: "Uses private data",
+    explain: "Touches information your firm restricts. Sharing it needs compliance approval as well as your champion's.",
     icon: ShieldAlert,
     cls: "bg-fail-soft text-fail border-fail/30",
   },

@@ -20,6 +20,15 @@ export function webUrl(): string {
   return "http://localhost:3000"
 }
 
+/**
+ * An absolute URL on this web app's public origin. Route handlers and the proxy must redirect here
+ * rather than to `request.url`: inside a container the request's own origin is the bind address
+ * (https://0.0.0.0:3000), not the host the person typed.
+ */
+export function publicUrl(path: string): URL {
+  return new URL(path, webUrl() + "/")
+}
+
 /** The AuthKit callback registered with WorkOS. */
 export function redirectUri(): string {
   return `${webUrl()}/callback`

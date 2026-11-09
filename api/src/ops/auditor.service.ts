@@ -61,7 +61,8 @@ Rules you never break:
 - Report only the numbers given to you under "metrics". Each carries a baseline; cite it as a footnote [n] after the number, and list that footnote with its source and baseline.
 - Never invent a figure. Metrics listed under "skipped" have no baseline: say plainly that they are not yet measurable and why, in one sentence each, without a number.
 - Plain, concrete prose. No superlatives, no exclamation marks, no bullet lists. 2 to 4 short paragraphs.
-- Hours back are always net of rework and always against a baseline record.`;
+- Hours back are always net of rework and always against a baseline record.
+- Write for a busy executive who has never seen Activate's internals: say "level" (L0 to L5), never "rung"; never name APIs, tables, seed data or internal components. Someone placed at a level when they joined has not "advanced"; only count moving up after that.`;
 
 registerMockResponder('auditor.readout', (call) => {
   const seed = (call.mockSeed ?? {}) as {
@@ -236,28 +237,39 @@ export class AuditorService {
         reason:
           seats === 0
             ? 'no people in scope'
-            : 'no usage snapshots for this scope (Analytics API not synced and no seed)',
+            : "Claude's usage reports are not connected for this company yet",
       });
     }
 
     // Rung progression: distribution at period end vs start.
     if (people.length > 0) {
-      const startRungs = people.map((p) => rungAt(f.placements, p.id, start));
+      // Someone first placed during the period starts where they were placed: a placement is a starting
+      // point, not progress.
+      const firstPlacement = (personId: string) =>
+        f.placements
+          .filter((x) => x.personId === personId)
+          .sort((a, b) => a.placedAt.getTime() - b.placedAt.getTime())[0];
+      const startRungs = people.map((p) => {
+        const first = firstPlacement(p.id);
+        return first && first.placedAt > start
+          ? first.rung
+          : rungAt(f.placements, p.id, start);
+      });
       const endRungs = people.map((p) => rungAt(f.placements, p.id, end));
       const startMean = mean(startRungs);
       const endMean = mean(endRungs);
       const moved = people.filter((_, i) => endRungs[i] > startRungs[i]).length;
       metrics.push({
         key: 'rungProgression',
-        label: 'Mean rung',
+        label: 'Average level',
         value: round(endMean, 2),
-        unit: 'rung',
+        unit: 'level',
         baseline: {
           value: round(startMean, 2),
-          ref: `Placement rows as of ${period.start}; distribution ${JSON.stringify(rungDistribution(startRungs))} → ${JSON.stringify(rungDistribution(endRungs))}`,
+          ref: `Levels on ${period.start} (or when first placed, if later); people per level ${JSON.stringify(rungDistribution(startRungs))} → ${JSON.stringify(rungDistribution(endRungs))}`,
         },
-        source: 'Placement',
-        detail: `${moved} of ${people.length} people moved up at least one rung`,
+        source: 'Activate ladder',
+        detail: `${moved} of ${people.length} people moved up at least one level after they were placed`,
       });
     }
 
@@ -339,16 +351,9 @@ export class AuditorService {
         },
         source: `Grade.expectationAccuracy (${accNow.length} grades)${revisitsNow.length ? `; ${revisitsNow.length} revisits scored, mean ${round(mean(revisitsNow.map((r) => r.score as number)), 2)}` : ''}`,
       });
-    } else {
-      skipped.push({
-        key: 'judgementRetention',
-        label: 'Judgement retention',
-        reason:
-          accNow.length === 0
-            ? 'no graded submissions with a recorded expectation in the period'
-            : 'no prior-period grades to compare against',
-      });
     }
+    // Practice no longer records an expectation (docs/practice-model.md), so a missing figure here is not
+    // news worth a sentence in the readout.
 
     return {
       scope: { type: scopeType, id: scopeId, name, people: people.length },

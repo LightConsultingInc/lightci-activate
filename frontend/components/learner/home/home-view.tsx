@@ -53,19 +53,21 @@ export function HomeView() {
             <span className="text-glow">{meta.code} {meta.name}</span>
             <span className="text-paper/50"> · {current.tagline}</span>
           </p>
-          <div className="ml-auto flex items-center gap-3">
-            <p className="text-sm text-paper/70">
-              Hours back this month <span className="font-display text-xl tabular text-paper" data-testid="hours-back">{hours.toFixed(hours >= 10 ? 0 : 1)}h</span>
-            </p>
-            <HoursBackSparkline series={l.hoursBack.series} height={28} className="w-28" />
-          </div>
+          {hours > 0 && (
+            <div className="ml-auto flex items-center gap-3">
+              <p className="text-sm text-paper/70">
+                Time saved this month <span className="font-display text-xl tabular text-paper" data-testid="hours-back">{hours.toFixed(hours >= 10 ? 0 : 1)}h</span>
+              </p>
+              <HoursBackSparkline series={l.hoursBack.series} height={28} className="w-28" />
+            </div>
+          )}
         </div>
       </header>
 
       <section data-testid="your-path">
         <div className="flex items-baseline justify-between pb-3">
           <h2 className="font-display text-xl font-medium">Your path</h2>
-          <p className="text-xs text-muted-foreground">Each module: Learn · Practice · Feedback</p>
+          <p className="text-xs text-muted-foreground">Each step: read a short lesson, practise, get feedback</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {MODULES.map((m) => {
@@ -86,7 +88,7 @@ export function HomeView() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <UpNext module={current} lesson={nextLesson} practice={l.nextUp} queuedCount={l.queued.length} />
         </div>
         <QuickRecaps revisits={l.revisitsDue} onOpen={setRevisit} />

@@ -23,7 +23,7 @@ export function Chip({ tone: t = "neutral", className, children, ...rest }: Reac
 export function DecisionChip({ decision, className }: { decision: "pass" | "revise"; className?: string }) {
   return (
     <Chip tone={decision === "pass" ? "pass" : "revise"} className={className} data-testid="decision-chip" data-decision={decision}>
-      {decision === "pass" ? "Pass" : "Revise"}
+      {decision === "pass" ? "Pass" : "Try again"}
     </Chip>
   )
 }
@@ -43,8 +43,8 @@ export function ModeBadge({ mode, className }: { mode: ExerciseMode; className?:
 const competencyStatus: Record<CompetencyStatus, { label: string; tone: keyof typeof tone }> = {
   locked: { label: "Locked", tone: "neutral" },
   in_progress: { label: "In progress", tone: "glow" },
-  mastered: { label: "Mastered", tone: "pass" },
-  decayed: { label: "Decayed", tone: "revise" },
+  mastered: { label: "Got it", tone: "pass" },
+  decayed: { label: "Needs a refresh", tone: "revise" },
 }
 export function CompetencyStatusChip({ status }: { status: CompetencyStatus }) {
   const s = competencyStatus[status]
@@ -52,7 +52,7 @@ export function CompetencyStatusChip({ status }: { status: CompetencyStatus }) {
 }
 
 export const WORKFLOW_PIPELINE: WorkflowStatus[] = ["candidate", "in_build", "shipped", "measured"]
-export const workflowStatusLabel: Record<WorkflowStatus, string> = { candidate: "Candidate", scored: "Scored", in_build: "In build", shipped: "Shipped", measured: "Measured" }
+export const workflowStatusLabel: Record<WorkflowStatus, string> = { candidate: "Not started", scored: "Not started", in_build: "Being built", shipped: "In use", measured: "Time saved counted" }
 
 /** candidate → in build → shipped → measured, with `scored` folded into candidate. */
 export function StatusPipeline({ status, className }: { status: WorkflowStatus; className?: string }) {

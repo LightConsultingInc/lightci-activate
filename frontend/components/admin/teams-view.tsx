@@ -173,7 +173,7 @@ function PeopleTable({ rows, teams, canWrite, onPatch }: { rows: Person[]; teams
   return (
     <Panel
       title={`People · ${rows.length}`}
-      description="Team and roles are editable inline. Rung comes from the ladder and is not editable here."
+      description="Team and roles are editable inline. Level comes from the work each person has done and can't be edited here."
       actions={
         <>
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email" className="h-7 w-48 text-xs" data-testid="people-search" />
@@ -201,7 +201,7 @@ function PeopleTable({ rows, teams, canWrite, onPatch }: { rows: Person[]; teams
         emptyLabel={q ? "Nobody matches that search." : "No people yet. Invite someone or import groups."}
         columns={[
           { key: "name", header: "Person", sortValue: (p) => p.name, render: (p) => <PersonCell person={{ name: p.name, avatarUrl: p.avatarUrl, title: p.title }} sub={p.email} /> },
-          { key: "rung", header: "Rung", sortValue: (p) => p.rung ?? -1, render: (p) => (p.rung != null ? <RungBadge rung={p.rung} showName={false} /> : <span className="text-xs text-muted-foreground">—</span>) },
+          { key: "rung", header: "Level", sortValue: (p) => p.rung ?? -1, render: (p) => (p.rung != null ? <RungBadge rung={p.rung} showName={false} /> : <span className="text-xs text-muted-foreground">—</span>) },
           { key: "team", header: "Team", sortValue: (p) => teamName(p.teamId) ?? "", render: (p) => (
             <Select value={p.teamId ?? NONE} disabled={!canWrite} onValueChange={(v) => onPatch({ id: p.id, teamId: v === NONE ? null : (v as string) }).then(() => toast.success(`${p.name} moved`)).catch((e) => toast.error("Couldn't move", { description: err(e) }))}>
               <SelectTrigger size="sm" className="min-w-36" data-testid="person-team-select">

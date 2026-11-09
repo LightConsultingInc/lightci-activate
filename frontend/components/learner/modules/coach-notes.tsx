@@ -8,8 +8,8 @@ import type { LadderView } from "@/hooks/learner/types"
 export function CoachNotes({ notes }: { notes: LadderView["coachNotes"] }) {
   return (
     <section className="rounded-xl border bg-card p-5" data-testid="coach-notes">
-      <h2 className="flex items-center gap-2 font-display text-xl font-medium"><MessageSquareText className="size-4 text-glow-foreground" /> Coach notes</h2>
-      {notes.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">Coach writes a note when it changes your plan, reschedules something, or spots a pattern.</p> : (
+      <h2 className="flex items-center gap-2 font-display text-xl font-medium"><MessageSquareText className="size-4 text-glow-foreground" /> Notes for you</h2>
+      {notes.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">A note shows up here when we change your plan, move something, or notice a pattern in your practice.</p> : (
         <ul className="mt-3 space-y-3">
           {notes.map((n, i) => (
             <li key={i} className="rounded-lg bg-glow-soft/50 p-3 text-sm" data-testid="coach-note">

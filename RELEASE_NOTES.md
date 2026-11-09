@@ -4,6 +4,35 @@ Each release has a section headed by its exact tag. The release workflow refuses
 without one. Operators read these before upgrading: new configuration keys, changed defaults,
 migrations, and anything they must do are listed first.
 
+## v1.0.3
+
+More fixes from the EU production walkthrough.
+
+**Operator actions**
+None.
+
+**New configuration keys**
+None.
+
+**Migrations**
+None.
+
+**Security advisory:** no
+
+**Behaviour changes**
+- Sign-out, the sign-in callback and the signed-out redirect build their URLs from `WEB_URL`. Behind a load balancer they sent people to the container's own address (`https://0.0.0.0:3000`), which broke Sign out and the "your company now uses single sign-on" hand-off.
+- A company on single sign-on now goes straight to its own identity provider instead of WorkOS's hosted page. Through the hosted page WorkOS quietly reused any earlier session (an admin's password sign-in from before single sign-on), which Activate then refused, so that admin could never get back in.
+- Sign out also ends the session at WorkOS, so the next sign-in asks again instead of silently reusing it.
+- The single sign-on, domain and directory setup pages (hosted by WorkOS) open in a new tab, so Activate stays open behind them; coming back to the Activate tab refreshes the status.
+- Plainer labels in the lead console and admin screens (no raw metric names, spec references or "rung").
+- Learner screens in plain language throughout (onboarding, My Ladder, My Workflows, History, the Skill Library); lines with no data yet are hidden instead of showing 0. The interview no longer shows its internal checker notes, and placement explains itself to the learner in their own words.
+- Tailored lessons can no longer show leaked raw JSON from the model, and Claude's tables in practice answers render as tables.
+- Right after placement, the list of work to practise on waits for the interview's workflows instead of showing "Workflow" placeholders.
+- My Ladder fits a phone screen. The approval queue and team page are closed to learners with a plain notice instead of an error.
+- A company whose Claude usage reports aren't connected yet (no Analytics key) no longer shows as 0% active: no "Stalled" lead card, the client tile and Mission Control Adoption say what's missing, and Cost & Return stops counting every seat as an inactive-seat cost. `LeadClient.hasUsage` and `CostView.seats.hasUsage` are new payload fields.
+- Mission Control: the "Nudge" button, which never sent anything, is removed; the Backlog's hours-at-stake total matches its rows; new workflows say they are scored overnight.
+- Readouts treat a person's placement as their starting point rather than progress, say "level" instead of "rung", and no longer mention internal sources or the retired judgement metric.
+
 ## v1.0.2
 
 Fixes found by the EU production walkthrough.

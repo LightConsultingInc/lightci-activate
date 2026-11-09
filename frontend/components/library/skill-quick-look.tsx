@@ -49,9 +49,9 @@ function QuickLookBody({ skill }: { skill: SkillCard }) {
           <Fact label="Owner"><PersonChip person={skill.owner} size="xs" /></Fact>
           <Fact label="Team">{skill.team?.name ?? "Shared"}</Fact>
           <Fact label="Version"><span className="font-mono">v{skill.version}</span></Fact>
-          <Fact label="Active users 30d"><span className="tabular">{fmt.num(skill.activeUsers30d)}</span></Fact>
-          <Fact label="Runs 30d"><span className="tabular">{fmt.num(skill.runs30d)}</span></Fact>
-          <Fact label="Grade"><GradeChip grade={skill.grade} /></Fact>
+          <Fact label="People using it, 30 days"><span className="tabular">{fmt.num(skill.activeUsers30d)}</span></Fact>
+          <Fact label="Times used, 30 days"><span className="tabular">{fmt.num(skill.runs30d)}</span></Fact>
+          <Fact label="Score"><GradeChip grade={skill.grade} /></Fact>
         </dl>
         {skill.health.length > 0 && <div className="mt-3"><HealthFlags flags={skill.health} max={6} /></div>}
 

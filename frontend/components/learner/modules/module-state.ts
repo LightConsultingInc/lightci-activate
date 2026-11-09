@@ -39,7 +39,7 @@ export function progressWords(ladder: LadderView, rung: number, nextCode: string
   const cs = competenciesForRung(ladder, rung)
   if (rung < ladder.rung) return `You finished this module. Everything here is kept fresh with quick recaps.`
   if (rung > ladder.rung) return `This module opens when you finish L${ladder.rung}. You can read the lessons any time.`
-  if (cs.length === 0) return `Finish the practice here and your grades will show what's ready.`
+  if (cs.length === 0) return `Finish the practice here and your feedback will show what's ready.`
   const mastered = cs.filter((c) => c.status === "mastered")
   const remaining = cs.filter((c) => c.status !== "mastered")
   const parts: string[] = []
@@ -55,7 +55,7 @@ export function progressWords(ladder: LadderView, rung: number, nextCode: string
       else parts.push(`Closest to done: ${next.name}, at ${Math.round(next.mastery * 100)}% of the ${Math.round(next.threshold * 100)}% needed.`)
     }
   }
-  if (!ladder.progress.met.judgement) parts.push(`Your self-checks also need to line up with the grader a little more often.`)
+  if (!ladder.progress.met.judgement) parts.push(`Your guesses about what Claude will give back also need to be right a little more often.`)
   if (nextCode) parts.push(mastered.length === cs.length && ladder.progress.met.judgement ? `You're ready for ${nextCode}.` : `Then you move to ${nextCode}.`)
   return parts.join(" ")
 }

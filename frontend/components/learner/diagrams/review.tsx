@@ -4,10 +4,10 @@ import { Cap, Frame, Mark, TONE, SANS } from "./primitives"
 export function ReviewOthers() {
   const rows = [
     { check: "Does one job", you: true, them: true },
-    { check: "Trigger line is clear", you: true, them: true },
+    { check: "Says when to use it", you: true, them: true },
     { check: "Two real examples included", you: true, them: true },
-    { check: "Boundary written down", you: true, them: false },
-    { check: "Ran on a sample case", you: true, them: true },
+    { check: "Data rules written down", you: true, them: false },
+    { check: "Tried on a test example", you: true, them: true },
   ]
   return (
     <Frame w={640} h={262} label="Two reviewers run the same checklist; where they disagree is what to talk about">

@@ -43,7 +43,7 @@ export function SkillDetailView({ slug }: { slug: string }) {
   if (q.isPending) return <DetailSkeleton />
   if (q.isError) {
     if (q.error instanceof ApiError && q.error.status === 404)
-      return <EmptyState title="No skill at this address" description="It may have been renamed or never published. The library search finds skills by name or trigger line." action={<Button render={<Link href="/library" />}>Back to the library</Button>} />
+      return <EmptyState title="No skill at this address" description="It may have been renamed or never published. Search the library by name or by what the skill does." action={<Button render={<Link href="/library" />}>Back to the library</Button>} />
     return <ErrorState title="Couldn't load this skill" detail={describeError(q.error)} retry={() => q.refetch()} />
   }
   const skill = q.data
@@ -79,13 +79,13 @@ export function SkillDetailView({ slug }: { slug: string }) {
               <PersonChip person={skill.owner} size="sm" showTitle />
               {skill.team && <span className="rounded-full bg-secondary px-2.5 py-0.5 text-sm" data-testid="team-chip">{skill.team.name}</span>}
               {skill.workflow && <Link href="/workflows" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"><Route className="size-3.5" /> {skill.workflow.name}</Link>}
-              <span className="text-muted-foreground tabular">{fmt.num(skill.activeUsers30d)} active · {fmt.num(skill.runs30d)} runs · 30d</span>
+              <span className="text-muted-foreground tabular">{fmt.num(skill.activeUsers30d)} {skill.activeUsers30d === 1 ? "person" : "people"} · used {fmt.num(skill.runs30d)} {skill.runs30d === 1 ? "time" : "times"} in the last 30 days</span>
             </div>
             {skill.health.length > 0 && <div className="mt-3"><HealthFlags flags={skill.health} max={6} /></div>}
           </div>
           <div className="flex flex-col items-center gap-1">
             <GradeRing grade={latest} size={88} />
-            <span className="eyebrow">grade</span>
+            <span className="eyebrow">score</span>
           </div>
         </div>
       </Paper>
@@ -93,8 +93,8 @@ export function SkillDetailView({ slug }: { slug: string }) {
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mt-6">
         <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b" data-testid="skill-tabs">
           <TabsTrigger value="skill" data-testid="tab-skill">Skill</TabsTrigger>
-          <TabsTrigger value="cases" data-testid="tab-cases">Sample cases <Count n={skill.sampleCases.length} /></TabsTrigger>
-          <TabsTrigger value="boundary" data-testid="tab-boundary">Boundary</TabsTrigger>
+          <TabsTrigger value="cases" data-testid="tab-cases">Test examples <Count n={skill.sampleCases.length} /></TabsTrigger>
+          <TabsTrigger value="boundary" data-testid="tab-boundary">Data rules</TabsTrigger>
           <TabsTrigger value="versions" data-testid="tab-versions">Versions <Count n={skill.versions.length} /></TabsTrigger>
           <TabsTrigger value="usage" data-testid="tab-usage">Usage</TabsTrigger>
           <TabsTrigger value="discussion" data-testid="tab-discussion">Discussion <Count n={skill.comments.length} /></TabsTrigger>

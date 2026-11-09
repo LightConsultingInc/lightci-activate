@@ -905,7 +905,14 @@ export class MissionControlService {
     );
     const totalsOf = (list: typeof items): BacklogTotals => ({
       hoursAtStake: round(
-        list.reduce((s, w) => s + (w.score?.hours ?? 0), 0),
+        // Same figure as each row: the scored hours, or the interview's own estimate until it is scored.
+        list.reduce(
+          (s, w) =>
+            s +
+            (w.score?.hours ??
+              (w.baselineMinutesPerWeek ? w.baselineMinutesPerWeek / 60 : 0)),
+          0,
+        ),
         1,
       ),
       candidates: list.filter(
@@ -1085,7 +1092,7 @@ export class MissionControlService {
         (e.status === 'active' && e.createdAt < staleCutoff),
     ).length;
 
-    return computeCost({
+    const view = computeCost({
       inputs,
       seats,
       orgSeats: f.org.seats,
@@ -1102,6 +1109,8 @@ export class MissionControlService {
       skillsUnadopted,
       exercisesAbandoned,
     });
+    // Seat activity comes from Claude's usage feed; without one, "active" and "inactive" are unmeasured.
+    return { ...view, seats: { ...view.seats, hasUsage: f.usage.length > 0 } };
   }
 }
 

@@ -205,7 +205,7 @@ export type ReturnRow = {
 }
 export type Cost = {
   inputs: CostInput
-  seats: { total: number; active: number; inactive: number; costTotal: number; costInactive: number; costPerActive: number | null; byTeam: { teamId: string; teamName: string; seats: number; active: number; cost: number; costInactive?: number }[] }
+  seats: { total: number; active: number; inactive: number; costTotal: number; costInactive: number; costPerActive: number | null; hasUsage?: boolean; byTeam: { teamId: string; teamName: string; seats: number; active: number; cost: number; costInactive?: number }[] }
   premium: { seats: number; unused: number; cost: number; costUnused?: number }
   program: { lightciFees: number; championHoursCost: number; learnerExerciseHoursCost: number; learnerExerciseMinutes?: number; total?: number }
   return: { hoursBackPerMonth: number; valueUsd: number; roi: number | null; hasCost?: boolean; hasBaseline?: boolean; perTeam: ReturnRow[]; perSkill: ReturnRow[]; baselineRefs?: BaselineRef[]; baselines?: BaselineRef[]; baselineIds?: string[]; baselineCoveragePct?: number }
@@ -406,6 +406,8 @@ export type LeadClient = {
   org: OrgRef & Partial<Org>
   seats: number
   activePct: number
+  /** False until Claude's usage feed has sent anything for this client. */
+  hasUsage?: boolean
   rungDistribution: number[]
   skillsPublished: number
   openEscalations: number

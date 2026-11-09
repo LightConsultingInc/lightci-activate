@@ -2,7 +2,11 @@ import type { ContextLayer } from '../context/entities/context-layer.entity';
 import type { Person } from '../orgs/entities/person.entity';
 import type { WorkflowMap } from '../workflows/entities/workflow-map.entity';
 import type { LessonPersonalisation } from './entities/lesson-personalisation.entity';
-import { LessonsService, type GenericLesson } from './lessons.service';
+import {
+  LessonsService,
+  stripLeakedJson,
+  type GenericLesson,
+} from './lessons.service';
 import { FakeRepo, fakeAi } from './testing/fake-repo';
 
 const lesson: GenericLesson = {
@@ -179,5 +183,18 @@ describe('LessonsService.personalise', () => {
     expect(out.example.title).toBe(
       'Quarterly performance summaries: A status note',
     );
+  });
+});
+
+describe('stripLeakedJson', () => {
+  it('cuts the rest of the tool input the model wrote inside the example', () => {
+    expect(
+      stripLeakedJson(
+        'Under 150 words, ready to paste into email."},"check":{"question":"You send',
+      ),
+    ).toBe('Under 150 words, ready to paste into email.');
+    expect(
+      stripLeakedJson('Plain text with "quotes", and a colon: fine.'),
+    ).toBe('Plain text with "quotes", and a colon: fine.');
   });
 });

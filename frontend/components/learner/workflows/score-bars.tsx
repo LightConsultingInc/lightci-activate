@@ -4,14 +4,14 @@ import type { WorkflowScore } from "@/hooks/learner/types"
 
 const DIMS: { key: "value" | "hours" | "readiness" | "exposure"; label: string; invert?: boolean }[] = [
   { key: "value", label: "Value" },
-  { key: "hours", label: "Hours at stake" },
-  { key: "readiness", label: "Readiness" },
-  { key: "exposure", label: "Exposure", invert: true },
+  { key: "hours", label: "Time it takes" },
+  { key: "readiness", label: "Ready for Claude" },
+  { key: "exposure", label: "Data risk", invert: true },
 ]
 
 /** Scorer's four dimensions. Hours is shown as a share of a 20h/week ceiling; exposure is inverted (less is better). */
 export function ScoreBars({ score, compact = false, className }: { score: WorkflowScore | null; compact?: boolean; className?: string }) {
-  if (!score) return <p className={cn("text-xs text-muted-foreground", className)}>Not scored yet</p>
+  if (!score) return <p className={cn("text-xs text-muted-foreground", className)}>Not looked at yet</p>
   return (
     <div className={cn("space-y-1.5", className)} data-testid="score-bars">
       {DIMS.map((d) => {
@@ -36,10 +36,10 @@ export function CompletenessMeter({ value, className }: { value: number; classNa
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100)
   return (
     <div className={cn("flex items-center gap-2", className)} data-testid="completeness-meter">
-      <div className="h-1.5 w-24 rounded-full bg-muted" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Map completeness">
+      <div className="h-1.5 w-24 rounded-full bg-muted" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="How fully this is described">
         <div className={cn("h-full rounded-full", pct >= 85 ? "bg-pass" : "bg-glow")} style={{ width: `${pct}%` }} />
       </div>
-      <span className="tabular text-xs text-muted-foreground">{pct}% mapped</span>
+      <span className="text-xs text-muted-foreground">{pct >= 85 ? "Fully described" : pct >= 50 ? "Mostly described" : "Partly described"}</span>
     </div>
   )
 }

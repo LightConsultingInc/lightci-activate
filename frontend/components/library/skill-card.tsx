@@ -53,8 +53,8 @@ export function SkillCard({ skill, onQuickLook, className, compact = false, show
 
       <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs">
         <div className="flex items-center gap-3 text-muted-foreground">
-          <span className="inline-flex items-center gap-1 tabular" title="Active users, last 30 days"><Users className="size-3.5" />{fmt.num(skill.activeUsers30d)}</span>
-          <span className="inline-flex items-center gap-1 tabular" title="Runs, last 30 days"><Activity className="size-3.5" />{fmt.num(skill.runs30d)}</span>
+          <span className="inline-flex items-center gap-1 tabular" title="People using it, last 30 days"><Users className="size-3.5" />{fmt.num(skill.activeUsers30d)}</span>
+          <span className="inline-flex items-center gap-1 tabular" title="Times used, last 30 days"><Activity className="size-3.5" />{fmt.num(skill.runs30d)}</span>
           <GradeChip grade={skill.grade} />
         </div>
         <HealthFlags flags={skill.health} max={2} />

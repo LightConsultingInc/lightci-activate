@@ -21,9 +21,6 @@ permissions:
   contents: read
   packages: read
 
-env:
-  BAKE_MINUTES: "30"
-
 jobs:
   version:
     runs-on: ubuntu-latest

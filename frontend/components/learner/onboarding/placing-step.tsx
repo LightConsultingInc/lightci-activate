@@ -43,7 +43,7 @@ export function PlacingStep({ mode, scribe, error, retry }: Props) {
             {failed
               ? "We couldn't finish your placement"
               : mode === "intake"
-                ? "We're placing you on the ladder"
+                ? "Working out where you start"
                 : "We're saving your workflow map"}
           </h1>
           <p className="mt-2 text-sm text-paper/70" aria-live="polite">

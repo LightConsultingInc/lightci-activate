@@ -198,7 +198,9 @@ export class LeadService {
   ): LeadQueue['stalled'] {
     const rows: LeadQueue['stalled'] = [];
     const today = isoDay(f.now);
-    if (f.people.length) {
+    // Weekly-active comes from Claude's own usage feed. A client with no feed yet has no figure, not 0%.
+    const hasUsage = f.usage.length > 0;
+    if (f.people.length && hasUsage) {
       const pct = activeInWindow(f.activeDays, today, 7).size / f.people.length;
       if (pct < ACTIVE_PCT_TARGET)
         rows.push({
@@ -213,7 +215,7 @@ export class LeadService {
           slaDueAt: null,
         });
     }
-    for (const t of f.teams.filter((x) => x.inProgram)) {
+    for (const t of f.teams.filter((x) => x.inProgram && hasUsage)) {
       const members = f.people.filter((p) => p.teamId === t.id);
       if (!members.length) continue;
       const ids = new Set(members.map((m) => m.id));
@@ -337,6 +339,7 @@ export class LeadService {
       activePct: seats
         ? round(activeInWindow(f.activeDays, isoDay(f.now), 7).size / seats)
         : 0,
+      hasUsage: f.usage.length > 0,
       rungDistribution: rungDistribution(
         f.people.map((p) => f.rungs.get(p.id) ?? 0),
       ),

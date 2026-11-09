@@ -11,7 +11,6 @@ import {
   PhoneOff,
   RotateCcw,
   SendHorizonal,
-  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -319,9 +318,9 @@ export function IntakeChat({
       <section className="flex h-[min(42rem,calc(100svh-11rem))] min-h-[28rem] flex-col overflow-hidden rounded-xl border bg-card">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <div>
-            <p className="eyebrow">Interviewer · {iv.mode}</p>
+            <p className="eyebrow">{iv.mode === "intake" ? "About your work" : "Mapping a workflow"}</p>
             <p className="text-xs text-muted-foreground">
-              {iv.turnCount} turn{iv.turnCount === 1 ? "" : "s"} · about 15
+              {iv.turnCount} answer{iv.turnCount === 1 ? "" : "s"} · about 10
               minutes
             </p>
           </div>
@@ -545,23 +544,6 @@ export function IntakeChat({
           </div>
         )}
 
-        {iv.checkerFlags.length > 0 && (
-          <ul
-            className="space-y-1 border-t px-4 py-2 text-[11px] text-muted-foreground"
-            data-testid="checker-notes"
-          >
-            {iv.checkerFlags.slice(0, 3).map((f, i) => (
-              <li key={`${f.field}-${i}`} className="flex gap-1.5">
-                <Sparkles className="mt-0.5 size-3 shrink-0 text-glow-foreground" />
-                <span>
-                  The checker wonders about{" "}
-                  <span className="font-medium text-foreground">{f.field}</span>
-                  : {f.issue}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
 
         {!inVoice && (
           <footer className="border-t p-3">

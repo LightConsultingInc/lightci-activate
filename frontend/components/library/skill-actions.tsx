@@ -28,29 +28,29 @@ export function SkillActions({ skill, size = "sm", showOpen = true, className, v
     adopt.mutate(skill, {
       onSuccess: (d) =>
         toast.success(`Adopted ${skill.name}`, {
-          description: d.exercise ? `Your first exercise is ready: “${d.exercise.title}”.` : "Added to My skills.",
-          action: d.exercise ? { label: "Open exercise", onClick: () => router.push(`/exercise/${d.exercise.id}`) } : undefined,
+          description: d.exercise ? `Your first practice with it is ready: “${d.exercise.title}”.` : "Added to My skills.",
+          action: d.exercise ? { label: "Open practice", onClick: () => router.push(`/exercise/${d.exercise.id}`) } : undefined,
         }),
       onError: (e) => toast.error("Couldn't adopt this skill", { description: describeError(e) }),
     })
 
   const onFork = () =>
     fork.mutate(skill, {
-      onSuccess: (d) => { toast.success(`Forked ${skill.name}`, { description: `Your draft “${d.name}” is on branch skill/${d.slug}.` }); router.push(`/library/${d.slug}?edit=1`) },
-      onError: (e) => toast.error("Couldn't fork this skill", { description: describeError(e) }),
+      onSuccess: (d) => { toast.success(`Copied ${skill.name}`, { description: `Your copy “${d.name}” is ready to edit.` }); router.push(`/library/${d.slug}?edit=1`) },
+      onError: (e) => toast.error("Couldn't copy this skill", { description: describeError(e) }),
     })
 
   const stop = (e: React.MouseEvent) => e.stopPropagation()
   const primary = variant === "bar" ? "default" : "outline"
   return (
     <div className={cn("flex items-center gap-1.5", className)} onClick={stop} data-testid="skill-actions">
-      <Button size={size} variant={skill.adoptedByMe ? "secondary" : primary} onClick={onAdopt} disabled={!canAdopt || adopt.isPending} data-testid="skill-adopt" title={skill.adoptedByMe ? "Already in My skills" : skill.status !== "published" ? "Only published skills can be adopted" : "Adopt: adds to My skills and creates an exercise on your own case"}>
+      <Button size={size} variant={skill.adoptedByMe ? "secondary" : primary} onClick={onAdopt} disabled={!canAdopt || adopt.isPending} data-testid="skill-adopt" title={skill.adoptedByMe ? "Already in My skills" : skill.status !== "published" ? "Only shared skills can be adopted" : "Adds it to My skills and sets up a practice on your own work"}>
         {adopt.isPending ? <Spinner className="size-3.5" /> : <Sparkles data-icon="inline-start" />}
         {skill.adoptedByMe ? "Adopted" : "Adopt"}
       </Button>
-      <Button size={size} variant="outline" onClick={onFork} disabled={fork.isPending} data-testid="skill-fork" title="Fork: a new draft on your own branch, pre-filled from this version">
+      <Button size={size} variant="outline" onClick={onFork} disabled={fork.isPending} data-testid="skill-fork" title="Make your own copy to change, starting from this version">
         {fork.isPending ? <Spinner className="size-3.5" /> : <GitFork data-icon="inline-start" />}
-        Fork
+        Copy
       </Button>
       {showOpen && (
         <Button size={size} variant="ghost" render={<Link href={`/library/${skill.slug}`} />} data-testid="skill-open">

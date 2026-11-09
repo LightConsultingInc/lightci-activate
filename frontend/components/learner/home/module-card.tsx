@@ -47,8 +47,12 @@ export function ModuleCard({ module, state, progress, lessonsDone, practiceTotal
       </div>
       <dl className="mt-auto flex items-center gap-3 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1"><dt className="sr-only">Lessons</dt><dd><span className="tabular font-medium text-foreground">{lessonsDone}/{lessons}</span> lessons</dd></div>
-        <span aria-hidden>·</span>
-        <div className="flex items-center gap-1"><dt className="sr-only">Practice</dt><dd><span className="tabular font-medium text-foreground">{practiceDone}/{practiceTotal}</span> practice</dd></div>
+        {practiceTotal > 0 && (
+          <>
+            <span aria-hidden>·</span>
+            <div className="flex items-center gap-1"><dt className="sr-only">Practice</dt><dd><span className="tabular font-medium text-foreground">{practiceDone}/{practiceTotal}</span> practice</dd></div>
+          </>
+        )}
       </dl>
       <p className="text-[11px] font-medium" data-testid="module-card-state">
         {state === "current" ? <span className="text-glow-foreground">You are here</span> : state === "done" ? <span className="text-pass">Done</span> : <span className="text-muted-foreground">Opens after L{module.rung - 1}</span>}

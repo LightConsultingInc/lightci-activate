@@ -61,7 +61,7 @@ export function FeedbackCard({ result, moduleCode, rung, onTryAgain, className }
             </Chip>
             {result.agreement && (
               <p className="text-xs text-muted-foreground" data-testid="agreement">
-                You said {result.agreement.yours}, the grader said {result.agreement.grader}
+                You guessed {result.agreement.yours}; it scored {result.agreement.grader}
               </p>
             )}
           </div>

@@ -32,6 +32,19 @@ export interface PersonalisedLesson {
   personalised: boolean;
 }
 
+/**
+ * The model now and then closes the example's string early and carries on writing the rest of the
+ * tool input inside it (`…ready to paste."},"check":{"question":…`), which a learner then reads as
+ * raw JSON. Cut the text where that starts.
+ */
+export function stripLeakedJson(text: string): string {
+  const m =
+    /"\s*}?\s*,\s*"(?:check|question|options|answer|explanation|title|text)"\s*:/.exec(
+      text,
+    );
+  return (m ? text.slice(0, m.index) : text).trim();
+}
+
 export const PersonaliseLessonSchema = z.object({
   example: z.object({
     title: z
@@ -128,7 +141,10 @@ export class LessonsService {
       await this.rows.save(Object.assign(cached, { moduleCode }));
     if (cached && cached.memoryVersion === memory.version)
       return {
-        example: cached.example,
+        example: {
+          ...cached.example,
+          text: stripLeakedJson(cached.example.text),
+        },
         check: cached.check,
         personalised: true,
       };
@@ -218,7 +234,7 @@ This call rewrites one lesson's example and check for one learner. The example m
       : lesson.check;
     const example: LessonExample = {
       title: out.example.title.slice(0, 120),
-      text: out.example.text,
+      text: stripLeakedJson(out.example.text),
     };
     const model = this.ai.provider === 'mock' ? 'mock' : this.ai.defaultModel;
     const row = await this.rows.save(

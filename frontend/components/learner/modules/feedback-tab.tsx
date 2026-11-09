@@ -39,12 +39,12 @@ export function FeedbackTab({ module, ladder }: { module: Module; ladder: Ladder
 
         <section className="rounded-xl border bg-card p-5" data-testid="module-grades">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-display text-xl font-medium">Your grades in {module.code}</h2>
+            <h2 className="font-display text-xl font-medium">Your feedback in {module.code}</h2>
             <Link href="/history" className="text-xs underline underline-offset-4">All history</Link>
           </div>
           {history.isPending && <div className="mt-3 space-y-2"><Skeleton className="h-12" /><Skeleton className="h-12" /></div>}
           {history.isError && <ErrorState detail={history.error.message} retry={() => history.refetch()} />}
-          {history.data && graded.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Your first grade here lands after your first practice submission. Each one comes with what worked, what to fix, and one thing to remember.</p>}
+          {history.data && graded.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Your first feedback here comes after you send in your first practice. Each one says what worked, what to fix, and one thing to remember.</p>}
           {graded.length > 0 && (
             <ul className="mt-3 divide-y">
               {graded.map(({ exercise, submission }) => {
@@ -55,7 +55,7 @@ export function FeedbackTab({ module, ladder }: { module: Module; ladder: Ladder
                     <button type="button" onClick={() => setOpen(isOpen ? null : submission.id)} className="flex w-full items-center justify-between gap-3 py-3 text-left" aria-expanded={isOpen}>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{exercise.title}</p>
-                        <p className="text-xs text-muted-foreground">Attempt {submission.attempt} · {fmt.ago(g.gradedAt)}</p>
+                        <p className="text-xs text-muted-foreground">{submission.attempt > 1 ? `Try ${submission.attempt} · ` : ""}{fmt.ago(g.gradedAt)}</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="tabular text-sm">{Math.round(g.score * 100)}</span>
@@ -73,9 +73,9 @@ export function FeedbackTab({ module, ladder }: { module: Module; ladder: Ladder
 
         <section className="rounded-xl border bg-card p-5" data-testid="module-competencies">
           <h2 className="font-display text-xl font-medium">What this module is checking</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Each bar fills as your graded work shows the skill on different tasks. The tick is the line to clear.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Each bar fills as your practice shows the skill on different tasks. The tick is the line to clear.</p>
           {cs.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">These appear once your intake interview places you on the path.</p>
+            <p className="mt-3 text-sm text-muted-foreground">These show up once your first chat places you on the path.</p>
           ) : (
             <ul className="mt-2 divide-y">{cs.map((c) => <CompetencyRow key={c.code} c={c} />)}</ul>
           )}

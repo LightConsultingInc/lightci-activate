@@ -53,10 +53,10 @@ export function PracticeTab({ module, practiceReady = true }: { module: Module; 
       </Paper>
       {mine.length === 0 && !practiceReady ? (
         <div className="flex items-center gap-3 rounded-xl border border-dashed bg-card/60 p-5 text-sm text-muted-foreground" data-testid="practice-preparing" role="status">
-          <Loader2 className="size-4 animate-spin text-glow-foreground" /> Coach is setting up your practice from the work you named at intake. It opens in a moment.
+          <Loader2 className="size-4 animate-spin text-glow-foreground" /> We&apos;re setting up your practice from the work you told us about. It opens in a moment.
         </div>
       ) : mine.length === 0 ? (
-        <EmptyState title="No practice here yet" description={`Coach adds practice for ${module.code} from the work you named at intake, once you reach this module. Lessons are open any time.`} />
+        <EmptyState title="No practice here yet" description={`Practice for ${module.code} is set up from your own work once you reach this module. Lessons are open any time.`} />
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {mine.map((e) => {

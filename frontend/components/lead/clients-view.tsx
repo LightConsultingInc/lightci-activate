@@ -58,7 +58,7 @@ function Inner() {
                 ) },
                 { key: "seats", header: "Seats", align: "right", sortValue: (c) => c.seats, render: (c) => c.seats },
                 { key: "active", header: "Active", align: "right", sortValue: (c) => c.activePct, render: (c) => <Bar01 value={c.activePct} /> },
-                { key: "rungs", header: "Rung mix", sortValue: (c) => weighted(c.rungDistribution), render: (c) => <RungMixBar counts={c.rungDistribution ?? []} className="w-28" /> },
+                { key: "rungs", header: "Level mix", sortValue: (c) => weighted(c.rungDistribution), render: (c) => <RungMixBar counts={c.rungDistribution ?? []} className="w-28" /> },
                 { key: "skills", header: "Skills published", align: "right", sortValue: (c) => c.skillsPublished, render: (c) => c.skillsPublished },
                 { key: "esc", header: "Open escalations", align: "right", sortValue: (c) => c.openEscalations, render: (c) => (c.openEscalations ? <Badge variant="outline" className="border-fail/40 bg-fail-soft text-foreground">{c.openEscalations}</Badge> : <span className="text-muted-foreground">0</span>) },
                 { key: "wave", header: "Wave", sortValue: (c) => c.wave?.number ?? -1, render: (c) => (c.wave ? <span>{c.wave.name} <span className="text-xs text-muted-foreground capitalize">· {c.wave.status} · {fmt.dateShort(c.wave.startsOn)}–{fmt.dateShort(c.wave.endsOn)}</span></span> : <span className="text-xs text-muted-foreground">no wave</span>) },
@@ -136,7 +136,7 @@ function ProvisionDialog({ onCreated }: { onCreated: (id: string) => void }) {
           <div className="grid gap-2 rounded-lg border p-3 text-xs" data-testid="provision-identity">
             <label className="flex items-center gap-2">
               <input type="checkbox" className="size-3.5" checked={createIdentity && !linkExisting} disabled={linkExisting} onChange={(e) => setCreateIdentity(e.target.checked)} data-testid="provision-create-identity" />
-              <span>Create the identity organisation now (their IT admin connects SSO from a link you send them)</span>
+              <span>Create their sign-in organisation now (you then invite their admin, who connects their company&apos;s single sign-on from Activate)</span>
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" className="size-3.5" checked={linkExisting} onChange={(e) => setLinkExisting(e.target.checked)} data-testid="provision-link-existing" />

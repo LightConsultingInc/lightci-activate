@@ -27,7 +27,7 @@ const COLUMNS: {
     tone: "info",
     items: [
       "Usage metadata from Claude: when you were active and which features you used.",
-      "The artifacts you submit here: prompts, projects, skills and workflow maps.",
+      "What you hand in here: the requests you write, your projects and the skills you build.",
       "Your grades and progress, visible to you and your champion.",
     ],
   },
@@ -38,7 +38,7 @@ const COLUMNS: {
     items: [
       "Your chats in Claude.",
       "Client documents, unless you paste something into an exercise.",
-      "Account data, or anything outside your firm's Claude tenant.",
+      "Your accounts, or anything outside your company's own Claude.",
     ],
   },
 ]

@@ -40,7 +40,7 @@ export function LoginForm({ authError, provider = "workos", next }: { authError:
           Continue with your company sign-in
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          You will sign in with the same account you use for work. Activate sees usage metadata and the artifacts you submit, never your chats.
+          You will sign in with the same account you use for work. Activate sees when you use Claude and the work you hand in here, never your chats.
         </p>
       </div>
     )
@@ -142,7 +142,7 @@ function WorkosLoginForm({ authError }: { authError: AuthError }) {
         Continue with your company sign-in
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        By signing in you agree to your firm&apos;s Claude usage policy. Activate sees usage metadata and the artifacts you submit, never your chats.
+        By signing in you agree to your firm&apos;s Claude usage policy. Activate sees when you use Claude and the work you hand in here, never your chats.
       </p>
     </div>
   )

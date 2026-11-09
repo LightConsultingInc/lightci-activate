@@ -78,6 +78,19 @@ export function OnboardingFlow(p: Props) {
     router.prefetch("/")
   }
 
+  // The workflows from the interview are saved a moment after placement: keep asking until they are all here.
+  const missing = Boolean(result && result.workflowMapIds.some((id) => !(workflows.data ?? []).some((w) => w.id === id)))
+  useEffect(() => {
+    if (!missing) return
+    let tries = 0
+    const t = setInterval(() => {
+      if (++tries > 15) clearInterval(t)
+      else workflows.refetch()
+    }, 2000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missing])
+
   const idx = STAGES.findIndex((x) => x.key === stage)
 
   return (
@@ -127,7 +140,7 @@ export function OnboardingFlow(p: Props) {
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               {p.mode === "intake"
-                ? "Talk it through, or type if you'd rather. The scribe on the right writes down your role, your weekly workflows and how you use Claude today; when the interviewer has enough it ends the conversation and places you."
+                ? "Talk it through, or type if you'd rather. We note your role, the work that fills your week and how you use Claude today, and once we have enough we suggest where you start."
                 : "Talk it through, or type if you'd rather. The scribe fills the workflow map as you go, and a checker flags anything that doesn't add up."}
             </p>
           </div>

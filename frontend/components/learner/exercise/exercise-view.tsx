@@ -80,7 +80,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
   const locked = result !== null || finished || busy
   const isReview = surface.kind === "review"
   const hasRun = hasOutput(surface)
-  const runLabel = run.isPending ? "Claude is working…" : submit.isPending ? "Coach is reading it…" : hasRun ? "Run again" : "Run"
+  const runLabel = run.isPending ? "Claude is working…" : submit.isPending ? "Reading it over…" : hasRun ? "Run again" : "Run"
   // Once something is running or came back, the page widens into two columns: your work on the left, what came back on the right.
   const showResults = hasRun || result !== null || busy
 
@@ -170,7 +170,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
               <Play data-icon="inline-start" /> {runLabel}
             </Button>
             {!runnable.ok && !locked && runnable.reason && <p className="text-xs text-muted-foreground">{runnable.reason}</p>}
-            {!locked && runnable.ok && <p className="text-xs text-muted-foreground">Claude does the task, then Coach tells you what worked and what to change.</p>}
+            {!locked && runnable.ok && <p className="text-xs text-muted-foreground">Claude does the task, then you get feedback on what worked and what to change.</p>}
           </div>
         )}
         {isReview && !locked && (
@@ -186,7 +186,7 @@ function ExerciseLoaded({ ex }: { ex: ExerciseDetail }) {
       {showResults && (
         <div ref={resultsRef} className="order-first space-y-6 scroll-mt-20 lg:order-2" data-testid="results-column">
           {run.isPending && <PendingCard testId="run-pending">Claude is working on it…</PendingCard>}
-          {submit.isPending && <PendingCard testId="submit-pending">Coach is reading it…</PendingCard>}
+          {submit.isPending && <PendingCard testId="submit-pending">Reading it over…</PendingCard>}
           {result && <FeedbackCard result={result} moduleCode={moduleCode} rung={ex.rung} onTryAgain={finished ? undefined : tryAgain} />}
           <RunOutput surface={surface} />
         </div>

@@ -24,8 +24,8 @@ variable "zone_id" {
   default = "Z02709411RIL5VJ45VIDP" # lciventure.com
 }
 
-variable "workos_verification_token" {
-  description = "Token WorkOS shows on its domain verification page (the customer adds it as a TXT record). Empty until then."
+variable "workos_verification_record" {
+  description = "The TXT value WorkOS shows on its domain verification page, exactly as shown (the customer adds it). Empty until then."
   type        = string
   default     = ""
 }
@@ -100,12 +100,12 @@ resource "aws_route53_record" "mx" {
 
 # The customer's proof of domain ownership for WorkOS, added once the verification page shows it.
 resource "aws_route53_record" "workos_verification" {
-  count   = var.workos_verification_token == "" ? 0 : 1
+  count   = var.workos_verification_record == "" ? 0 : 1
   zone_id = var.zone_id
   name    = var.domain
   type    = "TXT"
   ttl     = 300
-  records = ["verification_token=${var.workos_verification_token}"]
+  records = [var.workos_verification_record]
 }
 
 resource "aws_ses_receipt_rule_set" "qa" {

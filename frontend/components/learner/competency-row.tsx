@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils"
 import type { Competency } from "@/hooks/learner/types"
 
 const COMPONENTS: { key: keyof Competency["components"]; label: string; weight: string; help: string }[] = [
-  { key: "artifact", label: "Artifact score", weight: "40%", help: "Recency-weighted grades on your last artifacts (14-day half-life)." },
-  { key: "consistency", label: "Consistency", weight: "20%", help: "Low variance across the contexts you have tried it in." },
-  { key: "retention", label: "Retention", weight: "20%", help: "Decays between revisits; a passed revisit restores it." },
-  { key: "judgement", label: "Judgement", weight: "20%", help: "Calibration of your pre-run confidence plus critique quality." },
-  { key: "contexts", label: "Contexts", weight: "gate", help: "Distinct workflows you have applied this to." },
+  { key: "artifact", label: "Your recent work", weight: "", help: "How your last few pieces of practice went. Recent ones count more." },
+  { key: "consistency", label: "Steadiness", weight: "", help: "Whether it goes well on different tasks, not just one." },
+  { key: "retention", label: "Remembering it", weight: "", help: "Fades a little over time; answering a quick recap brings it back." },
+  { key: "judgement", label: "Spotting what's off", weight: "", help: "Whether your guess about the result matches what Claude gives back, and how useful your notes are." },
+  { key: "contexts", label: "Different tasks", weight: "needed", help: "How many different pieces of your own work you've used this on." },
 ]
 
 /** Name, mastery bar with a threshold tick, status chip, and a popover breaking mastery into its components. */
@@ -30,7 +30,7 @@ export function CompetencyRow({ c, className }: { c: Competency; className?: str
           </PopoverTrigger>
           <PopoverContent align="start" className="w-80">
             <p className="text-sm font-medium">{c.name}</p>
-            <p className="text-xs text-muted-foreground">Mastery {fmt.pct(c.mastery)} · threshold {fmt.pct(c.threshold)} · needs {c.minContexts} contexts</p>
+            <p className="text-xs text-muted-foreground">At {fmt.pct(c.mastery)} of the {fmt.pct(c.threshold)} needed, on {c.minContexts} different {c.minContexts === 1 ? "task" : "tasks"}</p>
             <ul className="mt-2 space-y-2">
               {COMPONENTS.map(({ key, label, weight, help }) => {
                 const v = c.components?.[key] ?? 0
@@ -39,7 +39,7 @@ export function CompetencyRow({ c, className }: { c: Competency; className?: str
                 return (
                   <li key={key}>
                     <div className="flex items-baseline justify-between text-xs">
-                      <span>{label} <span className="text-muted-foreground">· {weight}</span></span>
+                      <span>{label}{weight && <span className="text-muted-foreground"> · {weight}</span>}</span>
                       <span className="tabular font-medium">{isCount ? `${v} / ${c.minContexts}` : fmt.pct(v)}</span>
                     </div>
                     <div className="mt-1 h-1 w-full rounded-full bg-muted"><div className="h-full rounded-full bg-glow" style={{ width: `${w * 100}%` }} /></div>
@@ -52,13 +52,13 @@ export function CompetencyRow({ c, className }: { c: Competency; className?: str
         </Popover>
       </div>
       <div className="col-span-2 sm:col-span-1 sm:col-start-2">
-        <div className="relative h-2 w-full rounded-full bg-muted" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${c.name} mastery`}>
+        <div className="relative h-2 w-full rounded-full bg-muted" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${c.name} progress`}>
           <div className={cn("h-full rounded-full transition-[width] duration-700", barTone)} style={{ width: `${pct}%` }} />
-          <span className="absolute -top-1 h-4 w-px bg-foreground/70" style={{ left: `${tick}%` }} title={`Threshold ${tick}%`} />
+          <span className="absolute -top-1 h-4 w-px bg-foreground/70" style={{ left: `${tick}%` }} title={`Line to clear: ${tick}%`} />
         </div>
         <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
           <span className="tabular">{pct}%</span>
-          <span className="tabular">{c.components?.contexts ?? 0}/{c.minContexts} contexts</span>
+          <span className="tabular">{c.components?.contexts ?? 0} of {c.minContexts} tasks</span>
         </div>
       </div>
       <div className="col-start-2 row-start-1 sm:col-start-3">

@@ -102,33 +102,22 @@ export function CompletionStep({
           data-testid="workflow-candidates"
         >
           <h2 className="flex items-center gap-2 font-display text-xl font-medium">
-            <Route className="size-4 text-glow-foreground" /> Workflow
-            candidates
+            <Route className="size-4 text-glow-foreground" /> Work we can
+            practise on
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Scorer will rank these by value, hours, readiness and exposure.
-            Coach draws your exercises from them.
+            Your exercises come from these, starting with the ones that
+            save you the most time.
           </p>
           {result.workflowMapIds.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">
               No workflows were mapped this time.
             </p>
+          ) : candidates.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">Getting these ready…</p>
           ) : (
             <ul className="mt-3 divide-y">
-              {(candidates.length
-                ? candidates
-                : result.workflowMapIds.map(
-                    (id) =>
-                      ({
-                        id,
-                        name: "Workflow",
-                        baselineMinutesPerWeek: null,
-                      }) as Pick<
-                        WorkflowSummary,
-                        "id" | "name" | "baselineMinutesPerWeek"
-                      >
-                  )
-              ).map((w) => (
+              {candidates.map((w) => (
                 <li
                   key={w.id}
                   className="flex items-center justify-between gap-2 py-2 text-sm"

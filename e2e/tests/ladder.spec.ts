@@ -18,8 +18,12 @@ test.describe("home: your path", () => {
     await expect(header).toBeVisible()
     await expect(page.getByTestId("ladder-name")).toContainText("Priya Nair")
     await expect(header).toContainText(/L[0-5]\s/)
-    await expect(page.getByTestId("hours-back")).toContainText(/\d/)
-    await expect(page.getByTestId("hours-back")).toContainText("h")
+    // Time saved is hidden until there is some to show.
+    if (await page.getByTestId("hours-back").count()) {
+      await expect(page.getByTestId("hours-back")).toContainText(/\d/)
+      await expect(page.getByTestId("hours-back")).toContainText("h")
+      await expect(page.getByTestId("hours-back")).not.toHaveText(/^0(\.0)?h$/)
+    }
     // No competency wall, judgement panel or coach-notes wall on the home page any more.
     await expect(page.getByTestId("competencies-panel")).toHaveCount(0)
     await expect(page.getByTestId("judgement-panel")).toHaveCount(0)
@@ -36,7 +40,8 @@ test.describe("home: your path", () => {
       await expect(card).toHaveAttribute("data-state", /locked|current|done/)
       await expect(card.locator("[role=meter]")).toHaveAttribute("aria-valuenow", /\d+/)
       await expect(card).toContainText(/\d+\/\d+ lessons/)
-      await expect(card).toContainText(/\d+\/\d+ practice/)
+      // Practice count shows only once the module has practice; never "0/0 practice".
+      await expect(card).not.toContainText("0/0 practice")
     }
     await expect(page.locator("[data-testid=module-card][data-state=current]")).toHaveCount(1)
     // Earlier modules are done, later ones locked.
@@ -66,7 +71,8 @@ test.describe("home: your path", () => {
     const panel = page.getByTestId("my-skills-panel")
     await expect(panel).toBeVisible()
     const adopted = panel.getByTestId("adopted-skill")
-    expect(await adopted.count()).toBeGreaterThanOrEqual(1)
+    // The list loads after the panel appears: wait for it rather than counting at once.
+    await expect(adopted.first()).toBeVisible({ timeout: 15_000 })
     await expect(adopted.first().locator("a")).toHaveAttribute("href", /\/library\//)
   })
 
@@ -92,7 +98,7 @@ test.describe("home: your path", () => {
     const result = sheet.getByTestId("revisit-result")
     await expect(result).toBeVisible({ timeout: 120_000 })
     await expect(result).toContainText(/\/ 100/)
-    await expect(result).toContainText("Next revisit")
+    await expect(result).toContainText("Next recap")
     await sheet.getByTestId("revisit-done").click()
     await expect(sheet).toBeHidden()
     await expect(rows).toHaveCount(before - 1)

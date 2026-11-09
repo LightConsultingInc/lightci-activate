@@ -192,11 +192,11 @@ test.describe("company sign-in setup", () => {
     // WorkOS only switches on single sign-on for a verified domain: until then the SSO step waits.
     await expect(page.getByTestId("sign-in-needs-domain")).toBeVisible()
     await expect(page.getByTestId("sign-in-connect-sso")).toBeDisabled()
-    // The link is made at click time and the browser goes straight to it, so it cannot expire on the way.
-    await Promise.all([
-      page.waitForURL((u) => /workos\.com$/.test(u.hostname), { timeout: 30_000 }),
-      page.getByTestId("sign-in-verify-domain").click(),
-    ])
+    // The link is made at click time and opens in a new tab (WorkOS's pages have no way back); Activate stays open.
+    const [tab] = await Promise.all([page.context().waitForEvent("page"), page.getByTestId("sign-in-verify-domain").click()])
+    await tab.waitForURL((u) => /workos\.com$/.test(u.hostname), { timeout: 30_000 })
+    await expect(page.getByTestId("sign-in-view")).toBeVisible()
+    await tab.close()
   })
 
   test("the setup checklist points at the Sign-in tab", async ({ page }) => {

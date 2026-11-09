@@ -270,7 +270,7 @@ export const IntakeCompleteSchema = z.object({
     evidence: z
       .array(z.string())
       .describe(
-        'Quotes or observations from the interview that justify the rung.',
+        'Shown to the learner as why they start where they do: 2–4 short, plain sentences to them ("You said you…"), each tied to something they said. Never write "rung", level numbers or codes, or the placement rules themselves.',
       ),
   }),
 });
