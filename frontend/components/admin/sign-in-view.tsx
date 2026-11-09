@@ -166,7 +166,7 @@ function Steps({ s, go, pending }: { s: SignInStatus; go: (intent: SetupIntent) 
         <Panel title="3. Keep people in step automatically (optional)" testId="sign-in-step-directory">
           <StepState done={directory?.state === "active"} label={directory ? (DIRECTORY_STATE[directory.state] ?? directory.state) : undefined} />
           <p className="mt-2 text-sm text-muted-foreground">
-            Connect your directory so new joiners can sign in straight away and leavers lose access the day they leave. You can also choose which groups become admins, sponsors and champions here. Without it, people appear the first time they sign in and you remove leavers by hand.
+            Connect your directory so new joiners can sign in straight away and leavers lose access the day they leave. Without it, people appear the first time they sign in and you remove leavers by hand.
           </p>
           <Button className="mt-3" size="sm" variant="outline" onClick={() => go("dsync")} disabled={disabled} data-testid="sign-in-connect-directory">
             {directory ? "Review your directory" : "Connect your directory"} <ArrowUpRightIcon data-icon="inline-end" />
@@ -175,7 +175,7 @@ function Steps({ s, go, pending }: { s: SignInStatus; go: (intent: SetupIntent) 
 
         <Panel title="4. Who gets which role" testId="sign-in-step-roles">
           <p className="text-sm text-muted-foreground">
-            Everyone who signs in can learn. To give people more, put them in a group in your provider and assign that group a role during step 3: <span className="font-medium text-foreground">activate-admin</span> runs Activate for your company, <span className="font-medium text-foreground">activate-sponsor</span> sees company-wide results, <span className="font-medium text-foreground">activate-champion</span> supports a team. You can also change anyone&apos;s role under Teams &amp; People.
+            Everyone who signs in can learn. To give people more, put them in a group in your provider, send group membership in the sign-in (for Microsoft Entra ID, add a group claim), then open step 2 again and, under &ldquo;Groups and role assignments&rdquo;, give each group its role (for Entra, the group&apos;s ID is its Object ID): <span className="font-medium text-foreground">activate-admin</span> runs Activate for your company, <span className="font-medium text-foreground">activate-sponsor</span> sees company-wide results, <span className="font-medium text-foreground">activate-champion</span> supports a team. Roles follow the groups each time someone signs in. You can also change anyone&apos;s role under Teams &amp; People, and switch off someone who has left.
           </p>
         </Panel>
       </div>
