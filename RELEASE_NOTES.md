@@ -4,6 +4,26 @@ Each release has a section headed by its exact tag. The release workflow refuses
 without one. Operators read these before upgrading: new configuration keys, changed defaults,
 migrations, and anything they must do are listed first.
 
+## v1.0.3
+
+More fixes from the EU production walkthrough.
+
+**Operator actions**
+None.
+
+**New configuration keys**
+None.
+
+**Migrations**
+None.
+
+**Security advisory:** no
+
+**Behaviour changes**
+- Sign-out, the sign-in callback and the signed-out redirect build their URLs from `WEB_URL`. Behind a load balancer they sent people to the container's own address (`https://0.0.0.0:3000`), which broke Sign out and the "your company now uses single sign-on" hand-off.
+- The single sign-on, domain and directory setup pages (hosted by WorkOS) open in a new tab, so Activate stays open behind them; coming back to the Activate tab refreshes the status.
+- Plainer labels in the lead console and admin screens (no raw metric names, spec references or "rung").
+
 ## v1.0.2
 
 Fixes found by the EU production walkthrough.

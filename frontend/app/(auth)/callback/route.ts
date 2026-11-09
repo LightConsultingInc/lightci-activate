@@ -2,7 +2,7 @@ import { getWorkOS, handleAuth, saveSession } from "@workos-inc/authkit-nextjs"
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 import { authProvider, oidcExchangeCode } from "@/lib/auth-provider"
-import { webUrl } from "@/lib/env"
+import { publicUrl, webUrl } from "@/lib/env"
 import { saveTokens } from "@/lib/session"
 import { PKCE_COOKIE } from "../sign-in/route"
 
@@ -13,7 +13,7 @@ function publicBase(): string {
 const handler = handleAuth({
   returnPathname: "/",
   baseURL: publicBase(),
-  onError: ({ request }) => NextResponse.redirect(new URL("/login?authError=1", publicBase() ?? request.url)),
+  onError: () => NextResponse.redirect(publicUrl("/login?authError=1")),
 })
 
 /**
@@ -50,11 +50,11 @@ export async function GET(request: NextRequest) {
   if (code && !state) {
     try {
       const auth = await getWorkOS().userManagement.authenticateWithCode({ clientId: process.env.WORKOS_CLIENT_ID as string, code })
-      const response = NextResponse.redirect(new URL("/", publicBase() ?? request.url))
+      const response = NextResponse.redirect(publicUrl("/"))
       await saveSession(auth, request)
       return response
     } catch {
-      return NextResponse.redirect(new URL("/login?authError=1", publicBase() ?? request.url))
+      return NextResponse.redirect(publicUrl("/login?authError=1"))
     }
   }
   return handler(request)

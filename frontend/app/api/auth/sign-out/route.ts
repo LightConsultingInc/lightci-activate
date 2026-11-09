@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 import { authProvider } from "@/lib/auth-provider"
+import { publicUrl } from "@/lib/env"
 import { clearSession } from "@/lib/session"
 
 /**
@@ -17,6 +18,6 @@ export async function GET(request: NextRequest) {
   // A session the company's sign-in policy refused: say why on the login page (whitelisted reasons only).
   const reason = request.nextUrl.searchParams.get("reason")
   const query = reason === "sso" || reason === "setup" ? `?authError=${reason}` : ""
-  return NextResponse.redirect(new URL(`/login${query}`, request.url))
+  return NextResponse.redirect(publicUrl(`/login${query}`))
 }
 export const POST = GET

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { ArrowUpRightIcon, Building2Icon, KeyRoundIcon, ShieldCheckIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -45,17 +45,32 @@ function IdentityPanel({ c }: { c: LeadClientDetail }) {
   const s = status.data
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
-  const open = (intent: "sso" | "dsync") =>
+  // Refresh the status when the lead comes back from the WorkOS tab.
+  const { refetch } = status
+  useEffect(() => {
+    const onFocus = () => void refetch()
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
+  }, [refetch])
+  const open = (intent: "sso" | "dsync") => {
+    // Open the tab during the click: one opened after the request finishes is blocked as a pop-up.
+    const tab = window.open("", "_blank")
+    if (tab) tab.opener = null
     portalLink.mutate(
       { id: org.id, intent },
       {
         onSuccess: ({ url }) => {
-          window.open(url, "_blank", "noopener")
+          if (tab) tab.location.href = url
+          else window.location.assign(url)
           toast.success(intent === "sso" ? "Single sign-on setup opened" : "Directory setup opened", { description: "Use it now, with the client on a call: the link expires within minutes." })
         },
-        onError: (err) => toast.error("Couldn't create the setup link", { description: err instanceof ApiError ? err.detail : String(err) }),
+        onError: (err) => {
+          tab?.close()
+          toast.error("Couldn't create the setup link", { description: err instanceof ApiError ? err.detail : String(err) })
+        },
       },
     )
+  }
   const invite = (e: React.FormEvent) => {
     e.preventDefault()
     inviteAdmin.mutate(
@@ -151,7 +166,7 @@ function Body({ c }: { c: LeadClientDetail }) {
       <PageHeader
         eyebrow={`Clients · ${org.slug}`}
         title={<span className="inline-flex items-center gap-3"><Building2Icon className="size-7 text-muted-foreground" /> {org.name}</span>}
-        description={[org.industry ?? c.industry, org.sponsorName ?? c.sponsorName ? `Sponsor: ${org.sponsorName ?? c.sponsorName}` : null, org.residencyMode ? org.residencyMode.replace(/_/g, "-") : null, org.isDemo ? "Demo data" : null].filter(Boolean).join(" · ")}
+        description={[org.industry ?? c.industry, org.sponsorName ?? c.sponsorName ? `Sponsor: ${org.sponsorName ?? c.sponsorName}` : null, org.residencyMode === "client_hosted" ? "Runs on their own servers" : org.residencyMode ? "Hosted by LightCI" : null, org.isDemo ? "Demo data" : null].filter(Boolean).join(" · ")}
         actions={
           <Button size="sm" onClick={() => switchAndGo(org.id, "/mission-control")} data-testid="client-open-mc">
             Open as this client <ArrowUpRightIcon data-icon="inline-end" />
@@ -166,7 +181,7 @@ function Body({ c }: { c: LeadClientDetail }) {
           <MetricTile testId="client-tile-skills" label="Skills published" value={c.skillsPublished ?? 0} source="Marketplace repo" baseline={c.wave ? `wave target ${c.wave.targets.skillsShipped}` : null} />
           <MetricTile testId="client-tile-escalations" label="Open escalations" value={c.openEscalations ?? 0} source="Activate" baseline="n/a (count)" delta={{ value: null, goodWhenUp: false }} />
           <div className="flex flex-col gap-1 rounded-xl bg-card p-4 ring-1 ring-foreground/10" data-testid="client-tile-rungs">
-            <p className="text-xs font-medium text-muted-foreground">Rung distribution</p>
+            <p className="text-xs font-medium text-muted-foreground">People at each level</p>
             <RungMixBar counts={c.rungDistribution ?? []} className="mt-2 h-3" />
             <p className="mt-1 text-[11px] text-muted-foreground">{(c.rungDistribution ?? []).map((n, i) => `L${i} ${n}`).join(" · ")}</p>
             <p className="mt-auto text-[11px] text-muted-foreground">Source: Activate ladder · Baseline: placement</p>
@@ -174,7 +189,7 @@ function Body({ c }: { c: LeadClientDetail }) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <Panel title="Setup checklist" description="Spec §2.1. Links open the client's own admin surfaces after switching to that client." testId="client-setup">
+          <Panel title="Setup checklist" description="What this client still has to set up. Each link switches you into the client and opens the right admin page." testId="client-setup">
             {steps.length ? <SetupChecklist steps={steps} readOnly /> : <p className="text-sm text-muted-foreground">Checklist not available for this client yet.</p>}
             <div className="mt-3 flex flex-wrap gap-2">
               {steps.filter((s) => !s.done).slice(0, 3).map((s) => (

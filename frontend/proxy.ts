@@ -1,7 +1,7 @@
 import { authkitMiddleware } from "@workos-inc/authkit-nextjs"
 import type { NextFetchEvent, NextRequest } from "next/server"
 import { NextResponse } from "next/server"
-import { redirectUri } from "@/lib/env"
+import { publicUrl, redirectUri } from "@/lib/env"
 
 const PUBLIC_PATHS = ["/login", "/sign-in", "/callback", "/api/auth/sign-out", "/api/health", "/auth/token", "/brand"]
 
@@ -29,7 +29,7 @@ export default async function proxy(request: NextRequest, event: NextFetchEvent)
   if (!isPublic && !request.cookies.get(SESSION_COOKIE)) {
     // Browser API calls through the same-origin proxy get a plain 401, not a login page.
     if (pathname.startsWith("/api/")) return NextResponse.json({ status: 401, title: "Unauthorized", detail: "Sign in required" }, { status: 401 })
-    const url = new URL("/login", request.url)
+    const url = publicUrl("/login")
     if (pathname !== "/") url.searchParams.set("next", pathname)
     return NextResponse.redirect(url)
   }

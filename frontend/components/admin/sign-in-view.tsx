@@ -57,11 +57,36 @@ function Inner() {
     router.replace("/admin/sign-in")
   }, [returned, q.data, router])
 
-  const go = (intent: SetupIntent) =>
+  // The WorkOS setup pages have no way back to Activate, so they open in a new tab and this one stays
+  // here. When the admin comes back to this tab, ask WorkOS again and say what changed.
+  const [away, setAway] = useState<SetupIntent | null>(null)
+  useEffect(() => {
+    if (!away) return
+    const back = () => {
+      setAway(null)
+      router.replace(`/admin/sign-in?returned=${away}`)
+    }
+    window.addEventListener("focus", back)
+    return () => window.removeEventListener("focus", back)
+  }, [away, router])
+
+  const go = (intent: SetupIntent) => {
+    // Open the tab during the click (a tab opened after the request finishes is blocked as a pop-up).
+    const tab = window.open("", "_blank")
+    if (tab) tab.opener = null
     setupLink.mutate(intent, {
-      onSuccess: ({ url }) => window.location.assign(url),
-      onError: (err) => toast.error("Couldn't open the setup page", { description: err instanceof ApiError ? err.detail : String(err) }),
+      onSuccess: ({ url }) => {
+        if (tab) {
+          tab.location.href = url
+          setAway(intent)
+        } else window.location.assign(url)
+      },
+      onError: (err) => {
+        tab?.close()
+        toast.error("Couldn't open the setup page", { description: err instanceof ApiError ? err.detail : String(err) })
+      },
     })
+  }
 
   return (
     <>

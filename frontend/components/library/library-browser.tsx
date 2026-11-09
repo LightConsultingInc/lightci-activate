@@ -88,7 +88,7 @@ export function LibraryBrowser() {
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <div className="flex items-center gap-2">
-            <span className="eyebrow">Rung</span>
+            <span className="eyebrow">Level</span>
             <ToggleGroup value={filters.rung ? [filters.rung] : []} onValueChange={(v) => set({ rung: v[0] as string | undefined })} size="sm" variant="outline" spacing={0} data-testid="filter-rung">
               {RUNGS.filter((r) => r.rung > 0).map((r) => (
                 <ToggleGroupItem key={r.rung} value={String(r.rung)} aria-label={`${r.code} ${r.name}`} className="gap-1.5">

@@ -99,6 +99,12 @@ the QA inbox and its links opened in the same browser.
 |---|---|---|---|
 | F1 | Lead sign-in (A1) | Both production WorkOS environments had email + password sign-in off (WorkOS's default for new environments). The lead could not sign in, and a client's invited admin could not do their first sign-in before single sign-on, which blocks onboarding at step one. | Enable Email + Password (and optionally Magic Auth) in the production environments: WorkOS dashboard, Authentication, Methods. Dashboard-only setting; added to the cell setup checklist in `infra/README.md`. |
 | F2 | Lead sign-in (A1) | The login page reported the disabled method as "That email and password did not match", sending people hunting for a password that was right. | WorkOS error codes now map to their own plain messages (PR #24). |
+| F3 | Lead sign-in (A1) | The lead was created as a learner: the cells passed an empty `LEAD_EMAIL_DOMAINS`. | The Terraform module passes `lead_email_domains` through (1.0.2). |
+| F4 | Lead sign-in (A1) | Once fixed, the lead's existing account stayed a learner. | Someone on a lead domain becomes a lead on their next request (1.0.2). |
+| F5 | SSO and domain setup (B3, B4) | The WorkOS setup pages replaced Activate in the same tab and have no way back: a dead end for the client's admin. | They open in a new tab; returning to Activate refreshes the status and says what changed (1.0.3). |
+| F6 | Lead console (A1, A2) | Learner-hostile or internal copy: raw `weeklyActivePct` on Stalled cards, "Spec §2.1.", "lightci-hosted", "Rung" labels, and a create-client option that still said the admin connects SSO "from a link you send them". | Plain labels (1.0.3). |
+| F7 | SSO hand-off (B4) | After SSO went live, Iris's password session was correctly refused, but the sign-out redirect landed on `https://0.0.0.0:3000/login`. The ordinary Sign out menu item had the same bug in production. | Redirects use `WEB_URL` (1.0.3). |
+| F8 | Invitation email (B1) | The WorkOS emails are branded "LightCI", not "Activate". | Dashboard setting (environment name and branding); the user's call. |
 
 
 ## Housekeeping
