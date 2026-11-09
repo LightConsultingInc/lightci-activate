@@ -171,7 +171,7 @@ test.describe("library", () => {
     await editor.fill(`${md.trimEnd()}\n\n## E2E note\nAdded by the Playwright suite to verify versioning.\n`)
     await expect(page.getByTestId("skill-save")).toBeEnabled()
     await page.getByTestId("skill-save").click()
-    await expectToast(page, /Committed as v\d+/)
+    await expectToast(page, /Saved as version \d+/)
 
     await expect(versionsTab).toContainText(String(before + 1))
     await expect(heroVersion).toContainText(`v${versionBefore + 1}`)

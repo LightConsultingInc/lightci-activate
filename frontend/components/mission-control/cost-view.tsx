@@ -78,7 +78,7 @@ function Body({ d }: { d: Cost }) {
         <MetricTile testId="tile-return" label="Return, this month" value={hasReturn ? fmt.money(d.return.valueUsd) : null} sub={hasReturn ? `${Math.round(d.return.hoursBackPerMonth)}h back × ${fmt.money(d.inputs.loadedHourlyRate)}/h` : "no baseline + measurement pair yet"} source="Activate baselines + measurements (net of rework) × client loaded hourly rate" baseline={returnBaseline} accent />
         <MetricTile testId="tile-cost" label="Total cost, this month" value={fmt.money(totalCost)} sub="seats + premium + program" source="Client inputs × seat counts (org seats, premium seats, people)" baseline={inputsBaseline} />
         <MetricTile testId="tile-roi" label="ROI" value={d.return.roi == null || !hasReturn || !hasCost ? null : `${(d.return.roi * 100).toFixed(0)}%`} sub={!hasReturn ? "needs baselines" : !hasCost ? "needs cost inputs" : "(return − cost) ÷ cost"} source="Derived: return tile ÷ total cost tile" baseline={hasReturn && hasCost ? `${returnBaseline} · ${inputsBaseline}` : returnBaseline} delta={{ value: null }} />
-        <MetricTile testId="tile-cost-per-active" label="Cost per active person" value={d.seats.costPerActive == null || !d.seats.active ? null : fmt.money(d.seats.costPerActive)} sub={`${d.seats.active} of ${d.seats.total} seats active (30d)`} source="Usage snapshots (active on real work, 30d) + client seat price" baseline={inputsBaseline} />
+        <MetricTile testId="tile-cost-per-active" label="Cost per active person" value={d.seats.hasUsage === false || d.seats.costPerActive == null || !d.seats.active ? null : fmt.money(d.seats.costPerActive)} sub={d.seats.hasUsage === false ? "needs Claude's usage reports (Analytics key)" : `${d.seats.active} of ${d.seats.total} seats active (30d)`} source="Usage snapshots (active on real work, 30d) + client seat price" baseline={inputsBaseline} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
@@ -115,7 +115,11 @@ function Body({ d }: { d: Cost }) {
         <Panel title="Where the cost comes from" description="Seats active vs inactive, premium seats unused, and the program itself." footer={<SourceLine source="Analytics API seat activity + client inputs" baseline={inputsBaseline} />} testId="panel-cost-breakdown">
           <CostBars d={d} programCost={programCost} />
           <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-            <Stat label="Inactive seat cost" value={fmt.money(d.seats.costInactive)} sub={`${d.seats.inactive} seats`} tone="fail" />
+            {d.seats.hasUsage === false ? (
+              <Stat label="Inactive seat cost" value="—" sub="needs Claude's usage reports" />
+            ) : (
+              <Stat label="Inactive seat cost" value={fmt.money(d.seats.costInactive)} sub={`${d.seats.inactive} seats`} tone="fail" />
+            )}
             <Stat label="Premium seats unused" value={`${d.premium.unused} of ${d.premium.seats}`} sub={fmt.money(d.premium.costUnused ?? (d.premium.seats ? (d.premium.cost / d.premium.seats) * d.premium.unused : 0))} tone="revise" />
             <Stat label="Program" value={fmt.money(programCost)} sub={`fees ${fmt.money(d.program.lightciFees)} · champions ${fmt.money(d.program.championHoursCost)}`} />
           </div>
@@ -133,7 +137,7 @@ function Body({ d }: { d: Cost }) {
 
       <Panel title="Waste signals" description="Money going out with nothing measurable coming back." footer={<SourceLine source="Analytics API + Activate" baseline={inputsBaseline} />} testId="panel-waste">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {(d.waste ?? []).map((w) => (
+          {(d.waste ?? []).filter((w) => !(w.kind === "inactive_seats" && d.seats.hasUsage === false)).map((w) => (
             <div key={w.kind} className="rounded-lg border p-3" data-testid="waste-signal">
               <p className="text-xs text-muted-foreground">{wasteLabel(w.kind)}</p>
               <p className="mt-1 font-display text-2xl tabular">{w.count}</p>
@@ -163,8 +167,8 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
 
 function CostBars({ d, programCost }: { d: Cost; programCost: number }) {
   const data = [
-    { name: "Active seats", value: Math.max(0, d.seats.costTotal - d.seats.costInactive), color: CHART.ink },
-    { name: "Inactive seats", value: d.seats.costInactive, color: "var(--fail)" },
+    { name: d.seats.hasUsage === false ? "Seats" : "Active seats", value: Math.max(0, d.seats.costTotal - (d.seats.hasUsage === false ? 0 : d.seats.costInactive)), color: CHART.ink },
+    ...(d.seats.hasUsage === false ? [] : [{ name: "Inactive seats", value: d.seats.costInactive, color: "var(--fail)" }]),
     { name: "Premium seats", value: d.premium.cost, color: CHART.info },
     { name: "Program", value: programCost, color: CHART.glow },
   ]

@@ -177,7 +177,7 @@ function Body({ c }: { c: LeadClientDetail }) {
       <p className="-mt-4 mb-4 text-xs"><Link href="/lead/clients" className="text-muted-foreground underline underline-offset-4 hover:text-foreground" data-testid="client-back">← All clients</Link></p>
       <div className="space-y-6 animate-rise" data-testid="client-detail">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricTile testId="client-tile-active" label="Active on real work" value={fmt.pct(c.activePct ?? 0)} sub={`of ${c.seats ?? org.seats ?? 0} seats`} source="Analytics API" baseline={c.wave ? `wave target ${fmt.pct(c.wave.targets.activePct)}` : null} accent />
+          <MetricTile testId="client-tile-active" label="Active on real work" value={c.hasUsage === false ? "Not yet" : fmt.pct(c.activePct ?? 0)} sub={c.hasUsage === false ? "Needs the client's Claude Analytics key" : `of ${c.seats ?? org.seats ?? 0} seats`} source="Analytics API" baseline={c.wave ? `wave target ${fmt.pct(c.wave.targets.activePct)}` : null} accent />
           <MetricTile testId="client-tile-skills" label="Skills published" value={c.skillsPublished ?? 0} source="Marketplace repo" baseline={c.wave ? `wave target ${c.wave.targets.skillsShipped}` : null} />
           <MetricTile testId="client-tile-escalations" label="Open escalations" value={c.openEscalations ?? 0} source="Activate" baseline="n/a (count)" delta={{ value: null, goodWhenUp: false }} />
           <div className="flex flex-col gap-1 rounded-xl bg-card p-4 ring-1 ring-foreground/10" data-testid="client-tile-rungs">

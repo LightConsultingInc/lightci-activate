@@ -55,7 +55,7 @@ test.describe("onboarding intake", () => {
       await expect(page.getByTestId("chat-user")).toHaveCount(usersBefore + 1)
       await expect(page.getByTestId("intake-input")).toBeEnabled({ timeout: 30_000 })
       await expect(page.getByTestId("chat-interviewer")).toHaveCount(i + 2, { timeout: 30_000 })
-      await expect(chat).toContainText(`${i + 1} turn`)
+      await expect(chat).toContainText(`${i + 1} answer`)
     }
     completenessAfterTurns = await intOf(completeness)
     expect(completenessAfterTurns).toBeGreaterThan(start)

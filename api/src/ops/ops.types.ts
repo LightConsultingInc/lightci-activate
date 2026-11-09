@@ -500,6 +500,8 @@ export interface CostView {
     costTotal: number;
     costInactive: number;
     costPerActive: number;
+    /** False until Claude's usage feed has sent anything: active/inactive counts are then unmeasured. */
+    hasUsage?: boolean;
     byTeam: {
       teamId: string;
       teamName: string;
@@ -602,6 +604,8 @@ export interface LeadClientRow {
   };
   seats: number;
   activePct: number;
+  /** False until Claude's usage feed has sent anything for this client: activePct is then 0 by default, not measured. */
+  hasUsage: boolean;
   rungDistribution: number[];
   skillsPublished: number;
   openEscalations: number;

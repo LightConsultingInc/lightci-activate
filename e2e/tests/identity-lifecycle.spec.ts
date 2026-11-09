@@ -219,7 +219,18 @@ test.describe("identity lifecycle: invite, set up, switch to single sign-on", ()
     // Keycloak lets them straight through without its form.
     await stalePage.waitForURL((u) => u.port === "8089" || u.pathname.includes("/sso/signin-consent") || (u.port === "3000" && !u.pathname.startsWith("/login")), { timeout: 45_000 })
     if (new URL(stalePage.url()).port === "8089" && (await stalePage.locator("#username").isVisible().catch(() => false))) await keycloakSignIn(stalePage, adminEmail, idpPassword)
-    else if (stalePage.url().includes("/sso/signin-consent")) await stalePage.getByRole("button").filter({ hasText: /approve|continue|confirm|allow/i }).first().click()
+    // WorkOS may ask the person to approve the sign-in it received; answer it until we are back in Activate.
+    for (let i = 0; i < 4; i++) {
+      const here = new URL(stalePage.url())
+      if (here.port === "3000" && !here.pathname.startsWith("/callback") && !here.pathname.startsWith("/login")) break
+      if (here.pathname.includes("/sso/signin-consent")) {
+        const approve = stalePage.getByRole("button").filter({ hasNotText: /cancel|deny|back|not you/i }).first()
+        await approve.waitFor({ timeout: 15_000 })
+        console.log("[lifecycle] WorkOS consent screen:", (await stalePage.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 300))
+        await approve.click()
+      }
+      await stalePage.waitForURL((u) => u.href !== here.href, { timeout: 20_000 }).catch(() => {})
+    }
     await stalePage.waitForURL((u) => u.port === "3000" && !u.pathname.startsWith("/callback") && !u.pathname.startsWith("/login"), { timeout: 45_000 })
     expect(await latestSessionMethod(adminUserId)).toBe("sso")
     await stale.close()

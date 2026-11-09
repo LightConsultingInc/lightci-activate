@@ -71,7 +71,8 @@ test.describe("home: your path", () => {
     const panel = page.getByTestId("my-skills-panel")
     await expect(panel).toBeVisible()
     const adopted = panel.getByTestId("adopted-skill")
-    expect(await adopted.count()).toBeGreaterThanOrEqual(1)
+    // The list loads after the panel appears: wait for it rather than counting at once.
+    await expect(adopted.first()).toBeVisible({ timeout: 15_000 })
     await expect(adopted.first().locator("a")).toHaveAttribute("href", /\/library\//)
   })
 
@@ -97,7 +98,7 @@ test.describe("home: your path", () => {
     const result = sheet.getByTestId("revisit-result")
     await expect(result).toBeVisible({ timeout: 120_000 })
     await expect(result).toContainText(/\/ 100/)
-    await expect(result).toContainText("Next revisit")
+    await expect(result).toContainText("Next recap")
     await sheet.getByTestId("revisit-done").click()
     await expect(sheet).toBeHidden()
     await expect(rows).toHaveCount(before - 1)

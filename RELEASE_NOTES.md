@@ -29,6 +29,9 @@ None.
 - Tailored lessons can no longer show leaked raw JSON from the model, and Claude's tables in practice answers render as tables.
 - Right after placement, the list of work to practise on waits for the interview's workflows instead of showing "Workflow" placeholders.
 - My Ladder fits a phone screen. The approval queue and team page are closed to learners with a plain notice instead of an error.
+- A company whose Claude usage reports aren't connected yet (no Analytics key) no longer shows as 0% active: no "Stalled" lead card, the client tile and Mission Control Adoption say what's missing, and Cost & Return stops counting every seat as an inactive-seat cost. `LeadClient.hasUsage` and `CostView.seats.hasUsage` are new payload fields.
+- Mission Control: the "Nudge" button, which never sent anything, is removed; the Backlog's hours-at-stake total matches its rows; new workflows say they are scored overnight.
+- Readouts treat a person's placement as their starting point rather than progress, say "level" instead of "rung", and no longer mention internal sources or the retired judgement metric.
 
 ## v1.0.2
 

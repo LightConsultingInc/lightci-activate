@@ -1,9 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { toast } from "sonner"
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from "recharts"
-import { BellRingIcon, UserRoundXIcon } from "lucide-react"
+import { PlugZapIcon, UserRoundXIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip as UiTooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAdoption } from "@/hooks/mc/use-mc"
@@ -52,16 +51,31 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
   const depthSrc = d.depth.source ?? analyticsSrc
   const depthBaseline = d.depth.baseline ?? null
   const seatPct = (n: number | null) => (n != null && seats ? fmt.pct(n / seats) : null)
+  // No usage feed from Claude yet: every usage number would be a 0 we never measured.
+  const noFeed = analyticsSrc === "none"
 
   return (
     <div className="space-y-6 animate-rise">
+      {noFeed && (
+        <div data-testid="adoption-no-feed" className="rounded-xl border bg-card">
+        <EmptyState
+          icon={<PlugZapIcon className="size-5" />}
+          title="Claude's usage isn't connected yet"
+          description="Who is using Claude, how often and for what comes from Claude's own usage reports. Once your Claude Analytics key is added and checked, these numbers fill in from the next daily sync. Until then, progress on the ladder below is already live."
+          action={<Button variant="outline" render={<Link href="/admin/integrations" />}>Open Integrations &amp; Keys</Button>}
+        />
+        </div>
+      )}
+      {!noFeed && (
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="adoption-tiles">
         <MetricTile testId="tile-active-pct" label="Active on real work" value={fmt.pct(d.active.pctOfSeats)} sub={`of ${seats} seats`} delta={{ value: typeof d.active.trend === "number" ? d.active.trend : null, label: trend.label && typeof d.active.trend !== "number" ? `${trend.label} · last complete week vs the one before` : `vs ${activeBaseline}` }} trend={trend.direction} source={analyticsSrc} baseline={activeBaseline} spark={daily.map((x) => x.active)} accent />
         <MetricTile testId="tile-wau" label="Weekly active (WAU)" value={weekly != null ? fmt.num(weekly) : null} sub={seatPct(weekly) ? `${seatPct(weekly)} of seats` : undefined} source={analyticsSrc} baseline={activeBaseline} />
         <MetricTile testId="tile-mau" label="Monthly active (MAU)" value={monthly != null ? fmt.num(monthly) : null} sub={seatPct(monthly) ? `${seatPct(monthly)} of seats` : undefined} source={analyticsSrc} baseline={activeBaseline} />
         <MetricTile testId="tile-sessions" label="Sessions per active person" value={d.depth.sessionsPerActive?.toFixed(1)} sub={`over the last ${range}`} source={depthSrc} baseline={depthBaseline} />
       </div>
+      )}
 
+      {!noFeed && (
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Panel title="Active on real work, daily" description={`Last ${range}. Dashed line is provisioned seats.`} footer={<SourceLine source={analyticsSrc} baseline={activeBaseline} />} testId="panel-active-daily">
           {daily.length ? <TrendChart data={daily} /> : <EmptyState title="No usage days yet" description="Once the Analytics key is verified, daily active-on-real-work lands here." className="p-6" />}
@@ -75,6 +89,7 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
           <SurfacesBar surfaces={d.depth.surfaces ?? []} />
         </Panel>
       </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Funnel" description="Provisioned → logged in → first real work → L1 … L5. Conversion vs the previous step, and median days to reach it." footer={<SourceLine source={d.funnel?.[0]?.source ?? "Analytics API + Activate ladder"} baseline={d.funnel?.[0]?.baseline ?? "provisioned seats"} />} testId="panel-funnel">
@@ -97,6 +112,7 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
         </Panel>
       </div>
 
+      {!noFeed && (
       <Panel title={`Inactive seats · ${d.inactiveSeats?.length ?? 0}`} description="No real work in the period. Every one is a seat cost with nothing back." footer={<SourceLine source={analyticsSrc} baseline="days since last real-work activity" />} testId="panel-inactive">
         <RankingTable
           testId="inactive-seats"
@@ -114,11 +130,8 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
               header: "",
               align: "right",
               sortable: false,
-              render: (p) => (
+              render: () => (
                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                  <Button size="xs" variant="outline" data-testid="nudge-button" onClick={() => toast.success(`Nudge queued for ${p.name}`, { description: "Coach will send a short, specific prompt tied to one of their real workflows. Nothing generic." })}>
-                    <BellRingIcon data-icon="inline-start" /> Nudge
-                  </Button>
                   <UiTooltip>
                     <TooltipTrigger render={<span className="inline-flex" />}>
                       <Button size="xs" variant="ghost" disabled data-testid="reassign-seat-button">
@@ -136,6 +149,7 @@ function AdoptionBody({ d, range }: { d: Adoption; range: "30d" | "90d" }) {
           Need to change who holds a seat? Open <Link href="/admin/teams" className="underline underline-offset-4">Teams & People</Link>.
         </p>
       </Panel>
+      )}
     </div>
   )
 }
