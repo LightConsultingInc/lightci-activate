@@ -19,7 +19,7 @@ docker network create "$NET" >/dev/null
 docker run -d --name "$PG" --network "$NET" -e POSTGRES_USER=activate -e POSTGRES_PASSWORD=pw -e POSTGRES_DB=activate postgres:16 >/dev/null
 for _ in $(seq 1 30); do docker exec "$PG" pg_isready -U activate >/dev/null 2>&1 && break; sleep 2; done
 
-ENV=(-e NODE_ENV=production -e ACTIVATE_EDITION=cloud -e ACTIVATE_ROLE=api -e DB_HOST="$PG" -e DB_PORT=5432 -e DB_USERNAME=activate -e DB_PASSWORD=pw -e DB_DATABASE=activate -e DB_SSL_MODE=disable
+ENV=(-e NODE_ENV=production -e ACTIVATE_EDITION=cloud -e ACTIVATE_ROLE=api -e DB_HOST="$PG" -e DB_PORT=5432 -e DB_USERNAME=activate -e DB_PASSWORD=pw -e DB_DATABASE=activate -e DB_SSL_MODE=disable -e DB_SSL_ALLOW_PLAINTEXT=true
      -e WEB_URL=http://web.test -e PUBLIC_API_URL=http://api.test -e ACTIVATE_SECRETS_KEY=upgrade-path-secrets-key -e AUTH_PROVIDER=workos -e WORKOS_API_KEY=sk_test_unused -e WORKOS_CLIENT_ID=client_unused
      -e LIBRARY_PROVIDER=local -e LIBRARY_ALLOW_LOCAL=true -e AI_PROVIDER=live -e ANTHROPIC_API_KEY=sk-ant-unused -e MIGRATIONS_RUN_ON_BOOT=false -e UPDATE_CHECK_ENABLED=false -e METRICS_ENABLED=false)
 migrate() { step "activate migrate with $1"; docker run --rm --network "$NET" "${ENV[@]}" "$1" activate migrate; }

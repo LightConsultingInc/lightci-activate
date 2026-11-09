@@ -25,3 +25,12 @@ marketplace/.git/
 
 # Playwright run state when tests are launched from the repo root
 /test-results/
+
+# Production walkthrough output (screenshots, sessions)
+/e2e/qa-out/
+/e2e/prod/qa-out/
+
+# QA tenant root keeps local state
+infra/aws/qa-tenant/.terraform/
+infra/aws/qa-tenant/terraform.tfstate*
+infra/aws/qa-tenant/.terraform.lock.hcl
