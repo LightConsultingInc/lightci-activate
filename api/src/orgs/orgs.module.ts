@@ -1,3 +1,4 @@
+import { Placement } from '../learning/entities/placement.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClaudeEnterpriseModule } from '../claude-enterprise/claude-enterprise.module';
@@ -23,6 +24,7 @@ import { OrgService } from './org.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      Placement,
       Org,
       Team,
       Person,

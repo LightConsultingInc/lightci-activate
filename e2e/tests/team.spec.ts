@@ -19,7 +19,7 @@ test.describe("team (champion)", () => {
     const stats = page.getByTestId("team-stats")
     await expect(stats).toBeVisible()
     await expect(stats.locator(":scope > div")).toHaveCount(5)
-    await expect(stats).toContainText("Active on real work")
+    await expect(stats).toContainText("Using Claude for work")
     await expect(stats).toContainText(/\d+%/)
     await expect(stats.getByTestId("rung-histogram")).toContainText(/\d+ people/)
     await expect(stats).toContainText("Skills published")
@@ -47,7 +47,7 @@ test.describe("team (champion)", () => {
     await expect(person).toBeVisible()
     // person-header's testid is swallowed by <Paper> (BUGS.md #1); assert on the page and its h1.
     await expect(person.locator("h1")).toContainText(personName.replace(/^[A-Z]{1,2}(?=[A-Z][a-z])/, "").split(" ")[0])
-    await expect(page.getByTestId("activation-components").locator(":scope > div")).toHaveCount(4)
+    await expect(page.getByTestId("activation-components").locator(":scope > div")).toHaveCount(3)
     const journey = page.getByTestId("person-journey")
     await expect(journey).toBeVisible()
     if (await journey.getByTestId("journey-timeline").count()) {
@@ -71,8 +71,8 @@ test.describe("team (champion)", () => {
     const workflowId = await row.getAttribute("data-workflow-id")
 
     await row.getByTestId("backlog-convert").click()
-    await expectToast(page, /Builder drafted/, 60_000)
-    const t = page.locator("[data-sonner-toast]").filter({ hasText: /Builder drafted/ }).first()
+    await expectToast(page, /Claude drafted/, 60_000)
+    const t = page.locator("[data-sonner-toast]").filter({ hasText: /Claude drafted/ }).first()
     await expect(t).toContainText("Open draft")
     // The workflow moves to "In build" and is linked to the new draft skill.
     await expect(page.locator(`[data-testid=backlog-row][data-workflow-id="${workflowId}"]`)).toContainText("In build")
@@ -148,7 +148,7 @@ test.describe("team (champion)", () => {
     const dialog = page.getByTestId("readout-dialog")
     await expect(dialog).toBeVisible()
     await expect(dialog).toContainText(/readout/i)
-    await expect(dialog).toContainText(/generated .* by the Auditor/, { timeout: 60_000 })
+    await expect(dialog).toContainText(/written .* by Claude/, { timeout: 60_000 })
     await expect(dialog.getByTestId("readout-footnotes")).toBeVisible()
     expect(await dialog.getByTestId("readout-footnotes").locator("li").count()).toBeGreaterThan(0)
     await expect(dialog.getByTestId("readout-footnotes").locator("li").first()).toContainText(/\[\w+\]/)

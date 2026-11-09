@@ -2,8 +2,8 @@ apiVersion: v2
 name: activate
 description: LightCI Activate, self-hosted. Web app, API, worker and migrations on Kubernetes against your own PostgreSQL.
 type: application
-version: 1.0.3
-appVersion: "1.0.3"
+version: 1.0.4
+appVersion: "1.0.4"
 kubeVersion: ">=1.29.0-0"
 home: https://lightci.com/activate/self-host
 sources:

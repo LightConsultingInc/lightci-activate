@@ -145,11 +145,17 @@ export class WorkosGuard implements CanActivate {
 
   /** Resolve any bearer this installation accepts (WorkOS, or Activate-issued in OIDC mode). */
   async resolveBearer(token: string): Promise<Person | null> {
-    if (authProvider() === 'oidc') {
-      const oauth = this.moduleRef.get(OAuthService, { strict: false });
-      return oauth.resolveAccessToken(token);
-    }
-    return this.resolveUser(token);
+    const person =
+      authProvider() === 'oidc'
+        ? await this.moduleRef
+            .get(OAuthService, { strict: false })
+            .resolveAccessToken(token)
+        : await this.resolveUser(token);
+    // Someone switched off (by an admin, or by the company's directory when they leave) loses access at
+    // once, whatever their sign-in still says: web, API and the Claude connector alike.
+    if (person?.status === 'inactive')
+      refuse(SIGN_IN_MESSAGES.deactivated, HttpStatus.FORBIDDEN);
+    return person;
   }
 
   private extractToken(header: string | undefined): string | null {

@@ -42,11 +42,11 @@ export function ReviewQueue() {
       <PageHeader
         eyebrow="Champion"
         title="Review Queue"
-        description="Teammates' L3/L4 submissions waiting on your grade. Grading is your L5 exercise: the Grader's draft is there for reference, your read is the one that counts."
-        actions={promos > 0 && <Button variant="outline" render={<Link href="/promotions" />} data-testid="reviews-to-promotions"><GitPullRequest data-icon="inline-start" /> {promos} promotion{promos === 1 ? "" : "s"} awaiting you</Button>}
+        description="Work your teammates have sent you to check. Claude suggests a score to start from, but your call is the one that counts."
+        actions={promos > 0 && <Button variant="outline" render={<Link href="/promotions" />} data-testid="reviews-to-promotions"><GitPullRequest data-icon="inline-start" /> {promos} skill{promos === 1 ? "" : "s"} waiting for your OK</Button>}
       />
       {items.length === 0 && !selected ? (
-        <EmptyState icon={<ClipboardCheck className="size-5" />} title="Nothing to grade right now" description="When someone on the team submits a skill exercise, say an RMD letter drafter with its sample cases, it lands here with the learner's expectation and critique alongside the artifact." action={promos > 0 ? <Button render={<Link href="/promotions" />}>Review promotions instead</Button> : undefined} />
+        <EmptyState icon={<ClipboardCheck className="size-5" />} title="Nothing to check right now" description="When someone on the team sends in a skill to check, say a follow-up email drafter with a few example requests, it shows up here next to what they expected and what they thought of the result." action={promos > 0 ? <Button render={<Link href="/promotions" />}>See skills waiting for approval</Button> : undefined} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
           <ul className="space-y-1.5 self-start rounded-xl border bg-card p-1.5" data-testid="review-list">
@@ -77,7 +77,7 @@ function ReviewPane({ item, onGraded }: { item: ReviewItem; onGraded?: () => voi
         <div className="flex flex-wrap items-center gap-2">
           <RungBadge rung={e.rung} />
           <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{e.kind}</span>
-          <span className="text-xs text-muted-foreground">attempt {s.attempt}{s.coldAttempt && " · cold attempt"} · {fmt.date(s.submittedAt)}</span>
+          <span className="text-xs text-muted-foreground">attempt {s.attempt}{s.coldAttempt && " · tried before the lesson"} · {fmt.date(s.submittedAt)}</span>
           {e.skillId && <Button size="xs" variant="ghost" className="ml-auto" render={<Link href={`/library?q=${encodeURIComponent(e.title)}`} />}>Related skill <ArrowUpRight data-icon="inline-end" /></Button>}
         </div>
         <h2 className="font-display mt-2 text-2xl font-medium">{e.title}</h2>
@@ -86,19 +86,19 @@ function ReviewPane({ item, onGraded }: { item: ReviewItem; onGraded?: () => voi
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Panel label="Learner’s expectation" testId="review-expectation">
+        <Panel label="What they expected" testId="review-expectation">
           <p className="text-sm leading-relaxed">{s.expectationText}</p>
-          <p className="mt-2 text-xs text-muted-foreground">Confidence it passes: <span className="tabular font-medium text-foreground">{fmt.pct(s.expectationConfidence)}</span></p>
+          <p className="mt-2 text-xs text-muted-foreground">How sure they were it would work: <span className="tabular font-medium text-foreground">{fmt.pct(s.expectationConfidence)}</span></p>
         </Panel>
-        <Panel label="Learner’s critique" testId="review-critique">
-          {s.critiqueText ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{s.critiqueText}</p> : <p className="text-sm text-muted-foreground italic">No critique written. That is itself a finding.</p>}
+        <Panel label="What they thought of it" testId="review-critique">
+          {s.critiqueText ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{s.critiqueText}</p> : <p className="text-sm text-muted-foreground italic">They didn’t say what they thought of it. Worth asking why.</p>}
         </Panel>
       </div>
 
-      <Panel label={`Artifact · ${s.artifact.type.replace("_", " ")}`} testId="review-artifact"><ArtifactView a={s.artifact} /></Panel>
+      <Panel label={`What they made · ${s.artifact.type.replace("_", " ")}`} testId="review-artifact"><ArtifactView a={s.artifact} /></Panel>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {s.grade ? <GradeCard grade={s.grade} title="Grader's draft (reference)" compact /> : <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">The Grader has not drafted a rubric for this submission.</div>}
+        {s.grade ? <GradeCard grade={s.grade} title="Claude's suggested score" compact /> : <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Claude didn’t suggest a score for this one.</div>}
         <RubricScorer submissionId={s.id} draft={s.grade} onGraded={onGraded} />
       </div>
     </div>
@@ -115,14 +115,14 @@ function ArtifactView({ a }: { a: Artifact }) {
     <div className="space-y-3">
       {md ? <div className="rounded-lg border bg-muted/20 p-4"><MarkdownLite source={a.content} /></div> : <pre className="overflow-x-auto rounded-lg border bg-muted/30 p-3 font-mono text-xs whitespace-pre-wrap">{a.content}</pre>}
       {a.output && <div><p className="eyebrow mb-1">Claude’s output</p><div className="rounded-lg border p-4"><MarkdownLite source={a.output} /></div></div>}
-      {a.rationale && <div><p className="eyebrow mb-1">Include / exclude rationale</p><p className="text-sm">{a.rationale}</p></div>}
+      {a.rationale && <div><p className="eyebrow mb-1">Why they put things in or left them out</p><p className="text-sm">{a.rationale}</p></div>}
       {a.sampleCases && a.sampleCases.length > 0 && (
-        <div><p className="eyebrow mb-1">Sample cases</p>
-          <ul className="space-y-1 text-xs">{a.sampleCases.map((c, i) => <li key={i} className="grid grid-cols-[6rem_1fr_1fr] gap-2 rounded border p-2"><span className="font-medium">{c.shouldTrigger === "yes" ? "Should" : c.shouldTrigger === "no" ? "Should not" : "Ambiguous"}</span><span>{c.input}</span><span className="text-muted-foreground">{c.expected}</span></li>)}</ul>
+        <div><p className="eyebrow mb-1">Example requests</p>
+          <ul className="space-y-1 text-xs">{a.sampleCases.map((c, i) => <li key={i} className="grid grid-cols-[6rem_1fr_1fr] gap-2 rounded border p-2"><span className="font-medium">{c.shouldTrigger === "yes" ? "Should use it" : c.shouldTrigger === "no" ? "Shouldn't use it" : "Could go either way"}</span><span>{c.input}</span><span className="text-muted-foreground">{c.expected}</span></li>)}</ul>
         </div>
       )}
       {a.boundary && (
-        <div><p className="eyebrow mb-1">Boundary</p>
+        <div><p className="eyebrow mb-1">What it’s allowed to use</p>
           <div className="flex flex-wrap gap-3 text-xs">{Object.entries(a.boundary).map(([k, v]) => <span key={k}><span className="font-medium">{k}:</span> <span className="font-mono">{v.join(", ") || "—"}</span></span>)}</div>
         </div>
       )}

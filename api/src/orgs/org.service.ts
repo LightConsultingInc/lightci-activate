@@ -16,6 +16,7 @@ import { SecretsService } from '../common/secrets.service';
 import { ContextSource } from '../context/entities/context-source.entity';
 import { AuditLog } from '../ops/entities/audit-log.entity';
 import { Baseline } from '../workflows/entities/baseline.entity';
+import { Placement } from '../learning/entities/placement.entity';
 import {
   Org,
   type ComplianceBoundary,
@@ -88,6 +89,8 @@ export class OrgService {
     private readonly sources: Repository<ContextSource>,
     @InjectRepository(Baseline)
     private readonly baselines: Repository<Baseline>,
+    @InjectRepository(Placement)
+    private readonly placements: Repository<Placement>,
     private readonly integrations: IntegrationsService,
     private readonly secrets: SecretsService,
     private readonly ai: AiService,
@@ -648,6 +651,14 @@ export class OrgService {
     });
     const teams = await this.teams.find({ where: { orgId } });
     const teamName = new Map(teams.map((t) => [t.id, t.name]));
+    // Each person's current level is their latest placement (onboarding or a promotion); none until onboarded.
+    const placed = people.length
+      ? await this.placements.find({
+          where: { personId: In(people.map((p) => p.id)) },
+          order: { placedAt: 'ASC' },
+        })
+      : [];
+    const rung = new Map(placed.map((x) => [x.personId, x.rung]));
     return people.map((p) => ({
       id: p.id,
       name: p.name,
@@ -656,6 +667,7 @@ export class OrgService {
       avatarUrl: p.avatarUrl,
       teamId: p.teamId,
       teamName: p.teamId ? (teamName.get(p.teamId) ?? null) : null,
+      rung: rung.get(p.id) ?? null,
       roles: p.roles,
       status: p.status,
       premiumSeat: p.premiumSeat,

@@ -25,7 +25,7 @@ function tiles(r: Readout | undefined): Tile[] {
   if (Array.isArray(list)) {
     return (list as ReadoutMetric[]).map((x) => {
       const unit = x.unit ? ` ${x.unit}` : ""
-      return { key: x.key, label: x.label, value: `${fmtVal(x.value)}${unit}`, hint: x.baseline ? `baseline ${fmtVal(x.baseline.value)}${unit}` : undefined }
+      return { key: x.key, label: x.label, value: `${fmtVal(x.value)}${unit}`, hint: x.baseline ? `before: ${fmtVal(x.baseline.value)}${unit}` : undefined }
     })
   }
   return Object.entries(m)
@@ -45,7 +45,7 @@ export function ReadoutDialog() {
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl" data-testid="readout-dialog">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">{r?.title ?? "Team readout"}</DialogTitle>
-          <DialogDescription>{r ? `${fmt.date(r.periodStart)} – ${fmt.date(r.periodEnd)} · generated ${fmt.ago(r.generatedAt)} by the Auditor` : "The Auditor writes this once a day from measured data, never from estimates alone."}</DialogDescription>
+          <DialogDescription>{r ? `${fmt.date(r.periodStart)} – ${fmt.date(r.periodEnd)} · written ${fmt.ago(r.generatedAt)} by Claude` : "Claude writes this once a day from measured time, never from guesses alone."}</DialogDescription>
         </DialogHeader>
         {q.isPending || (!r && !q.isError) ? (
           <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-2/3" /></div>
@@ -63,7 +63,7 @@ export function ReadoutDialog() {
             <MarkdownLite source={r.narrative} />
             {r.footnotes.length > 0 && (
               <ol className="space-y-1 border-t pt-3 text-xs text-muted-foreground" data-testid="readout-footnotes">
-                {r.footnotes.map((f) => <li key={f.ref}><span className="font-mono">[{f.ref}]</span> {f.source}{f.baseline && <> · baseline: {f.baseline}</>}</li>)}
+                {r.footnotes.map((f) => <li key={f.ref}><span className="font-mono">[{f.ref}]</span> {f.source}{f.baseline && <> · compared with: {f.baseline}</>}</li>)}
               </ol>
             )}
           </div>

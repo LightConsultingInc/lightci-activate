@@ -28,10 +28,16 @@ export function ladderLite(f: OrgFacts, person: Person): LadderView {
 
   // Competencies: latest snapshot per code.
   const latest = new Map<string, OrgFacts['masterySnapshots'][number]>();
+  // Highest mastery ever recorded per competency: only something once learned can fade.
+  const peak = new Map<string, number>();
   for (const s of f.masterySnapshots) {
     if (s.personId !== person.id) continue;
     const cur = latest.get(s.competencyCode);
     if (!cur || s.day > cur.day) latest.set(s.competencyCode, s);
+    peak.set(
+      s.competencyCode,
+      Math.max(peak.get(s.competencyCode) ?? 0, s.mastery),
+    );
   }
   const competencies: LadderCompetency[] = COMPETENCY_CATALOG.map((c) => {
     const snap = latest.get(c.code);
@@ -50,8 +56,11 @@ export function ladderLite(f: OrgFacts, person: Person): LadderView {
     else if (
       c.rung < rung &&
       snap &&
+      (peak.get(c.code) ?? 0) >= c.masteryThreshold &&
       components.retention < DECAY_REASSESS_THRESHOLD
     )
+      // Same rule as the learner's own ladder (MasteryService.statusFor): someone placed above a level
+      // on day one hasn't let anything fade.
       status = 'decayed';
     return {
       code: c.code,

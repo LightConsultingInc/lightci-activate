@@ -239,8 +239,22 @@ function PeopleTable({ rows, teams, canWrite, onPatch }: { rows: Person[]; teams
               {p.roles.includes("lead") && <Badge variant="outline" className="border-glow bg-glow-soft text-glow-foreground">LightCI lead</Badge>}
             </div>
           ) },
-          { key: "status", header: "Status", sortValue: (p) => p.status, render: (p) => <Badge variant="outline" className={cn("capitalize text-foreground", p.status === "active" ? "border-pass/40 bg-pass-soft" : p.status === "invited" ? "border-info/40 bg-info-soft" : "border-border text-muted-foreground")}>{p.status}</Badge> },
-          { key: "last", header: "Last active", sortValue: (p) => p.lastActiveAt ?? "", render: (p) => <span className="text-xs text-muted-foreground">{p.lastActiveAt ? fmt.ago(p.lastActiveAt) : "never"}</span> },
+          { key: "status", header: "Status", sortValue: (p) => p.status, render: (p) =>
+            canWrite && p.status !== "invited" ? (
+              // Switching someone off ends their access at once (web, API and the Claude connector); switching back restores it.
+              <Select value={p.status} onValueChange={(v) => v && v !== p.status && onPatch({ id: p.id, status: v as Person["status"] }).then(() => toast.success(v === "inactive" ? `${p.name} can no longer sign in` : `${p.name} can sign in again`)).catch((e) => toast.error("Couldn't change access", { description: err(e) }))}>
+                <SelectTrigger size="sm" className={cn("min-w-28", p.status === "inactive" && "text-muted-foreground")} data-testid="person-status-select">
+                  <SelectValue>{(v: string) => (v === "inactive" ? "Switched off" : "Active")}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Switched off</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Badge variant="outline" className={cn("capitalize text-foreground", p.status === "active" ? "border-pass/40 bg-pass-soft" : p.status === "invited" ? "border-info/40 bg-info-soft" : "border-border text-muted-foreground")}>{p.status === "inactive" ? "Switched off" : p.status}</Badge>
+            ) },
+          { key: "last", header: "Last in Activate", sortValue: (p) => p.lastSeenAt ?? "", render: (p) => <span className="text-xs text-muted-foreground">{p.lastSeenAt ? fmt.ago(p.lastSeenAt) : "not yet"}</span> },
           { key: "open", header: "", sortable: false, render: (p) => <Button size="xs" variant="ghost" render={<Link href={`/people/${p.id}`} />}>Open</Button> },
         ]}
       />

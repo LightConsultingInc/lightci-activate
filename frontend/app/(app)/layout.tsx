@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // The API refused this session on purpose (company sign-in policy): say why on the login page.
     if (error instanceof ApiError && error.status === 401 && /single sign-on/i.test(error.detail ?? "")) redirect("/api/auth/sign-out?reason=sso")
     if (error instanceof ApiError && error.status === 403 && /setting up sign-in/i.test(error.detail ?? "")) redirect("/api/auth/sign-out?reason=setup")
+    if (error instanceof ApiError && error.status === 403 && /access to Activate has been switched off/i.test(error.detail ?? "")) redirect("/api/auth/sign-out?reason=deactivated")
     redirect("/login?authError=1")
   }
   if (!me.user) redirect("/login")

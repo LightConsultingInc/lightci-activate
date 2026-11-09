@@ -57,12 +57,12 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/lightconsultinginc/activate/server:1.0.3
+          value: ghcr.io/lightconsultinginc/activate/server:1.0.4
         template: api-deployment.yaml
         documentIndex: 0
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/lightconsultinginc/activate/web:1.0.3
+          value: ghcr.io/lightconsultinginc/activate/web:1.0.4
         template: web-deployment.yaml
         documentIndex: 0
       - contains:
@@ -76,7 +76,7 @@ tests:
     template: worker-statefulset.yaml
     asserts:
       - failedTemplate:
-          errorPattern: 'global.imageTag "1.2.3" does not match this chart.s appVersion "1.0.3"'
+          errorPattern: 'global.imageTag "1.2.3" does not match this chart.s appVersion "1.0.4"'
 
   - it: a mirror that retags images can opt out of the lock
     set: { global.imageTag: "1.2.3", global.allowImageTagMismatch: true }

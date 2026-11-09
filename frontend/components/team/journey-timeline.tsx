@@ -15,7 +15,7 @@ const META: Record<JourneyEvent["type"], { icon: typeof Flag; cls: string; label
 /** Journey timeline: newest first, grouped by month, each event typed and coloured by kind. */
 export function JourneyTimeline({ events, className }: { events: JourneyEvent[]; className?: string }) {
   const sorted = [...events].sort((a, b) => b.at.localeCompare(a.at))
-  if (sorted.length === 0) return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No events yet. The intake interview writes the first placement.</p>
+  if (sorted.length === 0) return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No events yet. Their first chat sets their starting level.</p>
   const monthOf = (e: JourneyEvent) => new Date(e.at).toLocaleDateString(undefined, { month: "long", year: "numeric" })
   const rows = sorted.map((e, i) => ({ e, month: monthOf(e), showMonth: i === 0 || monthOf(sorted[i - 1]) !== monthOf(e) }))
   return (

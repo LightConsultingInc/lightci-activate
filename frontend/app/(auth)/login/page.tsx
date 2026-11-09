@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <ActivateLockup className="mb-10" />
           <h2 className="font-display text-3xl font-medium">Welcome back</h2>
           <p className="mt-2 text-sm text-muted-foreground">Sign in with your work account. Your firm&apos;s SSO is honoured automatically.</p>
-          <LoginForm authError={sp.authError === "sso" || sp.authError === "setup" ? sp.authError : sp.authError === "1"} provider={provider} next={sp.next} />
+          <LoginForm authError={sp.authError === "sso" || sp.authError === "setup" || sp.authError === "deactivated" ? sp.authError : sp.authError === "1"} provider={provider} next={sp.next} />
         </div>
       </div>
     </main>

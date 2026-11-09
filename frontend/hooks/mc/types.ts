@@ -324,7 +324,9 @@ export type Person = {
   roles: Role[]
   avatarUrl: string | null
   status: "invited" | "active" | "inactive"
-  rung?: number
+  rung?: number | null
+  /** Last request this person made to Activate itself. */
+  lastSeenAt?: string | null
   lastActiveAt: string | null
   premiumSeat?: boolean
 }

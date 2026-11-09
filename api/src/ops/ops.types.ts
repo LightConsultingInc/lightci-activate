@@ -279,6 +279,7 @@ export interface TeamView {
   library: SkillCard[];
   stats: {
     activePct7d: number;
+    hasUsage?: boolean;
     rungDistribution: number[];
     hoursBackPerWeek: number;
     hasBaseline: boolean;
