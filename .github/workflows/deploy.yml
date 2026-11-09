@@ -4,8 +4,8 @@ name: Deploy cells
 # environment; required reviewers need GitHub Enterprise on a private repository, so the gate here is
 # that this workflow only runs by hand. Per cell: verify and mirror the signed images into the cell's
 # ECR, terraform apply with the new image tag, run the one-shot migrate task and wait for exit 0, roll
-# the services, check /api/ready, then bake for 30 minutes with no 5xx from the people load balancer
-# before the next cell starts (T5.6).
+# the services and check /api/ready before the next cell starts. A staging cell, not a timed bake, is
+# meant to be the gate before production.
 on:
   workflow_dispatch:
     inputs:
@@ -49,7 +49,6 @@ jobs:
       root: infra/aws/envs/us-prod
       version: ${{ needs.version.outputs.version }}
       api_url: https://api.activate.lciventure.com
-      bake_minutes: 30
     secrets:
       role_arn: ${{ secrets.AWS_DEPLOY_ROLE_US }}
 
@@ -65,6 +64,5 @@ jobs:
       root: infra/aws/envs/eu-prod
       version: ${{ needs.version.outputs.version }}
       api_url: https://api.eu.activate.lciventure.com
-      bake_minutes: 30
     secrets:
       role_arn: ${{ secrets.AWS_DEPLOY_ROLE_EU }}

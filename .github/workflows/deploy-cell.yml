@@ -8,7 +8,6 @@ on:
       root: { type: string, required: true }
       version: { type: string, required: true }
       api_url: { type: string, required: true }
-      bake_minutes: { type: number, default: 30 }
     secrets:
       role_arn: { required: true }
 
@@ -114,20 +113,7 @@ jobs:
           done
           [ "$FAILED" = 0 ]
 
-      - name: Ready, version and bake
+      - name: Ready
         run: |
           for _ in $(seq 1 30); do curl -fsS -m 20 "${{ inputs.api_url }}/api/ready" > /dev/null && break; sleep 10; done
           curl -fsS -m 20 "${{ inputs.api_url }}/api/ready"
-          echo
-          echo "Baking for ${{ inputs.bake_minutes }} minutes; any 5xx from the people load balancer fails the promotion."
-          ALB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='${{ steps.out.outputs.cluster }}-internal'].LoadBalancerArn" --output text)
-          DIM=$(echo "$ALB" | sed 's#.*loadbalancer/##')
-          END=$(( $(date +%s) + ${{ inputs.bake_minutes }} * 60 ))
-          while [ "$(date +%s)" -lt "$END" ]; do
-            sleep 300
-            SUM=$(aws cloudwatch get-metric-statistics --namespace AWS/ApplicationELB --metric-name HTTPCode_Target_5XX_Count \
-              --dimensions Name=LoadBalancer,Value="$DIM" --start-time "$(date -u -d '-5 minutes' +%FT%TZ)" --end-time "$(date -u +%FT%TZ)" \
-              --period 300 --statistics Sum --query 'Datapoints[0].Sum' --output text)
-            echo "$(date -u +%T) 5xx in the last 5 minutes: ${SUM:-0}"
-            if [ "${SUM:-None}" != "None" ] && [ "${SUM%.*}" -gt 0 ]; then echo "5xx seen during bake; stopping the rollout here."; exit 1; fi
-          done

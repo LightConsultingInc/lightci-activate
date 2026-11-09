@@ -73,7 +73,8 @@ cells (`us,eu` by default). Per cell, `deploy-cell.yml`:
 3. snapshots the database, runs `activate migrate` as a one-shot task and requires exit 0;
 4. rolls api, worker and web, waits for them to stabilise, and requires each one to finish on the task
    definition just applied (the circuit breaker rolls a failed service back, and a rolled-back service counts as stable);
-5. checks `/api/ready`, then bakes for 30 minutes with no 5xx from the people load balancer before the next cell.
+5. checks `/api/ready` before the next cell starts. (There is no timed bake: a staging cell is the planned
+   gate before production.)
 
 Required reviewers on GitHub environments need GitHub Enterprise on a private repository, so running the
 workflow by hand is the approval gate.
