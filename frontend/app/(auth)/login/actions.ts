@@ -15,9 +15,19 @@ export type SignInLookup = { mode: "sso" | "setup" | "password" | "unknown"; org
 
 const origin = () => webUrl()
 
+/**
+ * Plain words for what WorkOS said. Checks WorkOS's error code first: a disabled sign-in method
+ * must not read as a wrong password (it sent people hunting for a password that was right).
+ */
 function friendly(err: unknown): string {
+  const e = err as { code?: string; error?: string; rawData?: { code?: string; error?: string } } | null
+  const code = e?.code ?? e?.rawData?.code ?? e?.error ?? e?.rawData?.error ?? ""
   const message = err instanceof Error ? err.message : "Sign-in failed."
-  return /password|credential|invalid/i.test(message) ? "That email and password did not match." : message
+  if (code === "email_password_auth_disabled" || /email-password authentication is not allowed/i.test(message))
+    return "Signing in with a password isn't switched on for this workspace. Use your company sign-in, or ask LightCI to turn passwords on."
+  if (code === "email_verification_required") return "Check your inbox: confirm your email address, then sign in."
+  if (code === "invalid_credentials" || /invalid credentials|password|credential/i.test(message)) return "That email and password did not match."
+  return message
 }
 
 /**
